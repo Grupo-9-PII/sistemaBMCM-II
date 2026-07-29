@@ -45,7 +45,7 @@
 
 ## Nome do Projeto
 
-Sistema web para apoio a gestao administrativa da Banda Marcial Municipal de Marilia - SP, desenvolvido no contexto do Projeto Integrado I (UNIVESP).
+Sistema web para apoio a gestao administrativa da Banda Marcial Municipal de Marilia - SP, desenvolvido no contexto do Projeto Integrado I (UNIVESP), sendo Aplicadas agora o contexto do PI II.
 
 ## Contexto e Justificativa
 
