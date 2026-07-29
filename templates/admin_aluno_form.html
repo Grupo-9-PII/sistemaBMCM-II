@@ -1,0 +1,911 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }} — Sistema PI{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5 fade-in">
+  <div class="row justify-content-center">
+    <div class="col-lg-12">
+      <div class="card">
+        <div class="card-header bg-dark text-white d-flex align-items-center">
+          <i class="bi {{ 'bi-person-plus' if not aluno else 'bi-person-gear' }} me-2"></i>
+          <h4 class="mb-0">{{ titulo }}</h4>
+        </div>
+        <div class="card-body">
+          <!-- Abas para organizar os dados -->
+          <ul class="nav nav-tabs mb-4" id="alunoTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="dados-pessoais-tab" data-bs-toggle="tab" 
+                      data-bs-target="#dados-pessoais" type="button" role="tab">
+                <i class="bi bi-person me-2"></i>Dados Pessoais
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="contato-tab" data-bs-toggle="tab" 
+                      data-bs-target="#contato" type="button" role="tab">
+                <i class="bi bi-telephone me-2"></i>Contato/Endereço
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="responsaveis-tab" data-bs-toggle="tab" 
+                      data-bs-target="#responsaveis" type="button" role="tab">
+                <i class="bi bi-people me-2"></i>Responsáveis
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="escola-tab" data-bs-toggle="tab" 
+                      data-bs-target="#escola" type="button" role="tab">
+                <i class="bi bi-building me-2"></i>Escola
+              </button>
+            </li>
+          </ul>
+
+          <form method="POST" enctype="multipart/form-data" id="form-aluno"
+                data-aluno-tem-foto="{{ '1' if aluno and aluno.foto_path else '0' }}">
+            <div class="tab-content" id="alunoTabsContent">
+              
+              <!-- Dados Pessoais -->
+              <div class="tab-pane fade show active" id="dados-pessoais" role="tabpanel">
+                <div class="row g-3">
+                  <!-- Campo de Foto -->
+                  <div class="col-12 mb-3">
+                    <div class="d-flex align-items-center gap-3">
+                      <div class="text-center">
+                        {% if aluno and aluno.foto_path %}
+                        <img id="preview-foto" src="{{ url_for('static', filename=aluno.foto_path) }}" 
+                             alt="Foto do aluno" class="rounded-circle" style="width: 120px; height: 120px; object-fit: cover; border: 3px solid #dee2e6;">
+                        {% else %}
+                        <i id="preview-foto" class="bi bi-person-circle text-secondary" 
+                           style="font-size: 5rem; border: 3px solid #dee2e6; border-radius: 50%;"></i>
+                        {% endif %}
+                        <div class="mt-2">
+                          <label for="foto" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-camera me-1"></i>Selecionar Foto
+                          </label>
+                          <input type="file" name="foto" id="foto" class="d-none" accept="image/*">
+                        </div>
+                        <small class="text-muted d-block">Foto não obrigatória</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  {% set af = autorizacao_foto_registrada %}
+                  {% set auth_ok_na_foto = af and not (pendente_autorizacao_foto|default(false)) %}
+                  {% set lbl_parent = {'PAI': 'Pai', 'MAE': 'Mãe', 'RESPONSAVEL_LEGAL': 'Responsável legal', 'OUTRO': 'Outro'} %}
+                  <div id="secao-autorizacao-foto"
+                       class="col-12 border rounded p-3 mb-3 bg-light {% if not pendente_autorizacao_foto|default(false) %}d-none{% endif %}"
+                       data-pendente="{{ '1' if pendente_autorizacao_foto|default(false) else '0' }}"
+                       data-exige-novo-envio="{{ '1' if exige_nova_assinatura_no_envio|default(true) else '0' }}"
+                       data-exige-novo-inicial="{{ '1' if exige_nova_assinatura_no_envio|default(true) else '0' }}">
+                    <h6 class="text-primary mb-2">
+                      <i class="bi bi-shield-lock me-1"></i>Autorização para armazenar imagem (menor de 18 anos / LGPD)
+                    </h6>
+                    <div id="autorizacao-foto-resumo-salva"
+                         class="alert alert-success mb-3 {% if not auth_ok_na_foto %}d-none{% endif %}">
+                      {% if auth_ok_na_foto %}
+                      <strong><i class="bi bi-check-circle me-1"></i>Autorização já registrada</strong> para a foto atual.
+                      <ul class="mb-2 small mt-2">
+                        <li>Registrado em: {{ af.created_at.strftime('%d/%m/%Y %H:%M') if af.created_at else '—' }} (UTC sistema)</li>
+                        <li>Signatário: <strong>{{ af.responsavel_nome }}</strong> ({{ lbl_parent.get(af.responsavel_parentesco, af.responsavel_parentesco) }})</li>
+                        {% if af.responsavel_cpf %}<li>CPF informado: {{ af.responsavel_cpf }}</li>{% endif %}
+                        <li>Versão do termo: {{ af.termo_versao }}</li>
+                        <li>Registrado no sistema por: {{ af.registrado_por.username if af.registrado_por else '—' }}{% if af.ip_origem %} — IP: {{ af.ip_origem }}{% endif %}</li>
+                      </ul>
+                      <p class="small mb-2">Assinatura arquivada:</p>
+                      <img src="{{ url_for('static', filename=af.assinatura_path) }}" alt="Assinatura registrada"
+                           class="img-thumbnail bg-white" style="max-height: 120px;">
+                      <p class="small text-muted mt-2 mb-0">
+                        Se trocar a foto deste integrante, será necessário coletar nova autorização e nova assinatura.
+                      </p>
+                      {% endif %}
+                    </div>
+                    <p class="small text-muted mb-2">
+                      Versão do termo: <strong>{{ termo_autorizacao_foto_versao|default('—') }}</strong>.
+                      Em ambiente de rede interna, a assinatura abaixo funciona como <strong>manifestação inequívoca</strong> do responsável,
+                      vinculada ao cadastro e ao arquivo da foto. Para assinatura com certificado ICP-Brasil, use fluxo complementar fora do sistema.
+                    </p>
+                    <div class="small border bg-white p-2 mb-3 rounded" style="max-height: 10rem; overflow-y: auto;">
+                      Pelo presente termo, na qualidade de responsável legal pelo menor vinculado a este cadastro, autorizo de forma livre, informada e inequívoca o armazenamento e o tratamento de sua imagem (foto), exclusivamente para fins de gestão institucional da banda marcial, incluindo identificação, controle de frequência e elaboração de relatórios internos.
+<br>
+Declaro estar ciente de que o tratamento dos dados será realizado em conformidade com a Lei Geral de Proteção de Dados Pessoais
+                    </div>
+                    <div id="bloco-nova-autorizacao-campos" class="row g-2 {% if auth_ok_na_foto %}d-none{% endif %}">
+                      <div class="col-md-6">
+                        <label class="form-label" for="autorizacao_responsavel_nome">Nome completo do responsável que assina *</label>
+                        <input type="text" class="form-control text-uppercase" name="autorizacao_responsavel_nome"
+                               id="autorizacao_responsavel_nome" autocomplete="off"
+                               value="{{ af.responsavel_nome if af else '' }}"
+                               oninput="this.value = this.value.toUpperCase()">
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label" for="autorizacao_responsavel_parentesco">Vínculo *</label>
+                        <select class="form-select" name="autorizacao_responsavel_parentesco" id="autorizacao_responsavel_parentesco">
+                          <option value="">—</option>
+                          <option value="PAI" {% if af and af.responsavel_parentesco == 'PAI' %}selected{% endif %}>Pai</option>
+                          <option value="MAE" {% if af and af.responsavel_parentesco == 'MAE' %}selected{% endif %}>Mãe</option>
+                          <option value="RESPONSAVEL_LEGAL" {% if af and af.responsavel_parentesco == 'RESPONSAVEL_LEGAL' %}selected{% endif %}>Responsável legal</option>
+                          <option value="OUTRO" {% if af and af.responsavel_parentesco == 'OUTRO' %}selected{% endif %}>Outro (especificar em observações do cadastro)</option>
+                        </select>
+                      </div>
+                      <div class="col-md-3">
+                        <label class="form-label" for="autorizacao_responsavel_cpf">CPF do signatário (opcional)</label>
+                        <input type="text" class="form-control js-documento" name="autorizacao_responsavel_cpf" id="autorizacao_responsavel_cpf"
+                               maxlength="14" placeholder="000.000.000-00"
+                               value="{{ af.responsavel_cpf if af and af.responsavel_cpf else '' }}" autocomplete="off">
+                      </div>
+                      <div class="col-12">
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" value="1" name="autorizacao_foto_aceite" id="autorizacao_foto_aceite">
+                          <label class="form-check-label" for="autorizacao_foto_aceite">
+                            Li e concordo com o termo acima, em nome do menor.
+                          </label>
+                        </div>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label">Assinatura do responsável (desenho no quadro) *</label>
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                          <canvas id="canvas-assinatura-foto" width="420" height="160" class="border bg-white rounded touch-none"
+                                  style="touch-action: none; cursor: crosshair;"></canvas>
+                          <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-limpar-assinatura-foto">
+                            <i class="bi bi-eraser"></i> Limpar assinatura
+                          </button>
+                        </div>
+                        <input type="hidden" name="assinatura_foto_data" id="assinatura_foto_data" value="">
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label for="funcao_id" class="form-label">Função na Banda</label>
+                    <select name="funcao_id" id="funcao_id" class="form-select">
+                      <option value="">-- Selecione --</option>
+                      {% for funcao in funcoes %}
+                      <option value="{{ funcao.id }}" 
+                              {% if aluno and aluno.funcao and aluno.funcao.id == funcao.id %}selected{% endif %}>
+                        {{ funcao.nome_funcao }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <label for="data_entrada_banda" class="form-label">Data de Entrada na Banda</label>
+                    <input type="date" name="data_entrada_banda" id="data_entrada_banda" 
+                           class="form-control" 
+                           value="{{ aluno.data_entrada_banda.strftime('%Y-%m-%d') if aluno and aluno.data_entrada_banda else '' }}">
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <label for="data_desligamento_banda" class="form-label">Data de Desligamento da Banda</label>
+                    <input type="date" name="data_desligamento_banda" id="data_desligamento_banda" 
+                           class="form-control" 
+                           value="{{ aluno.data_desligamento_banda.strftime('%Y-%m-%d') if aluno and aluno.data_desligamento_banda else '' }}">
+                  </div>
+                  
+                  <div class="col-12">
+                    <label for="nome" class="form-label">Nome Completo *</label>
+                    <input type="text" name="nome" id="nome" class="form-control text-uppercase" 
+                           value="{{ aluno.nome if aluno else '' }}" required oninput="this.value = this.value.toUpperCase()" autocomplete="off">
+
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <label for="data_nascimento" class="form-label">Data de Nascimento</label>
+                    <input type="date" name="data_nascimento" id="data_nascimento" 
+                           class="form-control" 
+                           value="{{ aluno.data_nascimento if aluno else '' }}">
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <label for="naturalidade" class="form-label">Naturalidade</label>
+<input type="text" name="naturalidade" id="naturalidade" 
+                           class="form-control text-uppercase" 
+                           value="{{ aluno.naturalidade if aluno else '' }}" oninput="this.value = this.value.toUpperCase()" autocomplete="off">
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <label for="cin_rg" class="form-label">CIN/RG</label>
+                    <input type="text" name="cin_rg" id="cin_rg" class="form-control js-documento" 
+                           value="{{ aluno.cin_rg if aluno else '' }}" maxlength="14" autocomplete="off">
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Contato/Endereço -->
+              <div class="tab-pane fade" id="contato" role="tabpanel">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label for="email" class="form-label">E-mail</label>
+                    <input type="email" name="email" id="email" class="form-control js-email" 
+                           value="{{ aluno.email if aluno else '' }}" autocomplete="off">
+                  </div>
+                  
+                  <div class="col-md-6">
+                    <label for="telefone" class="form-label">Telefone</label>
+                    <input type="text" name="telefone" id="telefone" class="form-control js-telefone" 
+                           value="{{ aluno.telefone if aluno else '' }}"
+                           placeholder="(00) 00000-0000" autocomplete="off">
+                  </div>
+                  
+                  <!-- Campo CEP com busca -->
+                  <div class="col-md-4">
+                    <label for="cep" class="form-label">CEP</label>
+                    <div class="input-group">
+                      <input type="text" name="cep" id="cep" class="form-control" 
+                             value="{{ aluno.cep if aluno else '' }}"
+                             placeholder="00000-000" maxlength="9" autocomplete="off">
+                      <button type="button" class="btn btn-outline-secondary" id="buscar-cep" title="Buscar CEP">
+                        <i class="bi bi-search"></i>
+                      </button>
+                    </div>
+                    <small class="text-muted">Digite o CEP e clique em buscar</small>
+                  </div>
+                  
+                  <div class="col-12">
+                    <label for="endereco" class="form-label">Endereço (Rua/Avenida)</label>
+<input type="text" name="endereco" id="endereco" class="form-control text-uppercase" 
+                           value="{{ aluno.endereco if aluno else '' }}"
+                           placeholder="RUA/AVENIDA, NOME DA RUA" oninput="this.value = this.value.toUpperCase()" autocomplete="off">
+                  </div>
+                  
+                  <div class="col-md-3">
+                    <label for="numero" class="form-label">Número</label>
+<input type="text" name="numero" id="numero" class="form-control text-uppercase" 
+                           value="{{ aluno.numero if aluno else '' }}"
+                           placeholder="Nº 123" oninput="this.value = this.value.toUpperCase()" autocomplete="off">
+                  </div>
+                  
+                  <div class="col-12">
+                    <label for="complemento" class="form-label">Complemento</label>
+<input type="text" name="complemento" id="complemento" class="form-control text-uppercase" 
+                           value="{{ aluno.complemento if aluno else '' }}"
+                           placeholder="APARTAMENTO, BLOCO, CASA, ETC." oninput="this.value = this.value.toUpperCase()" autocomplete="off">
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <label for="bairro" class="form-label">Bairro</label>
+<input type="text" name="bairro" id="bairro" class="form-control text-uppercase" 
+                           value="{{ aluno.bairro if aluno else '' }}" oninput="this.value = this.value.toUpperCase()" autocomplete="off">
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <label for="cidade" class="form-label">Cidade</label>
+<input type="text" name="cidade" id="cidade" class="form-control text-uppercase" 
+                           value="{{ aluno.cidade if aluno else '' }}" oninput="this.value = this.value.toUpperCase()" autocomplete="off">
+                  </div>
+                  
+                  <div class="col-md-4">
+                    <label for="estado" class="form-label">Estado (UF)</label>
+                    <input type="text" name="estado" id="estado" class="form-control" 
+                           value="{{ aluno.estado if aluno else '' }}"
+                           maxlength="2" placeholder="SP">
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Responsáveis -->
+              <div class="tab-pane fade" id="responsaveis" role="tabpanel">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label for="nome_pai" class="form-label">Nome do Pai</label>
+<input type="text" name="nome_pai" id="nome_pai" class="form-control text-uppercase" 
+                           value="{{ aluno.responsaveis[0].nome_pai if aluno and aluno.responsaveis else '' }}" oninput="this.value = this.value.toUpperCase()" autocomplete="off">
+                  </div>
+                  
+                  <div class="col-md-6">
+                    <label for="nome_mae" class="form-label">Nome da Mãe</label>
+<input type="text" name="nome_mae" id="nome_mae" class="form-control text-uppercase" 
+                           value="{{ aluno.responsaveis[0].nome_mae if aluno and aluno.responsaveis else '' }}" oninput="this.value = this.value.toUpperCase()" autocomplete="off">
+                  </div>
+                  
+                  <div class="col-md-6">
+                    <label for="telefone_responsavel" class="form-label">Telefone do Responsável</label>
+                    <input type="text" name="telefone_responsavel" id="telefone_responsavel" 
+                           class="form-control js-telefone " 
+                           value="{{ aluno.responsaveis[0].telefone if aluno and aluno.responsaveis else '' }}"
+                           placeholder="(00) 00000-0000" autocomplete="off">
+                  </div>
+                  
+                  <div class="col-md-6">
+                    <label for="email_responsavel" class="form-label">E-mail do Responsável</label>
+                    <input type="email" name="email_responsavel" id="email_responsavel" 
+                           class="form-control js-email" 
+                           value="{{ aluno.responsaveis[0].email if aluno and aluno.responsaveis else '' }}" autocomplete="off">
+                  </div>
+                  
+                  <div class="col-12">
+                    <label for="endereco_responsavel" class="form-label">Endereço do Responsável</label>
+<input type="text" name="endereco_responsavel" id="endereco_responsavel" 
+                           class="form-control text-uppercase" 
+                           value="{{ aluno.responsaveis[0].endereco if aluno and aluno.responsaveis else '' }}" oninput="this.value = this.value.toUpperCase()" autocomplete="off">
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Escola -->
+              <div class="tab-pane fade" id="escola" role="tabpanel">
+                <div class="row g-3">
+                  <div class="col-12">
+                    <label for="escola_id" class="form-label">Escola</label>
+                    <select name="escola_id" id="escola_id" class="form-select">
+                      <option value="">Selecione uma escola...</option>
+                      {% for escola in escolas %}
+                      <option value="{{ escola.id }}" 
+                              {% if aluno and aluno.escolas and aluno.escolas[0].escola_id == escola.id %}selected{% endif %}>
+                        {{ escola.nome }}
+                      </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  
+                  <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                      <a href="{{ url_for('main.criar_escola') }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                        <i class="bi bi-plus-circle me-2"></i>Nova Escola
+                      </a>
+                      <a href="{{ url_for('main.listar_escolas') }}" class="btn btn-outline-secondary btn-sm" target="_blank">
+                        <i class="bi bi-gear me-2"></i>Gerenciar Escolas
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Botões de ação -->
+            <div class="d-grid gap-2 mt-4">
+              <button type="submit" class="btn btn-dark btn-lg">
+                <i class="bi {{ 'bi-check2-circle' if not aluno else 'bi-save' }} me-2"></i>
+                {% if aluno %}
+                  Salvar Alterações
+                {% else %}
+                  Cadastrar Integrante
+                {% endif %}
+              </button>
+              <a href="{{ url_for('main.listar_alunos') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Cancelar
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loading" class="position-fixed top-50 start-50 translate-middle bg-dark bg-opacity-75 rounded p-4 d-none" style="z-index: 9999;">
+  <div class="spinner-border text-light" role="status">
+    <span class="visually-hidden">Carregando...</span>
+  </div>
+  <span class="text-light ms-2">Buscando CEP...</span>
+</div>
+
+<!-- Toast para mensagens -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="cep-toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+      <strong class="me-auto" id="toast-title">Aviso</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Fechar"></button>
+    </div>
+    <div class="toast-body" id="toast-message">
+      Mensagem aqui
+    </div>
+  </div>
+</div>
+
+<script>
+// Preview da foto
+document.getElementById('foto').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  const preview = document.getElementById('preview-foto');
+  
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      // Verificar se o preview é uma imagem ou um ícone
+      if (preview.tagName === 'IMG') {
+        preview.src = e.target.result;
+      } else {
+        // Substituir o ícone por uma imagem
+        const img = document.createElement('img');
+        img.id = 'preview-foto';
+        img.src = e.target.result;
+        img.alt = 'Foto do aluno';
+        img.className = 'rounded-circle';
+        img.style.width = '120px';
+        img.style.height = '120px';
+        img.style.objectFit = 'cover';
+        img.style.border = '3px solid #dee2e6';
+        preview.parentNode.replaceChild(img, preview);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+  if (typeof window.atualizarVisibilidadeAutorizacaoFoto === 'function') {
+    window.atualizarVisibilidadeAutorizacaoFoto();
+  }
+  const secaoAuth = document.getElementById('secao-autorizacao-foto');
+  const resumoSalvaEl = document.getElementById('autorizacao-foto-resumo-salva');
+  const blocoNovaEl = document.getElementById('bloco-nova-autorizacao-campos');
+  if (secaoAuth && file) {
+    secaoAuth.dataset.exigeNovoEnvio = '1';
+    if (resumoSalvaEl) resumoSalvaEl.classList.add('d-none');
+    if (blocoNovaEl) blocoNovaEl.classList.remove('d-none');
+  } else if (secaoAuth && !file) {
+    secaoAuth.dataset.exigeNovoEnvio = secaoAuth.dataset.exigeNovoInicial || '1';
+    if (secaoAuth.dataset.exigeNovoInicial === '0') {
+      if (resumoSalvaEl) resumoSalvaEl.classList.remove('d-none');
+      if (blocoNovaEl) blocoNovaEl.classList.add('d-none');
+    }
+  }
+});
+
+// Máscara para CEP
+document.getElementById('cep').addEventListener('input', function(e) {
+  let value = e.target.value.replace(/\D/g, '');
+  if (value.length > 5) {
+    value = value.slice(0, 5) + '-' + value.slice(5, 8);
+  }
+  e.target.value = value;
+});
+
+// Buscar CEP
+document.getElementById('buscar-cep').addEventListener('click', buscarCEP);
+
+async function buscarCEP() {
+  const cepInput = document.getElementById('cep');
+  const cep = cepInput.value.replace(/\D/g, '');
+  
+  if (cep.length !== 8) {
+    showToast('CEP inválido', 'O CEP deve ter 8 dígitos', 'warning');
+    return;
+  }
+  
+  // Mostrar loading
+  document.getElementById('loading').classList.remove('d-none');
+  
+  try {
+    // Primeiro: tentar buscar no banco local (tabela logradouro)
+    const responseLocal = await fetch(`/admin/buscar-cep/${cep}`);
+    const dataLocal = await responseLocal.json();
+    
+    if (dataLocal.success && dataLocal.logradouro) {
+      // Encontrou no banco local
+      const logradouro = dataLocal.logradouro;
+      document.getElementById('endereco').value = logradouro.tipo + ' ' + logradouro.descricao;
+      document.getElementById('bairro').value = logradouro.descricao_bairro || '';
+      document.getElementById('cidade').value = logradouro.descricao_cidade || '';
+      document.getElementById('estado').value = logradouro.uf || '';
+      showToast('CEP encontrado', 'Endereço local encontrado!', 'success');
+    } else {
+      // Não encontrou no banco, buscar na API ViaCEP
+      console.log('CEP não encontrado localmente, buscando na API...');
+      const responseApi = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const dataApi = await responseApi.json();
+      
+      if (dataApi.erro) {
+        showToast('CEP não encontrado', 'O CEP informado não foi encontrado', 'danger');
+      } else {
+        // Preencher com dados da API
+        document.getElementById('endereco').value = dataApi.logradouro || '';
+        document.getElementById('bairro').value = dataApi.bairro || '';
+        document.getElementById('cidade').value = dataApi.localidade || '';
+        document.getElementById('estado').value = dataApi.uf || '';
+        
+        // Salvar o novo logradouro no banco
+        await salvarLogradouro(cep, dataApi);
+        showToast('CEP encontrado', 'Endereço da API encontrado e salvo!', 'success');
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao buscar CEP:', error);
+    showToast('Erro', 'Erro ao buscar CEP. Tente novamente.', 'danger');
+  } finally {
+    document.getElementById('loading').classList.add('d-none');
+  }
+}
+
+async function salvarLogradouro(cep, data) {
+  try {
+    await fetch('/admin/salvar-logradouro', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        cep: cep,
+        tipo: data.logradouro ? data.logradouro.split(' ')[0] : '',
+        descricao: data.logradouro ? data.logradouro.split(' ').slice(1).join(' ') : '',
+        descricao_bairro: data.bairro,
+        descricao_cidade: data.localidade,
+        uf: data.uf,
+        complemento: data.complemento
+      })
+    });
+  } catch (error) {
+    console.error('Erro ao salvar logradouro:', error);
+  }
+}
+
+function showToast(title, message, type = 'info') {
+  const toast = document.getElementById('cep-toast');
+  const toastTitle = document.getElementById('toast-title');
+  const toastMessage = document.getElementById('toast-message');
+  
+  toastTitle.textContent = title;
+  toastMessage.textContent = message;
+  
+  toast.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info');
+  toast.classList.add('bg-' + type);
+  
+  const bsToast = new bootstrap.Toast(toast);
+  bsToast.show();
+}
+
+(function () {
+  const form = document.getElementById('form-aluno');
+  const secao = document.getElementById('secao-autorizacao-foto');
+  const dataNasc = document.getElementById('data_nascimento');
+  const fotoInput = document.getElementById('foto');
+  const canvas = document.getElementById('canvas-assinatura-foto');
+  const hiddenSig = document.getElementById('assinatura_foto_data');
+  if (!form || !secao || !canvas || !hiddenSig) return;
+
+  function idadeDeNascimento(str) {
+    if (!str) return null;
+    const p = str.split('-');
+    if (p.length !== 3) return null;
+    const d = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+    if (isNaN(d.getTime())) return null;
+    const t = new Date();
+    let a = t.getFullYear() - d.getFullYear();
+    const m = t.getMonth() - d.getMonth();
+    if (m < 0 || (m === 0 && t.getDate() < d.getDate())) a--;
+    return a;
+  }
+
+  function previewTemFoto() {
+    if (fotoInput && fotoInput.files && fotoInput.files.length) return true;
+    if (form.dataset.alunoTemFoto === '1') return true;
+    const prev = document.getElementById('preview-foto');
+    return prev && prev.tagName === 'IMG';
+  }
+
+  function exigeTratamentoComoMenor() {
+    const raw = dataNasc ? dataNasc.value : '';
+    if (!raw) return true;
+    const idade = idadeDeNascimento(raw);
+    return idade === null || idade < 18;
+  }
+
+  window.atualizarVisibilidadeAutorizacaoFoto = function () {
+    const pendente = secao.dataset.pendente === '1';
+    const mostrar = pendente || (exigeTratamentoComoMenor() && previewTemFoto());
+    if (mostrar) {
+      secao.classList.remove('d-none');
+    } else {
+      secao.classList.add('d-none');
+      hiddenSig.value = '';
+    }
+  };
+
+  if (dataNasc) {
+    dataNasc.addEventListener('change', window.atualizarVisibilidadeAutorizacaoFoto);
+    dataNasc.addEventListener('input', window.atualizarVisibilidadeAutorizacaoFoto);
+  }
+  window.atualizarVisibilidadeAutorizacaoFoto();
+
+  const ctx = canvas.getContext('2d');
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#111';
+
+  function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    const cx = e.clientX !== undefined ? e.clientX : e.touches[0].clientX;
+    const cy = e.clientY !== undefined ? e.clientY : e.touches[0].clientY;
+    return { x: cx - r.left, y: cy - r.top };
+  }
+  let desenhando = false;
+  function start(e) {
+    e.preventDefault();
+    desenhando = true;
+    const p = pos(e);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  }
+  function move(e) {
+    if (!desenhando) return;
+    e.preventDefault();
+    const p = pos(e);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  }
+  function end(e) {
+    if (!desenhando) return;
+    desenhando = false;
+    if (e && e.cancelable) e.preventDefault();
+    hiddenSig.value = canvas.toDataURL('image/png');
+  }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  canvas.addEventListener('mouseup', end);
+  canvas.addEventListener('mouseleave', end);
+  canvas.addEventListener('touchstart', start, { passive: false });
+  canvas.addEventListener('touchmove', move, { passive: false });
+  canvas.addEventListener('touchend', end);
+
+  const btnLimpar = document.getElementById('btn-limpar-assinatura-foto');
+  if (btnLimpar) {
+    btnLimpar.addEventListener('click', function () {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      hiddenSig.value = '';
+    });
+  }
+
+  form.addEventListener('submit', function (ev) {
+    if (secao.classList.contains('d-none')) return;
+    if (secao.dataset.exigeNovoEnvio !== '1') return;
+    const aceite = document.getElementById('autorizacao_foto_aceite');
+    if (!aceite || !aceite.checked) {
+      ev.preventDefault();
+      showToast('Autorização', 'Aceite o termo para armazenar a foto do menor.', 'warning');
+      secao.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    if (!hiddenSig.value || hiddenSig.value.length < 200) {
+      ev.preventDefault();
+      showToast('Assinatura', 'Desenhe a assinatura do responsável no quadro.', 'warning');
+      secao.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+})();
+
+// Permitir buscar com Enter
+document.getElementById('cep').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    buscarCEP();
+  }
+});
+
+function aplicarMascaraCPF(valor) {
+            const apenasDigitos = valor.replace(/\D/g, "").slice(0, 11);
+
+            return apenasDigitos
+                .replace(/(\d{3})(\d)/, "$1.$2")
+                .replace(/(\d{3})(\d)/, "$1.$2")
+                .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+        }
+
+        function aplicarMascaraRG(valor) {
+            // RG no formato: 00.000.000-0 (aceita X no último dígito)
+            const bruto = (valor || "").toUpperCase().replace(/[^0-9X]/g, "");
+            const temXFinal = bruto.endsWith("X");
+            const digitos = bruto.replace(/X/g, "").slice(0, 8); // base do RG (sem dígito verificador)
+            const dv = temXFinal ? "X" : bruto.replace(/[^0-9]/g, "").slice(8, 9); // 9º caractere numérico, se existir
+
+            let out = digitos;
+            if (out.length > 2) out = out.slice(0, 2) + "." + out.slice(2);
+            if (out.length > 6) out = out.slice(0, 6) + "." + out.slice(6);
+            if (dv) out += "-" + dv;
+            return out;
+        }
+
+        function aplicarMascaraDocumento(valor) {
+            const apenasDigitos = (valor || "").replace(/\D/g, "");
+            if (apenasDigitos.length >= 10) {
+                // tende a ser CPF (11 dígitos). Com 10+ já vai “puxar” para CPF enquanto digita.
+                return aplicarMascaraCPF(valor);
+            }
+            return aplicarMascaraRG(valor);
+        }
+
+        // Documentos (CIN/RG/CPF) serão tratados via bindDocumentoCampos()
+
+        function aplicarMascaraEmail(valor) {
+            let s = (valor || "").toLowerCase().replace(/\s/g, "");
+            const partes = s.split("@");
+            if (partes.length > 2) {
+                s = partes[0] + "@" + partes.slice(1).join("");
+            }
+            s = s.replace(/[^a-z0-9@._%+\-.]/g, "");
+            return s;
+        }
+
+        function validarEmail(email) {
+            const s = aplicarMascaraEmail(email);
+            if (!s || s.indexOf("@") === -1) return false;
+
+            const i = s.lastIndexOf("@");
+            const local = s.slice(0, i);
+            const domain = s.slice(i + 1);
+
+            if (!local || !domain || domain.indexOf("@") !== -1) return false;
+            if (!domain.includes(".")) return false;
+
+            const rotuloLocal = /^[a-z0-9](?:[a-z0-9._%+-]*[a-z0-9])?$/;
+            if (!rotuloLocal.test(local)) return false;
+
+            const rotulos = domain.split(".");
+            if (rotulos.length < 2) return false;
+            const rotuloDominio = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+            for (let j = 0; j < rotulos.length; j++) {
+                const r = rotulos[j];
+                if (!r || r.length > 63 || !rotuloDominio.test(r)) return false;
+            }
+
+            const ultimo = rotulos[rotulos.length - 1];
+            if (ultimo.length < 2) return false;
+
+            return true;
+        }
+
+        const campoEmail = document.getElementById("email");
+        const feedbackEmail = document.getElementById("email-feedback");
+
+        function atualizarFeedbackEmail() {
+            const ok = validarEmail(campoEmail.value);
+            campoEmail.classList.toggle("is-invalid", campoEmail.value.length > 0 && !ok);
+            campoEmail.classList.toggle("is-valid", campoEmail.value.length > 0 && ok);
+            if (!campoEmail.value) {
+                feedbackEmail.textContent = "";
+                feedbackEmail.className = "form-text mt-1";
+                return;
+            }
+            if (ok) {
+                feedbackEmail.textContent = "E-mail válido.";
+                feedbackEmail.className = "form-text mt-1 text-success";
+            } else {
+                feedbackEmail.textContent = "Informe um e-mail válido (ex.: nome@empresa.gov.br, nome@provedor.com).";
+                feedbackEmail.className = "form-text mt-1 text-danger";
+            }
+        }
+
+        campoEmail.addEventListener("input", function (event) {
+            event.target.value = aplicarMascaraEmail(event.target.value);
+            atualizarFeedbackEmail();
+        });
+        campoEmail.addEventListener("blur", atualizarFeedbackEmail);
+
+        function aplicarMascaraTelefoneBrasil(valor) {
+            const d = (valor || "").replace(/\D/g, "").slice(0, 11);
+            if (d.length === 0) return "";
+
+            const ddd = d.slice(0, 2);
+            const rest = d.slice(2);
+
+            if (d.length <= 2) {
+                return "(" + ddd;
+            }
+
+            if (d.length <= 6) {
+                return "(" + ddd + ") " + rest;
+            }
+
+            if (d.length <= 10) {
+                return "(" + ddd + ") " + rest.slice(0, 4) + (rest.length > 4 ? "-" + rest.slice(4) : "");
+            }
+
+            return "(" + ddd + ") " + rest.slice(0, 5) + "-" + rest.slice(5);
+        }
+
+        function validarTelefoneBrasil(valor) {
+            const d = (valor || "").replace(/\D/g, "");
+            if (d.length !== 10 && d.length !== 11) return false;
+
+            const ddd = parseInt(d.slice(0, 2), 10);
+            if (Number.isNaN(ddd) || ddd < 11 || ddd > 99) return false;
+
+            if (d.length === 11) {
+                if (d[2] !== "9") return false;
+            } else {
+                if (d[2] === "9") return false;
+            }
+
+            return true;
+        }
+
+        const campoTelefone = document.getElementById("telefone");
+        const feedbackTelefone = document.getElementById("telefone-feedback");
+
+        function atualizarFeedbackTelefone() {
+            const d = campoTelefone.value.replace(/\D/g, "");
+            const ok = validarTelefoneBrasil(campoTelefone.value);
+            campoTelefone.classList.toggle("is-invalid", d.length > 0 && !ok);
+            campoTelefone.classList.toggle("is-valid", ok);
+            if (d.length === 0) {
+                feedbackTelefone.textContent = "";
+                feedbackTelefone.className = "form-text mt-1";
+                return;
+            }
+           
+        }
+
+        campoTelefone.addEventListener("input", function (event) {
+            event.target.value = aplicarMascaraTelefoneBrasil(event.target.value);
+            atualizarFeedbackTelefone();
+        });
+        campoTelefone.addEventListener("blur", atualizarFeedbackTelefone);
+
+
+        function bindEmailCampos() {
+  document.querySelectorAll(".js-email").forEach((el) => {
+    const fb = el.dataset.feedback ? document.querySelector(el.dataset.feedback) : null;
+
+    function atualizar() {
+      const ok = validarEmail(el.value);
+      el.classList.toggle("is-invalid", el.value.length > 0 && !ok);
+      el.classList.toggle("is-valid", el.value.length > 0 && ok);
+
+      if (!fb) return;
+      if (!el.value) {
+        fb.textContent = "";
+        fb.className = "form-text mt-1";
+      } else if (ok) {
+        fb.textContent = "E-mail válido.";
+        fb.className = "form-text mt-1 text-success";
+      } else {
+        fb.textContent = "Informe um e-mail válido.";
+        fb.className = "form-text mt-1 text-danger";
+      }
+    }
+
+    el.addEventListener("input", () => {
+      el.value = aplicarMascaraEmail(el.value);
+      atualizar();
+    });
+    el.addEventListener("blur", atualizar);
+  });
+}
+
+function bindDocumentoCampos() {
+            document.querySelectorAll(".js-documento").forEach((el) => {
+                el.addEventListener("input", () => {
+                    el.value = aplicarMascaraDocumento(el.value);
+                });
+            });
+        }
+
+function bindTelefoneCampos() {
+  document.querySelectorAll(".js-telefone").forEach((el) => {
+    const fb = el.dataset.feedback ? document.querySelector(el.dataset.feedback) : null;
+
+    function atualizar() {
+      const d = el.value.replace(/\D/g, "");
+      const ok = validarTelefoneBrasil(el.value);
+      el.classList.toggle("is-invalid", d.length > 0 && !ok);
+      el.classList.toggle("is-valid", d.length > 0 && ok);
+
+      if (!fb) return;
+      if (d.length === 0) {
+        fb.textContent = "";
+        fb.className = "form-text mt-1";
+      } else if (ok) {
+        fb.textContent = d.length === 11 ? "Celular com DDD." : "Fixo com DDD.";
+        fb.className = "form-text mt-1 text-success";
+      } else {
+        fb.textContent = "Telefone inválido.";
+        fb.className = "form-text mt-1 text-danger";
+      }
+    }
+
+    el.addEventListener("input", () => {
+      el.value = aplicarMascaraTelefoneBrasil(el.value);
+      atualizar();
+    });
+    el.addEventListener("blur", atualizar);
+  });
+}
+
+bindEmailCampos();
+bindDocumentoCampos();
+bindTelefoneCampos();
+
+
+
+</script>
+
+{% endblock %}
+

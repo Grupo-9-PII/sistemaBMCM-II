@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório {{ aluno.nome }} - {{ data_geracao.strftime('%d/%m/%Y') }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Courier New', Courier, monospace; 
+      font-size: 12px; 
+      line-height: 1.5; 
+      color: black; 
+      background: white;
+      margin: 1cm;
+    }
+    .header { text-align: center; margin-bottom: 25px; border-bottom: 3px double black; padding-bottom: 15px; }
+    .header h1 { font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; }
+    .header h2 { font-size: 14px; margin-bottom: 10px; }
+    .info-top { margin-bottom: 25px; font-size: 11px; }
+    .dados-pessoais, .endereco, .responsavel, .escola { margin-bottom: 20px; }
+    .section-title { font-weight: bold; font-size: 13px; text-transform: uppercase; margin-bottom: 8px; border-bottom: 1px solid black; padding-bottom: 3px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+    th, td { border: 1px solid black; padding: 6px 8px; text-align: left; }
+    th { background-color: #e8e8e8; font-weight: bold; width: 35%; font-size: 11px; }
+    .foto { text-align: center; margin: 20px 0; }
+    .foto img { max-width: 120px; max-height: 160px; border: 2px solid black; }
+    .rodape { text-align: center; font-size: 10px; margin-top: 30px; border-top: 2px solid black; padding-top: 15px; color: #333; }
+    @media print { body { margin: 0.5cm; } .foto img { max-width: 100px; max-height: 130px; } }
+  </style>
+</head>
+<body onload="window.print()">
+  <div class="header">
+    <h1>Banda MARCIAL CIDADE DE MARÍLIA - Marília/SP</h1>
+    <h2>RELATÓRIO INDIVIDUAL DE INTEGRANTE</h2>
+  </div>
+
+  <div class="info-top" style="text-align: center; font-size: 11px; margin-bottom: 25px;">
+    <strong>ID: {{ aluno.id }}</strong> | <strong>Status: {{ 'ATIVO' if aluno.ativo else 'INATIVO' }}</strong> | 
+    <strong>Gerado em: {{ data_geracao.strftime('%d/%m/%Y às %H:%M') }}</strong>
+  </div>
+
+  <div class="foto">
+    {% if aluno.foto_path %}
+      <img src="{{ url_for('static', filename=aluno.foto_path) }}" alt="Foto do integrante">
+    {% else %}
+      <div style="width: 120px; height: 160px; border: 2px solid black; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px;">
+        SEM FOTO
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="dados-pessoais">
+    <div class="section-title">DADOS PESSOAIS</div>
+    <table>
+      <tr><th>Nome Completo</th><td>{{ aluno.nome or '-' }}</td></tr>
+      <tr><th>CIN/RG</th><td>{{ aluno.cin_rg or '-' }}</td></tr>
+      <tr><th>Data Nascimento</th><td>{{ aluno.data_nascimento.strftime('%d/%m/%Y') if aluno.data_nascimento else '-' }}</td></tr>
+      <tr><th>Naturalidade</th><td>{{ aluno.naturalidade or '-' }}</td></tr>
+      <tr><th>Email</th><td>{{ aluno.email or '-' }}</td></tr>
+      <tr><th>Telefone</th><td>{{ aluno.telefone or '-' }}</td></tr>
+    </table>
+  </div>
+
+  <div class="endereco">
+    <div class="section-title">ENDEREÇO COMPLETO</div>
+    <table>
+      <tr><th>Endereço</th><td>{{ aluno.endereco or '-' }}{% if aluno.numero %}, {{ aluno.numero }}{% endif %}{% if aluno.complemento %} - {{ aluno.complemento }}{% endif %}</td></tr>
+      <tr><th>Bairro</th><td>{{ aluno.bairro or '-' }}</td></tr>
+      <tr><th>Cidade/UF</th><td>{{ aluno.cidade or '-' }}{% if aluno.estado %}/{{ aluno.estado }}{% endif %}</td></tr>
+      <tr><th>CEP</th><td>{{ aluno.cep or '-' }}</td></tr>
+    </table>
+  </div>
+
+  {% if aluno.responsaveis %}
+  <div class="responsavel">
+    <div class="section-title">RESPONSÁVEIS</div>
+    {% for resp in aluno.responsaveis %}
+    <table style="margin-bottom: 10px;">
+      <tr><th>Nome do Pai</th><td>{{ resp.nome_pai or '-' }}</td></tr>
+      <tr><th>Nome da Mãe</th><td>{{ resp.nome_mae or '-' }}</td></tr>
+      <tr><th>Telefone</th><td>{{ resp.telefone or '-' }}</td></tr>
+      <tr><th>Email</th><td>{{ resp.email or '-' }}</td></tr>
+    </table>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if aluno.escolas %}
+  <div class="escola">
+    <div class="section-title">MATRÍCULA ESCOLAR</div>
+    <table>
+      {% for ae in aluno.escolas %}
+      <tr><th>Escola</th><td>{{ ae.escola.nome or '-' }}</td></tr>
+      <tr><th>Data Matrícula</th><td>{{ ae.data_matricula.strftime('%d/%m/%Y') if ae.data_matricula else '-' }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endif %}
+
+  <div class="rodape">
+    <strong>Sistema de Controle Banda Marcial PM Marília/SP</strong><br>
+    Documento gerado automaticamente em {{ data_geracao.strftime('%d/%m/%Y %H:%M') }}
+  </div>
+</body>
+</html>

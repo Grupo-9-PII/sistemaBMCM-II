@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }} — Sistema PI{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="card">
+        <div class="card-header bg-dark text-white d-flex">
+          <i class="bi {{ 'bi-music-note-plus' if not instrumento else 'bi-music-note-gear' }} me-2 fs-4"></i>
+          <h4 class="mb-0">{{ titulo }}</h4>
+        </div>
+        <div class="card-body">
+          <form method="POST">
+            <div class="row g-4">
+              <!-- Dados Básicos -->
+              <div class="col-12">
+                <h6><i class="bi bi-info-circle"></i> Dados Básicos</h6>
+                <hr>
+              </div>
+              
+              <div class="col-md-6">
+                <label class="form-label">Nome do Instrumento *</label>
+                <input type="text" name="nome" class="form-control" required 
+                       value="{{ instrumento.nome if instrumento else '' }}" placeholder="Ex: Clarinete Bb">
+              </div>
+              
+              <div class="col-md-3">
+                <label class="form-label">Tipo</label>
+                <select name="tipo_id" class="form-select">
+                  <option value="">Selecione...</option>
+                  {% for tipo in tipos_instrumento %}
+                  <option value="{{ tipo.id }}" {% if instrumento and instrumento.tipo_id == tipo.id %}selected{% endif %}>
+                    {{ tipo.nome }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              
+              <div class="col-md-3">
+                <label class="form-label">Naipe</label>
+                <select name="naipe_id" class="form-select">
+                  <option value="">Selecione...</option>
+                  {% for naipe in naipes %}
+                  <option value="{{ naipe.id }}" {% if instrumento and instrumento.naipe_id == naipe.id %}selected{% endif %}>
+                    {{ naipe.nome }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </div>
+              
+              <!-- Detalhes Patrimônio -->
+              <div class="col-12">
+                <h6><i class="bi bi-tag"></i> Patrimônio e Estado</h6>
+                <hr>
+              </div>
+              
+              <div class="col-md-3">
+                <label class="form-label">Patrimônio (único)</label>
+                <input type="text" name="patrimonio" class="form-control" 
+                       value="{{ instrumento.patrimonio if instrumento else '' }}" placeholder="PAT-001">
+              </div>
+              
+              <div class="col-md-3">
+                <label class="form-label">Marca</label>
+                <input type="text" name="marca" class="form-control" 
+                       value="{{ instrumento.marca if instrumento else '' }}" placeholder="Yamaha">
+              </div>
+              
+              <div class="col-md-3">
+                <label class="form-label">Modelo</label>
+                <input type="text" name="modelo" class="form-control" 
+                       value="{{ instrumento.modelo if instrumento else '' }}" placeholder="YCL-255">
+              </div>
+              
+              <div class="col-md-3">
+                <label class="form-label">Estado</label>
+                <select name="estado" class="form-select">
+                  <option value="">Selecione...</option>
+                  <option value="Novo" {% if instrumento and instrumento.estado == 'Novo' %}selected{% endif %}>Novo</option>
+                  <option value="Bom" {% if instrumento and instrumento.estado == 'Bom' %}selected{% endif %}>Bom</option>
+                  <option value="Regular" {% if instrumento and instrumento.estado == 'Regular' %}selected{% endif %}>Regular</option>
+                  <option value="Ruim" {% if instrumento and instrumento.estado == 'Ruim' %}selected{% endif %}>Ruim</option>
+                </select>
+              </div>
+              
+              <div class="col-md-6">
+                <label class="form-label">Data de Aquisição</label>
+                <input type="date" name="data_aquisicao" class="form-control" 
+                       value="{{ instrumento.data_aquisicao if instrumento else '' }}">
+              </div>
+              
+              <div class="col-md-6">
+                <label class="form-label">Observações</label>
+                <textarea name="observacoes" class="form-control" rows="3">{{ instrumento.observacoes if instrumento else '' }}</textarea>
+              </div>
+              
+              <!-- Links úteis >
+              <div class="col-12">
+                <div class="d-flex gap-2">
+                  <a href="{{ url_for('main.listar_tipos') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-plus-circle"></i> Gerenciar Tipos
+                  </a>
+                  <a href="{{ url_for('main.listar_naipes') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-plus-circle"></i> Gerenciar Naipes
+                  </a>
+                </div>
+              </div-->
+            </div>
+            
+            <!-- Botões -->
+            <div class="d-grid gap-2 mt-5">
+              <button type="submit" class="btn btn-dark btn-lg">
+                <i class="bi {{ 'bi-check-lg' if not instrumento else 'bi-save' }}"></i>
+                {{ 'Cadastrar' if not instrumento else 'Salvar' }}
+              </button>
+              <a href="{{ url_for('main.listar_instrumentos') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Cancelar
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% block title %}Configurações — Sistema PI{% endblock %}
+
+{% block content %}
+<div class="container mt-5 fade-in">
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h2><i class="bi bi-gear me-2"></i>Configurações do Sistema</h2>
+      <p class="text-white">Gerencie as configurações gerais do sistema</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+      <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-2"></i>Voltar ao Dashboard
+      </a>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <div class="card bg-dark bg-opacity-50 border-secondary">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col-md-3 text-center mb-3 mb-md-0">
+              <img src="{{ url_for('static', filename=system_settings.get('login_logo_path', 'imgs/logo.jpeg')) }}" alt="Logo da Banda" class="img-fluid rounded-circle border border-light" style="max-width: 120px;">
+            </div>
+            <div class="col-md-9">
+              <p class="mb-1"><strong>Título de login:</strong> {{ system_settings.get('login_title', 'Sistema de Controle') }}</p>
+              <p class="mb-1"><strong>Subtítulo de login:</strong> {{ system_settings.get('login_subtitle', 'Banda Marcial Cidade de Marília') }}</p>
+              <p class="mb-1"><strong>Backup atual:</strong> {{ system_settings.get('backup_folder', 'instance/backups') }}</p>
+              <p class="mb-0"><strong>Upload máximo:</strong> {{ system_settings.get('upload_maximo', '50') }} MB • <strong>Retenção de logs:</strong> {{ system_settings.get('log_retention_days', '30') }} dias</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Abas de Configurações -->
+  <div class="card">
+    <div class="card-header bg-dark text-white">
+      <ul class="nav nav-tabs card-header-tabs" id="configTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" id="personalizacao-tab" data-bs-toggle="tab" data-bs-target="#personalizacao" type="button" role="tab" aria-controls="personalizacao" aria-selected="true">
+            <i class="bi bi-palette me-1"></i>Personalização
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="seguranca-tab" data-bs-toggle="tab" data-bs-target="#seguranca" type="button" role="tab" aria-controls="seguranca" aria-selected="false">
+            <i class="bi bi-shield-lock me-1"></i>Segurança
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="info-status-tab" data-bs-toggle="tab" data-bs-target="#info-status" type="button" role="tab" aria-controls="info-status" aria-selected="false">
+            <i class="bi bi-info-circle me-1"></i>Info/Status
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="sistema-manutencao-tab" data-bs-toggle="tab" data-bs-target="#sistema-manutencao" type="button" role="tab" aria-controls="sistema-manutencao" aria-selected="false">
+            <i class="bi bi-tools me-1"></i>Sistema/Manutenção
+          </button>
+        </li>
+      </ul>
+    </div>
+    <div class="card-body">
+      <div class="tab-content" id="configTabsContent">
+        <!-- Aba Personalização -->
+        <div class="tab-pane fade show active" id="personalizacao" role="tabpanel" aria-labelledby="personalizacao-tab">
+          <h5>Personalização do Sistema</h5>
+          <p>Configure o visual e o texto das telas do sistema.</p>
+          <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+              <label for="logo-banda" class="form-label">Logo da Banda (tela de login)</label>
+              <input class="form-control" type="file" id="logo-banda" name="logo_banda" accept="image/*">
+            </div>
+            <div class="mb-3">
+              <label for="login-titulo" class="form-label">Título da Tela de Login</label>
+              <input type="text" name="login_titulo" class="form-control" id="login-titulo" value="{{ system_settings.get('login_title', 'Sistema de Controle') }}" placeholder="Digite o título da tela de login">
+            </div>
+            <div class="mb-3">
+              <label for="login-subtitulo" class="form-label">Subtítulo da Tela de Login</label>
+              <input type="text" name="login_subtitulo" class="form-control" id="login-subtitulo" value="{{ system_settings.get('login_subtitle', 'Banda Marcial Cidade de Marília') }}" placeholder="Digite o subtítulo da tela de login">
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="cor-accent" class="form-label">Cor do Tema (accent)</label>
+                <input type="color" name="cor-accent" class="form-control form-control-color" id="cor-accent" value="{{ system_settings.get('theme_accent', '#0d6efd') }}" title="Escolha a cor de destaque">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="cor-fundo" class="form-label">Cor do Fundo do Tema</label>
+                <input type="color" name="cor-fundo" class="form-control form-control-color" id="cor-fundo" value="{{ system_settings.get('theme_bg', '#121212') }}" title="Escolha a cor de fundo">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="cor-navbar" class="form-label">Cor da Barra de Navegação</label>
+                <input type="color" name="cor-navbar" class="form-control form-control-color" id="cor-navbar" value="{{ system_settings.get('navbar_bg', '#343a40') }}" title="Escolha a cor da barra de navegação">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="cor-superficie" class="form-label">Cor da Superfície</label>
+                <input type="color" name="cor-superficie" class="form-control form-control-color" id="cor-superficie" value="{{ system_settings.get('surface_bg', '#1f1f1f') }}" title="Escolha a cor de superfícies do layout">
+              </div>
+            </div>
+            <hr>
+            <h6>Personalização das Abas</h6>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="cor-texto-aba-ativa" class="form-label">Cor do Texto da Aba Ativa</label>
+                <input type="color" name="cor-texto-aba-ativa" class="form-control form-control-color" id="cor-texto-aba-ativa" value="{{ system_settings.get('tab_active_text', '#ffffff') }}">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="cor-fundo-aba-ativa" class="form-label">Cor do Fundo da Aba Ativa</label>
+                <input type="color" name="cor-fundo-aba-ativa" class="form-control form-control-color" id="cor-fundo-aba-ativa" value="{{ system_settings.get('tab_active_bg', '#0d6efd') }}">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label for="cor-texto-aba-inativa" class="form-label">Cor do Texto da Aba Inativa</label>
+                <input type="color" name="cor-texto-aba-inativa" class="form-control form-control-color" id="cor-texto-aba-inativa" value="{{ system_settings.get('tab_inactive_text', '#adb5bd') }}">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="cor-fundo-aba-inativa" class="form-label">Cor do Fundo da Aba Inativa</label>
+                <input type="color" name="cor-fundo-aba-inativa" class="form-control form-control-color" id="cor-fundo-aba-inativa" value="{{ system_settings.get('tab_inactive_bg', '#212529') }}">
+              </div>
+            </div>
+            <div class="mb-3">
+              <label for="texto-rodape" class="form-label">Texto de Rodapé</label>
+              <input type="text" name="texto-rodape" class="form-control" id="texto-rodape" value="{{ system_settings.get('footer_text', 'Grupo 9 — DPR7 - UNIVESP') }}" placeholder="Digite o texto do rodapé">
+            </div>
+            <div class="mb-3">
+              <label for="texto-versao" class="form-label">Texto de Versão</label>
+              <input type="text" name="texto-versao" class="form-control" id="texto-versao" value="{{ system_settings.get('version_text', 'Versão 1.0 - Junho de 2026') }}" placeholder="Ex: v1.0.0 - Versão Estável">
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Personalização</button>
+          </form>
+        </div>
+
+        <!-- Aba Segurança -->
+        <div class="tab-pane fade" id="seguranca" role="tabpanel" aria-labelledby="seguranca-tab">
+          <h5>Configurações de Segurança</h5>
+          <p>Gerencie configurações relacionadas à segurança do sistema.</p>
+          <form method="POST">
+            <div class="mb-3">
+              <label for="timeout-sessao" class="form-label text-white">Timeout de Sessão (minutos)</label>
+              <input type="number" name="timeout-sessao" class="form-control" id="timeout-sessao" value="{{ system_settings.get('session_timeout_minutes', '30') }}" min="5" max="480">
+            </div>
+            <div class="mb-3">
+              <label for="tentativas-login" class="form-label text-white">Máximo de Tentativas de Login</label>
+              <input type="number" name="tentativas-login" class="form-control" id="tentativas-login" value="{{ system_settings.get('login_attempts_limit', '5') }}" min="3" max="10">
+            </div>
+            <div class="mb-3">
+              <label for="complexidade-senha" class="form-label text-white">Requisitos de Complexidade da Senha</label>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="req-minuscula" id="req-minuscula" {{ 'checked' if system_settings.get('password_lower', '1') == '1' else '' }}>
+                <label class="form-check-label text-white" for="req-minuscula">Pelo menos uma letra minúscula</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="req-maiuscula" id="req-maiuscula" {{ 'checked' if system_settings.get('password_upper', '1') == '1' else '' }}>
+                <label class="form-check-label text-white" for="req-maiuscula">Pelo menos uma letra maiúscula</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="req-numero" id="req-numero" {{ 'checked' if system_settings.get('password_number', '1') == '1' else '' }}>
+                <label class="form-check-label text-white" for="req-numero">Pelo menos um número</label>
+              </div>
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="req-simbolo" id="req-simbolo" {{ 'checked' if system_settings.get('password_symbol', '0') == '1' else '' }}>
+                <label class="form-check-label text-white" for="req-simbolo">Pelo menos um símbolo especial</label>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Salvar Configurações de Segurança</button>
+          </form>
+        </div>
+
+        <!-- Aba Info/Status -->
+        <div class="tab-pane fade" id="info-status" role="tabpanel" aria-labelledby="info-status-tab">
+          <h5>Informações e Status do Sistema</h5>
+          <p>Visualize informações sobre o status atual do sistema.</p>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-header">Versão do Sistema</div>
+                <div class="card-body">
+                  <p class="mb-0">Sistema de Controle de Banda Marcial v1.0.0</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-header">Status do Banco de Dados</div>
+                <div class="card-body">
+                  <p class="mb-1"><strong>Conexão:</strong> <span class="badge bg-success">Ativa</span></p>
+                  <p class="mb-1"><strong>Último Backup:</strong> 2024-01-15 10:30</p>
+                  <p class="mb-0"><strong>Tamanho:</strong> 2.5 MB</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-header">Estatísticas Gerais</div>
+                <div class="card-body">
+                  <p class="mb-1"><strong>Total de Usuários:</strong> 5</p>
+                  <p class="mb-1"><strong>Total de Integrantes:</strong> 120</p>
+                  <p class="mb-1"><strong>Total de Instrumentos:</strong> 45</p>
+                  <p class="mb-0"><strong>Espaço em Disco:</strong> 85% usado</p>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-header">Últimas Atividades</div>
+                <div class="card-body text-white">
+                  <ul class="list-unstyled">
+                    <li><small class="text-white">2024-01-15 14:20 - Backup realizado</small></li>
+                    <li><small class="text-white">2024-01-15 12:45 - Novo usuário criado</small></li>
+                    <li><small class="text-white">2024-01-15 11:30 - Integrante editado</small></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aba Sistema/Manutenção -->
+        <div class="tab-pane fade" id="sistema-manutencao" role="tabpanel" aria-labelledby="sistema-manutencao-tab">
+          <h5>Manutenção do Sistema</h5>
+          <p>Execute tarefas de manutenção e limpeza do sistema.</p>
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Atenção:</strong> Algumas operações podem afetar o funcionamento do sistema. Execute com cuidado.
+          </div>
+          <form method="POST" enctype="multipart/form-data">
+            <div class="row mb-3">
+              <div class="col-md-4">
+                <label for="upload-maximo" class="form-label">Tamanho Máximo de Upload (MB)</label>
+                <input type="number" name="upload-maximo" class="form-control" id="upload-maximo" value="{{ system_settings.get('upload_maximo', '50') }}" min="1" max="10240">
+              </div>
+              <div class="col-md-4">
+                <label for="pasta-backup" class="form-label">Pasta de Backup</label>
+                <input type="text" name="pasta-backup" class="form-control" id="pasta-backup" value="{{ system_settings.get('backup_folder', 'instance/backups') }}" placeholder="Caminho da pasta de backup">
+              </div>
+              <div class="col-md-4">
+                <label for="log-retencao" class="form-label">Manutenção de Logs (dias)</label>
+                <input type="number" name="log-retencao" class="form-control" id="log-retencao" value="{{ system_settings.get('log_retention_days', '30') }}" min="1" max="365">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary mb-4">Salvar Configurações de Manutenção</button>
+          </form>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-header">Limpeza de Cache</div>
+                <div class="card-body">
+                  <p>Limpe caches temporários do sistema para melhorar performance.</p>
+                  <form action="{{ url_for('main.limpar_cache') }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-warning">Limpar Cache</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-header">Verificação de Integridade</div>
+                <div class="card-body">
+                  <p>Verifique a integridade dos dados e estruturas do banco.</p>
+                  <form action="{{ url_for('main.verificar_integridade') }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-info">Executar Verificação</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-header">Reindexação de Banco</div>
+                <div class="card-body">
+                  <p>Reindexe tabelas do banco para otimizar consultas.</p>
+                  <form action="{{ url_for('main.reindexar_banco') }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-secondary">Reindexar</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card mb-3">
+                <div class="card-header">Logs do Sistema</div>
+                <div class="card-body">
+                  <p>Visualize e gerencie logs de sistema e erros.</p>
+                  <a href="{{ url_for('main.logs_hard_delete_alunos') }}" class="btn btn-outline-primary">Ver Logs</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Inicializar tooltips se necessário
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

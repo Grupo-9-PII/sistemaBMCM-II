@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }} — Sistema PI{% endblock %}
+{% block content %}
+
+<div class="container mt-5 fade-in">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-dark text-white d-flex align-items-center">
+          <i class="bi {{ 'bi-person-plus' if not usuario else 'bi-person-gear' }} me-2"></i>
+          <h4 class="mb-0">{{ titulo }}</h4>
+        </div>
+        <div class="card-body">
+          <form method="POST">
+<div class="mb-4">
+              <label class="form-label">
+                <i class="bi bi-person me-2"></i>Usuário
+              </label>
+              {% if not usuario %}
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="bi bi-person-fill"></i>
+                </span>
+                <input type="text" name="username" id="username" class="form-control" 
+                       value="{{ usuario.username if usuario else '' }}" required>
+              </div>
+              {% else %}
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="bi bi-person-fill"></i>
+                </span>
+                <input type="text" name="username" id="username" class="form-control" 
+                       value="{{ usuario.username }}" readonly style="background-color: #050505;">
+              </div>
+              <small class="text-muted mt-1 d-block">
+                <i class="bi bi-info-circle me-1"></i>
+                Username não pode ser alterado para preservar o acesso do usuário.
+              </small>
+              {% endif %}
+            </div>
+
+            <div class="mb-4">
+              <label for="password" class="form-label">
+                <i class="bi bi-lock me-2"></i>
+                {% if usuario %}
+                  Nova Senha
+                {% else %}
+                  Senha
+                {% endif %}
+              </label>
+              <div class="input-group">
+                <span class="input-group-text">
+                  <i class="bi bi-lock-fill"></i>
+                </span>
+                <input type="password" name="password" id="password" class="form-control"
+                       {% if not usuario %}required{% endif %}
+                       placeholder="{{ 'Deixe em branco para manter a atual' if usuario else 'Mínimo 6 caracteres' }}">
+              </div>
+              {% if usuario %}
+              <small class="text-muted">Se preenchida, o usuário precisará trocar a senha no próximo login.</small>
+              {% endif %}
+            </div>
+
+            <div class="mb-4 form-check form-switch">
+              <input type="checkbox" name="is_admin" id="is_admin" class="form-check-input"
+                     {% if usuario and usuario.is_admin %}checked{% endif %}>
+              <label for="is_admin" class="form-check-label text-white">
+                <i class="bi bi-shield-check me-1"></i>
+                Usuário Administrador
+              </label>
+            </div>
+
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-dark btn-lg">
+                <i class="bi {{ 'bi-check2-circle' if not usuario else 'bi-save' }} me-2"></i>
+                {% if usuario %}
+                  Salvar Alterações
+                {% else %}
+                  Criar Usuário
+                {% endif %}
+              </button>
+              <a href="{{ url_for('main.listar_usuarios') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Cancelar
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+

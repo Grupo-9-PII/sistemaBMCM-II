@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Relatório {{ aluno.nome }} — Sistema PI{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="d-flex justify-content-between mb-4">
+    <h2>Relatório Individual: {{ aluno.nome }}</h2>
+    <button onclick="window.print()" class="btn btn-primary">
+      <i class="bi bi-printer"></i> Imprimir
+    </button>
+  </div>
+
+  <div class="row">
+    <div class="col-md-8">
+      <div class="card">
+        <div class="card-header">
+          <h5>Dados Pessoais</h5>
+        </div>
+        <div class="card-body">
+          <table class="table table-borderless">
+            <tr><td><strong>ID:</strong></td><td>{{ aluno.id }}</td></tr>
+            <tr><td><strong>Nome:</strong></td><td>{{ aluno.nome }}</td></tr>
+            <tr><td><strong>CIN/RG:</strong></td><td>{{ aluno.cin_rg or '-' }}</td></tr>
+            <tr><td><strong>Email:</strong></td><td>{{ aluno.email or '-' }}</td></tr>
+            <tr><td><strong>Telefone:</strong></td><td>{{ aluno.telefone or '-' }}</td></tr>
+            <tr><td><strong>Escola:</strong></td><td>{{ aluno.escolas[0].escola.nome if aluno.escolas else '-' }}</td></tr>
+            <tr><td><strong>Data Entrada Banda:</strong></td><td>{{ aluno.data_entrada_banda.strftime('%d/%m/%Y') if aluno.data_entrada_banda else '-' }}</td></tr>
+            <tr><td><strong>Data Desligamento Banda:</strong></td><td>{{ aluno.data_desligamento_banda.strftime('%d/%m/%Y') if aluno.data_desligamento_banda else '-' }}</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      {% if aluno.foto_path %}
+      <img src="{{ url_for('static', filename=aluno.foto_path) }}" class="img-fluid rounded" alt="Foto">
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

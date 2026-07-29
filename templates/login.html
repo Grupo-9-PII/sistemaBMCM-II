@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="login-container d-flex justify-content-center align-items-center">
+  <div class="login-card shadow-lg fade-in">
+    <div class="text-center mb-4">
+      <div class="mb-3">
+        <span class="d-inline-flex align-items-center justify-content-center rounded-circle bg-dark bg-opacity-75 p-3 overflow-hidden">
+          <img src="{{ url_for('static', filename=system_settings.get('login_logo_path', 'imgs/logo.jpeg')) }}" alt="Banda Marcial" class="rounded-circle d-block" width="60" height="60" style="object-fit: cover;">
+          <!--i class="bi bi-mortarboard-fill" style="font-size: 2.4rem; color: #38bdf8;"></i-->
+        </span>
+      </div>
+      <h3 class="mt-2 mb-1">{{ system_settings.get('login_title', 'Sistema de Controle') }}</h3>
+      <p class="login-subtitle mb-0">{{ system_settings.get('login_subtitle', 'Banda Marcial Cidade de Marília') }}</p>
+    </div>
+
+    <form method="POST">
+      <div class="mb-3">
+        <label class="form-label">
+          <i class="bi bi-person me-2"></i>Usuário
+        </label>
+        <div class="input-group">
+          <span class="input-group-text bg-dark bg-opacity-25 border-0 text-light">
+            <i class="bi bi-person-fill"></i>
+          </span>
+          <input type="text" name="username" class="form-control" placeholder="Digite seu usuário" required autofocus>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label">
+          <i class="bi bi-lock me-2"></i>Senha
+        </label>
+        <div class="input-group">
+          <span class="input-group-text bg-dark bg-opacity-25 border-0 text-light">
+            <i class="bi bi-lock-fill"></i>
+          </span>
+          <input type="password" name="password" class="form-control" placeholder="Digite sua senha" required>
+        </div>
+      </div>
+
+      <div class="d-grid">
+        <button type="submit" class="btn btn-dark btn-lg">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Entrar
+        </button>
+      </div>
+    </form>
+
+    <div class="text-center mt-4">
+      <small class="login-subtitle">
+        {{ system_settings.get('footer_text', 'Grupo 9 — DPR7 - UNIVESP') }}<br>{{ system_settings.get('version_text', 'Versão 1.0 - Junho de 2026') }}
+      </small>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+

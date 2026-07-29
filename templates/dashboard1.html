@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Inicial — Sistema de Controle{% endblock %}
+{% block content %}
+
+<div class="container mt-5 fade-in">
+  <div class="row">
+    <div class="col-12">
+      <div class="dashboard-card mb-4">
+        <div class="d-flex align-items-center">
+          <div class="me-4">
+            <i class="bi bi-person-circle" style="font-size: 4rem; color: #1a1a2e;"></i>
+          </div>
+          <div>
+            <h2 class="mb-1">Bem-vindo, {{ current_user.username }}!</h2>
+            <p class="text-muted mb-0">Você está logado no Sistema de Controle da Banda Marcial Cidade de </p>
+            {% if current_user.is_admin %}
+              <span class="badge bg-primary mt-2">
+                <i class="bi bi-shield-check me-1"></i>Administrador
+              </span>
+            {% else %}
+              <span class="badge bg-secondary mt-2">
+                <i class="bi bi-person me-1"></i>Usuário
+              </span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-5">
+    <!-- Stats Cards - Bootstrap Icons + Dark theme match -->
+    <div class="col-lg-3 col-md-6">
+      <div class="card bg-dark text-white h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-people-fill" style="font-size: 3rem; color: #0dcaf0;"></i>
+          <h5 class="card-title mt-2">Alunos</h5>
+          <h3 class="mb-0">{{ stats.total_alunos }}</h3>
+          <small class="text-info">{{ stats.alunos_ativos }} ativos</small>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card bg-dark text-white h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-building" style="font-size: 3rem; color: #198754;"></i>
+          <h5 class="card-title mt-2">Escolas</h5>
+          <h3 class="mb-0">{{ stats.total_escolas }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card bg-dark text-white h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-music-note-beamed" style="font-size: 3rem; color: #ffc107;"></i>
+          <h5 class="card-title mt-2">Instrumentos</h5>
+          <h3 class="mb-0">{{ stats.instrumentos_ativos }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card bg-dark text-white h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-person-check" style="font-size: 3rem; color: #0d6efd;"></i>
+          <h5 class="card-title mt-2">Usuários</h5>
+          <h3 class="mb-0">{{ stats.usuarios }}</h3>
+          <small class="text-primary">{{ stats.usuarios_admin }} admins</small>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+     <!-- Cards disponíveis para todos os usuários logados -->
+     <div class="col-lg-3 col-md-6">
+        <div class="card bg-dark text-white h-100">
+          <div class="card-body text-center">
+            <i class="bi bi-people-fill" style="font-size: 3rem; color: #667eea;"></i>
+            <h6 class="mt-3 mb-2">{% if current_user.is_admin %}Usuários{% else %}Integrantes{% endif %}</h6>
+            <p class="text-muted mb-3">{% if current_user.is_admin %}Gerencie usuários do sistema{% else %}Gerencie integrantes da banda{% endif %}</p>
+            <a href="{{ url_for('main.listar_alunos') }}" class="btn btn-primary w-100">Acessar</a>
+          </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+       <div class="card bg-dark text-white h-100">
+           <div class="card-body text-center">
+              <i class="bi bi-building" style="font-size: 3rem; color: #198754;"></i>
+              <h6 class="mt-3 mb-2">Escolas</h6>
+              <p class="text-muted mb-3">Gerencie escolas parceiras</p>
+              <a href="{{ url_for('main.listar_escolas') }}" class="btn btn-success w-100">Acessar</a>
+           </div>
+        </div> 
+    </div>
+    <div class="col-lg-3 col-md-6">
+       <div class="card bg-dark text-white h-100">
+           <div class="card-body text-center">
+              <i class="bi bi-music-note-list" style="font-size: 3rem; color: #ffc107;"></i>
+              <h6 class="mt-3 mb-2">Instrumentos</h6>
+              <p class="text-muted mb-3">Patrimônio musical</p>
+              <a href="{{ url_for('main.listar_instrumentos') }}" class="btn btn-warning w-100">Acessar</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card bg-dark text-white h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-file-earmark-text" style="font-size: 3rem; color: #0dcaf0;"></i>
+          <h6 class="mt-3 mb-2">Relatórios</h6>
+          <p class="text-muted mb-3">Gere relatórios dos dados</p>
+          <a href="{{ url_for('main.relatorios_alunos') }}" class="btn btn-info w-100">
+            Acessar
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card bg-dark text-white h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-shield-lock" style="font-size: 3rem; color: #6f42c1;"></i>
+          <h6 class="mt-3 mb-2">Senha</h6>
+          <p class="text-muted mb-3">Altere sua senha</p>
+          <a href="{{ url_for('auth.change_password') }}" class="btn btn-outline-light w-100">
+            Alterar
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-3 col-md-6">
+      <div class="card bg-dark text-white h-100">
+        <div class="card-body text-center">
+          <i class="bi-c-circle" style="font-size: 3rem; color: #795c5f;"></i>
+          <h6 class="mt-3 mb-2">UNIVESP PI1</h6>
+          <p class="mt-3 mb-2">Grupo 9 - DPR7</p>   
+           <a href="{{ url_for('main.creditos') }}" class="btn btn-creditos w-100">
+            CopyRight
+            </a>
+        </div>
+      </div>
+    </div>
+    <!--div class="col-lg-3 col-md-6">
+      <div class="card bg-dark text-white h-100">
+        <div class="card-body text-center">
+          <i class="bi bi-gear" style="font-size: 3rem; color: #fd7e14;"></i>
+          <h6 class="mt-3 mb-2">Configurações</h6>
+          <p class="text-muted mb-3">Seeds + Migrations</p>
+          <a href="#" class="btn btn-secondary w-100" onclick="alert('Seeds executados no startup!')">
+            Status
+          </a>
+        </div>
+      </div>
+    </div--->
+  </div>
+</div>
+
+{% endblock %}
+

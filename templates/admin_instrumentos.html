@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}Gerenciar Instrumentos — Sistema PI{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5 fade-in">
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h2><i class="bi bi-music-note-beamed me-2"></i>Gerenciamento de Instrumentos</h2>
+      <p class="text-white">Controle do patrimônio musical da banda</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+      {% if current_user.is_admin %}
+      <a href="{{ url_for('main.criar_instrumento') }}" class="btn btn-success">
+        <i class="bi bi-plus-circle me-2"></i>Novo Instrumento
+      </a>
+      {% endif %}
+    </div>
+     <!-- Links úteis -->
+              <div class="col-md-4 text-md-end">
+                <div class="d-flex gap-2">
+                  <a href="{{ url_for('main.listar_tipos') }}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-plus-circle"></i> Gerenciar Tipos
+                  </a>
+                  <a href="{{ url_for('main.listar_naipes') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-plus-circle"></i> Gerenciar Naipes
+                  </a>
+                </div>
+              </div>
+            </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <form method="GET" action="{{ url_for('main.listar_instrumentos') }}" class="row g-3">
+        <div class="col-md-4">
+          <label for="busca" class="form-label">Buscar por nome</label>
+          <input type="text" name="busca" id="busca" class="form-control" value="{{ busca }}" placeholder="Flauta...">
+        </div>
+        <div class="col-md-3">
+          <label for="ativo" class="form-label">Status</label>
+          <select name="ativo" id="ativo" class="form-select">
+            <option value="">Todos</option>
+            <option value="1" {% if ativo_filter == '1' %}selected{% endif %}>Ativos</option>
+            <option value="0" {% if ativo_filter == '0' %}selected{% endif %}>Inativos</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label for="tipo_id" class="form-label">Tipo</label>
+          <select name="tipo_id" id="tipo_id" class="form-select">
+            <option value="">Todos tipos</option>
+            {% for tipo in tipos_instrumento %}
+            <option value="{{ tipo.id }}" {% if tipo_filter == tipo.id|string %}selected{% endif %}>{{ tipo.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2 d-flex align-items-end">
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-search me-2"></i>Filtrar
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-dark table-striped table-hover mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>ID</th>
+              <th>Instrumento</th>
+              <th>Tipo</th>
+              <th>Naipe</th>
+              <th>Patrimônio</th>
+              <th>Marca/Modelo</th>
+              <th>Estado</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for inst in instrumentos %}
+            <tr>
+              <td><span class="badge bg-secondary">{{ inst.id }}</span></td>
+              <td><strong>{{ inst.nome }}</strong></td>
+              <td>{{ inst.tipo.nome if inst.tipo else '-' }}</td>
+              <td>{{ inst.naipe.nome if inst.naipe else '-' }}</td>
+              <td><code>{{ inst.patrimonio or '-' }}</code></td>
+              <td>
+                {{ inst.marca or '' }} {{ inst.modelo or '' }}<br>
+                <small class="text-muted">
+                  {{ inst.data_aquisicao.strftime('%d/%m/%Y') if inst.data_aquisicao else '-' }}
+                </small>
+              </td>
+              <td>
+                <span class="badge {{ 'bg-success' if inst.estado == 'Novo' else 'bg-warning' if inst.estado == 'Bom' else 'bg-info' if inst.estado == 'Regular' else 'bg-danger' }}">
+                  {{ inst.estado or 'Não definido' }}
+                </span>
+              </td>
+              <td>
+                {% if inst.ativo %}
+                  <span class="badge bg-success"><i class="bi bi-check-circle"></i> Ativo</span>
+                {% else %}
+                  <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Inativo</span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="btn-group">
+                  <a href="{{ url_for('main.editar_instrumento', instrumento_id=inst.id) }}" class="btn btn-sm btn-primary" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  <a href="{{ url_for('main.toggle_instrumento', instrumento_id=inst.id) }}" 
+                     class="btn btn-sm {{ 'btn-warning' if inst.ativo else 'btn-success' }}" title="Ativar/Desativar">
+                    <i class="bi {{ 'bi-pause-circle' if inst.ativo else 'bi-play-circle' }}"></i>
+                  </a>
+                  <form action="{{ url_for('main.excluir_instrumento', instrumento_id=inst.id) }}" method="POST" style="display:inline">
+                    <button class="btn btn-sm btn-danger" onclick="return confirm('Excluir {{ inst.nome }}?')" title="Excluir">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="9" class="text-center py-5">
+                
+                <i class="bi bi-music-note-list text-muted" style="font-size: 4rem;"></i>
+                <h5>Nenhum instrumento cadastrado</h5>
+                <a href="{{ url_for('main.criar_instrumento') }}" class="btn btn-primary mt-3">
+                  <i class="bi bi-plus-circle"></i> Cadastrar Primeiro Instrumento
+                </a>
+                
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <div class="mt-3 text-muted">
+    Total: {{ instrumentos|length }} instrumentos
+  </div>
+</div>
+
+{% endblock %}
+

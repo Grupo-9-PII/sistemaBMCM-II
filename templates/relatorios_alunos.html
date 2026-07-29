@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+{% block title %}Relatórios de Integrantes — Sistema PI{% endblock %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<div class="container mt-5 fade-in">
+<div class="row mb-4">
+    <div class="col-md-7">
+      <h2><i class="bi bi-file-earmark-texts me-2"></i>Relatórios de Integrantes</h2>
+      <p class="text-muted">Gere relatórios detalhados da banda marcial</p>
+    </div>
+    <div class="col-md-5 text-end">
+      <button onclick="downloadPDF('relatorios-alunos')" class="btn btn-danger">
+        <i class="bi bi-file-earmark-pdf me-2"></i>Baixar PDF
+      </button>
+    </div>
+  </div>
+    <div class="col-md-4 text-md-end">
+      <a href="{{ url_for('main.listar_alunos') }}" class="btn btn-outline-secondary me-2">
+        <i class="bi bi-arrow-left me-2"></i>Voltar aos Integrantes
+      </a>
+    </div>
+  </div>
+
+  <!-- Cards de Estatísticas -->
+  <div class="row g-4 mb-5">
+    <div class="col-md-3">
+      <div class="card text-center h-100">
+        <div class="card-body">
+          <i class="bi bi-people-fill" style="font-size: 3rem; color: #667eea;"></i>
+          <h3 class="card-title mt-3">{{ total_ativos or 0 }}</h3>
+          <p class="card-text text-muted">Integrantes Ativos</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center h-100">
+        <div class="card-body">
+          <i class="bi bi-calendar-x" style="font-size: 3rem; color: #f5576c;"></i>
+          <h3 class="card-title mt-3">{{ total_inativos or 0 }}</h3>
+          <p class="card-text text-muted">Inativos</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center h-100">
+        <div class="card-body">
+          <i class="bi bi-people" style="font-size: 3rem; color: #00b894;"></i>
+          <h3 class="card-title mt-3">{{ total_alunos or 0 }}</h3>
+          <p class="card-text text-muted">Total Cadastrados</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center h-100">
+        <div class="card-body">
+          <i class="bi bi-file-earmark-pdf" style="font-size: 3rem; color: #ff6b6b;"></i>
+          <h3 class="card-title mt-3">2</h3>
+          <p class="card-text text-muted">Tipos de Relatório</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botões Rápidos de Relatórios -->
+  <div class="row mb-5">
+    <div class="col-md-6 mb-3">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center">
+          <i class="bi bi-table" style="font-size: 4rem; color: #28a745;"></i>
+          <h4 class="card-title mt-3">Relatório Geral</h4>
+          <p class="card-text">Lista completa de todos os integrantes ativos com dados completos</p>
+          <a href="{{ url_for('main.relatorio_geral_alunos') }}" class="btn btn-success btn-lg">
+            <i class="bi bi-download me-2"></i>Gerar Relatório Geral
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6 mb-3">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body text-center">
+          <i class="bi bi-file-earmark-person" style="font-size: 4rem; color: #007bff;"></i>
+          <h4 class="card-title mt-3">Relatório Individual</h4>
+          <p class="card-text">Relatório detalhado de um integrante específico</p>
+          <a href="#recentes" class="btn btn-primary btn-lg">
+            <i class="bi bi-search me-2"></i>Selecionar Integrante
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Integrantes Recentes -->
+  {% if alunos %}
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0">
+        <i class="bi bi-clock-history me-2"></i>Integrantes Recentes ({{ alunos|length }})
+      </h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover table-striped mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Foto</th>
+              <th>Nome</th>
+              <th>Escola</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for aluno in alunos %}
+            <tr>
+              <td>
+                {% if aluno.foto_path %}
+                  <img src="{{ url_for('static', filename=aluno.foto_path) }}" alt="Foto" 
+                       class="rounded-circle" style="width: 45px; height: 45px; object-fit: cover;">
+                {% else %}
+                  <div class="bg-light rounded-circle d-flex align-items-center justify-content-center" 
+                       style="width: 45px; height: 45px;">
+                    <i class="bi bi-person text-secondary" style="font-size: 1.2rem;"></i>
+                  </div>
+                {% endif %}
+              </td>
+              <td>
+                <strong>{{ aluno.nome }}</strong>
+                {% if aluno.telefone %}<br><small class="text-muted">{{ aluno.telefone }}</small>{% endif %}
+              </td>
+              <td>
+                {% if aluno.escolas %}
+                  {{ aluno.escolas[0].escola.nome if aluno.escolas[0].escola else '-' }}
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge bg-success">
+                  <i class="bi bi-check-circle me-1"></i>Ativo
+                </span>
+              </td>
+              <td>
+                <div class="btn-group">
+                  <a href="{{ url_for('main.relatorio_aluno', aluno_id=aluno.id) }}" 
+                     class="btn btn-sm btn-info" title="Relatório Individual">
+                    <i class="bi bi-file-earmark-person"></i>
+                  </a>
+                  <a href="{{ url_for('main.editar_aluno', aluno_id=aluno.id) }}" 
+                     class="btn btn-sm btn-outline-primary" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center py-5">
+    <i class="bi bi-inbox" style="font-size: 4rem; color: #6c757d;"></i>
+    <h4>Nenhum integrante ativo encontrado</h4>
+    <p class="text-muted">Cadastre os primeiros integrantes para gerar relatórios</p>
+    <a href="{{ url_for('main.criar_aluno') }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle me-2"></i>Novo Integrante
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<script>
+function downloadPDF(filename) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('p', 'mm', 'a4');
+  
+  html2canvas(document.querySelector('.container'), { 
+    scale: 0.8,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: '#ffffff'
+  }).then(canvas => {
+    const imgData = canvas.toDataURL('image/png');
+    const imgProps = doc.getImageProperties(imgData);
+    const pdfWidth = doc.internal.pageSize.getWidth();
+    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+    
+    let heightLeft = pdfHeight;
+    let position = 0;
+    
+    doc.addImage(imgData, 'PNG', 10, position, pdfWidth - 20, pdfHeight);
+    heightLeft -= pdfHeight;
+    
+    while (heightLeft > 0) {
+      position = heightLeft - pdfHeight;
+      doc.addPage();
+      doc.addImage(imgData, 'PNG', 10, position, pdfWidth - 20, pdfHeight);
+      heightLeft -= doc.internal.pageSize.getHeight();
+    }
+    
+    doc.save(`${filename}_relatorios_${new Date().toISOString().slice(0,10)}.pdf`);
+  }).catch(err => {
+    alert('Erro ao gerar PDF: ' + err.message);
+  });
+}
+</script>
+{% endblock %}

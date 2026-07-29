@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}{{ titulo }} — Sistema PI{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5 fade-in">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-dark text-white d-flex align-items-center">
+          <i class="bi {{ 'bi-building-plus' if not escola else 'bi-building-gear' }} me-2"></i>
+          <h4 class="mb-0">{{ titulo }}</h4>
+        </div>
+        <div class="card-body">
+          <form method="POST">
+            <div class="mb-4">
+              <label for="nome" class="form-label">
+                <i class="bi bi-building me-2"></i>Nome da Escola *
+              </label>
+              <input type="text" name="nome" id="nome" class="form-control" 
+                     value="{{ escola.nome if escola else '' }}" required>
+            </div>
+
+            <div class="mb-4">
+              <label for="endereco" class="form-label">
+                <i class="bi bi-geo-alt me-2"></i>Endereço
+              </label>
+              <input type="text" name="endereco" id="endereco" class="form-control" 
+                     value="{{ escola.endereco if escola else '' }}"
+                     placeholder="Rua, número, complemento">
+            </div>
+
+            <div class="d-grid gap-2">
+              <button type="submit" class="btn btn-dark btn-lg">
+                <i class="bi {{ 'bi-check2-circle' if not escola else 'bi-save' }} me-2"></i>
+                {% if escola %}
+                  Salvar Alterações
+                {% else %}
+                  Criar Escola
+                {% endif %}
+              </button>
+              <a href="{{ url_for('main.listar_escolas') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Cancelar
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-5 fade-in">
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <h2><i class="bi bi-people-fill me-2"></i>Gerenciamento de Usuários</h2>
+      <p class="text-white">Gerencie os usuários do sistema</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+      <a href="{{ url_for('main.criar_usuario') }}" class="btn btn-success">
+        <i class="bi bi-plus-circle me-2"></i>Novo Usuário
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-dark table-striped table-hover mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th><i class="bi bi-hash me-1"></i>ID</th>
+              <th><i class="bi bi-person me-1"></i>Usuário</th>
+              <th><i class="bi bi-shield-check me-1"></i>Tipo</th>
+              <th><i class="bi bi-toggle-on me-1"></i>Status</th>
+              <th><i class="bi bi-key me-1"></i>Senha</th>
+              <th><i class="bi bi-gear me-1"></i>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user in usuarios %}
+            <tr>
+              <td><span class="badge bg-secondary">{{ user.id }}</span></td>
+              <td>
+                <i class="bi bi-person-fill me-1 text-muted"></i>
+                <strong>{{ user.username }}</strong>
+              </td>
+              <td>
+                {% if user.is_admin %}
+                  <span class="badge bg-primary">
+                    <i class="bi bi-shield-check me-1"></i>Admin
+                  </span>
+                {% else %}
+                  <span class="badge bg-secondary">
+                    <i class="bi bi-person me-1"></i>Usuário
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                {% if user.is_active %}
+                  <span class="badge bg-success">
+                    <i class="bi bi-check-circle me-1"></i>Ativo
+                  </span>
+                {% else %}
+                  <span class="badge bg-danger">
+                    <i class="bi bi-x-circle me-1"></i>Bloqueado
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                {% if user.must_change_password %}
+                  <span class="badge bg-warning text-dark">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Pendente
+                  </span>
+                {% else %}
+                  <span class="badge bg-info">
+                    <i class="bi bi-check2 me-1"></i>Definida
+                  </span>
+                {% endif %}
+              </td>
+              <td>
+                <div class="btn-group" role="group">
+                  {% if user.username != 'admin' or user.id == current_user.id %}
+                  <a href="{{ url_for('main.editar_usuario', user_id=user.id) }}" class="btn btn-sm btn-primary" title="Editar">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                  
+                  {% if user.id != current_user.id %}
+                  <a href="{{ url_for('main.resetar_senha', user_id=user.id) }}" class="btn btn-sm btn-warning" title="Resetar Senha">
+                    <i class="bi bi-key"></i>
+                  </a>
+
+                  <a href="{{ url_for('main.toggle_usuario', user_id=user.id) }}" class="btn btn-sm btn-secondary" title="{{ 'Bloquear' if user.is_active else 'Ativar' }}">
+                    <i class="bi {{ 'bi-lock' if user.is_active else 'bi-unlock' }}"></i>
+                  </a>
+                  {% endif %}
+
+                  {% if user.id != current_user.id %}
+                  <form action="{{ url_for('main.excluir_usuario', user_id=user.id) }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-sm btn-danger" title="Excluir" onclick="return confirm('Tem certeza que deseja excluir o usuário {{ user.username }}?')">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                  {% endif %}
+                  {% else %}
+                  <span class="text-white small" title="Usuário admin protegido">
+                    <i class="bi bi-shield-lock"></i> Protegido
+                  </span>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+

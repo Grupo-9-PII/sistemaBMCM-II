@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório Geral - Banda Marcial - {{ data_geracao.strftime('%d/%m/%Y') }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Courier New', Courier, monospace; 
+      font-size: 11px; 
+      line-height: 1.4; 
+      color: black; 
+      background: white;
+      margin: 1cm;
+    }
+    .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid black; padding-bottom: 10px; }
+    .header h1 { font-size: 14px; font-weight: bold; text-transform: uppercase; margin-bottom: 5px; }
+    .header h2 { font-size: 12px; margin-bottom: 10px; }
+    .info { margin-bottom: 20px; font-size: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th, td { border: 1px solid black; padding: 4px 6px; text-align: left; vertical-align: top; }
+    th { background-color: #e0e0e0; font-weight: bold; text-transform: uppercase; font-size: 10px; }
+    tr:nth-child(even) { background-color: #f8f8f8; }
+    .total { font-weight: bold; font-size: 12px; text-align: center; border-top: 3px double black; }
+    .rodape { text-align: center; font-size: 9px; margin-top: 20px; border-top: 1px solid black; padding-top: 10px; }
+    @media print { body { margin: 0.5cm; } }
+  </style>
+</head>
+<body onload="window.print()">
+  <div class="header">
+    <h1>Banda MARCIAL CIDADE DE MARÍLIA - Marília/SP</h1>
+    <h2>RELATÓRIO GERAL DE INTEGRANTES ATIVOS</h2>
+    <div class="info">
+      <strong>Gerado em:</strong> {{ data_geracao.strftime('%d/%m/%Y às %H:%M') }} | 
+      <strong>Total de Integrantes:</strong> {{ total_alunos }}
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 5%;">ID</th>
+        <th style="width: 25%;">Nome Completo</th>
+        <th style="width: 10%;">CIN/RG</th>
+        <th style="width: 18%;">Telefone</th>
+        <th style="width: 22%;">Endereço Completo</th>
+        <th style="width: 20%;">Escola</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in alunos %}
+      <tr>
+        <td>{{ a.id }}</td>
+        <td>{{ a.nome or '-' }}</td>
+        <td>{{ a.cin_rg or '-' }}</td>
+        <td>{{ a.telefone or '-' }}</td>
+        <td>
+          {% if a.endereco %}{{ a.endereco }}{% if a.numero %}, {{ a.numero }}{% endif %}{% if a.complemento %}{{ ', ' + a.complemento }}{% endif %}{% endif %}
+          {% if a.bairro %}<br><small>{{ a.bairro }}</small>{% endif %}
+          {% if a.cidade %}{{ a.cidade }}/{% endif %}{{ a.estado }}
+        </td>
+        <td>{{ a.escolas[0].escola.nome if a.escolas and a.escolas[0].escola else '-' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="total">
+        <td colspan="6">TOTAL: {{ total_alunos }} INTEGRANTES ATIVOS</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="rodape">
+    <strong>Sistema de Controle Banda Marcial PM Marília/SP</strong><br>
+    Página impressa automaticamente - {{ data_geracao.strftime('%d/%m/%Y %H:%M') }}
+  </div>
+</body>
+</html>

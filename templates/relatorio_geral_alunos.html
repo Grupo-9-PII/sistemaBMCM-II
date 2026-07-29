@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Relatório Geral Alunos — Sistema PI{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-text me-2"></i>Relatório Geral de Integrantes</h2>
+    <button onclick="window.print()" class="btn btn-primary">
+      <i class="bi bi-printer me-2"></i>Imprimir/PDF
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="card-header bg-dark text-white">
+      <h5>Gerado em {{ data_geracao.strftime('%d/%m/%Y %H:%M') }} | Total: {{ total_alunos }} alunos ativos</h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nome</th>
+              <th>CIN/RG</th>
+              <th>Email</th>
+              <th>Telefone</th>
+              <th>Escola</th>
+              <th>Data Entrada</th>
+              <th>Data Desligamento</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in alunos %}
+            <tr>
+              <td>{{ a.id }}</td>
+              <td>{{ a.nome }}</td>
+              <td>{{ a.cin_rg or '-' }}</td>
+              <td>{{ a.email or '-' }}</td>
+              <td>{{ a.telefone or '-' }}</td>
+              <td>{{ a.escolas[0].escola.nome if a.escolas else '-' }}</td>
+              <td>{{ a.data_entrada_banda.strftime('%d/%m/%Y') if a.data_entrada_banda else '-' }}</td>
+              <td>{{ a.data_desligamento_banda.strftime('%d/%m/%Y') if a.data_desligamento_banda else '-' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+@media print {
+  .btn, .card-header { display: none; }
+  .table { font-size: 0.9em; }
+}
+</style>
+{% endblock %}
