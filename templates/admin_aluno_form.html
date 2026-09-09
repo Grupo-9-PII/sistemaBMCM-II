@@ -38,6 +38,12 @@
                 <i class="bi bi-building me-2"></i>Escola
               </button>
             </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="instrumento-tab" data-bs-toggle="tab"
+                      data-bs-target="#instrumento" type="button" role="tab">
+                <i class="bi bi-music-note-beamed me-2"></i>Instrumento
+              </button>
+            </li>
           </ul>
 
           <form method="POST" enctype="multipart/form-data" id="form-aluno"
@@ -347,6 +353,34 @@ Declaro estar ciente de que o tratamento dos dados será realizado em conformida
                         <i class="bi bi-gear me-2"></i>Gerenciar Escolas
                       </a>
                     </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Instrumento associado -->
+              <div class="tab-pane fade" id="instrumento" role="tabpanel">
+                <div class="row g-3">
+                  {% set associacao_atual = aluno.instrumentos|selectattr('data_devolucao', 'none')|list|first if aluno else none %}
+                  <div class="col-md-8">
+                    <label for="instrumento_id" class="form-label">Instrumento atual</label>
+                    <select name="instrumento_id" id="instrumento_id" class="form-select">
+                      <option value="">Nenhum instrumento associado</option>
+                      {% for instrumento in instrumentos %}
+                      <option value="{{ instrumento.id }}"
+                              {% if associacao_atual and associacao_atual.instrumento_id == instrumento.id %}selected{% endif %}>
+                        {{ instrumento.nome }}{% if instrumento.patrimonio %} — Patrimônio {{ instrumento.patrimonio }}{% endif %}
+                      </option>
+                      {% endfor %}
+                    </select>
+                    <small class="form-text text-muted">
+                      A troca ou remoção encerra a associação anterior e preserva o histórico.
+                    </small>
+                  </div>
+                  <div class="col-md-4">
+                    <label for="instrumento_observacoes" class="form-label">Observações</label>
+                    <input type="text" name="instrumento_observacoes" id="instrumento_observacoes"
+                           class="form-control" maxlength="500"
+                           value="{{ associacao_atual.observacoes if associacao_atual else '' }}">
                   </div>
                 </div>
               </div>

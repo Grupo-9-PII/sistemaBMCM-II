@@ -65,6 +65,7 @@
               <th><i class="bi bi-card-text me-1"></i>CIN/RG</th>
               <th><i class="bi bi-telephone me-1"></i>Telefone</th>
               <th><i class="bi bi-building me-1"></i>Escola</th>
+              <th><i class="bi bi-music-note-beamed me-1"></i>Instrumento</th>
               <th><i class="bi bi-toggle-on me-1"></i>Status</th>
               <th class="text-end"><i class="bi bi-gear me-1"></i>Ações</th>
             </tr>
@@ -99,6 +100,15 @@
                   {% for ae in a.escolas %}
                     {{ ae.escola.nome }}{% if not loop.last %}<br>{% endif %}
                   {% endfor %}
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td>
+                {% set instrumento_atual = a.instrumentos|selectattr('data_devolucao', 'none')|list|first %}
+                {% if instrumento_atual and instrumento_atual.instrumento %}
+                  {{ instrumento_atual.instrumento.nome }}
+                  {% if instrumento_atual.instrumento.patrimonio %}<br><small>{{ instrumento_atual.instrumento.patrimonio }}</small>{% endif %}
                 {% else %}
                   <span class="text-muted">-</span>
                 {% endif %}
@@ -154,7 +164,7 @@
             </tr>
             {% else %}
             <tr>
-              <td colspan="8" class="text-center py-4">
+              <td colspan="9" class="text-center py-4">
                 <i class="bi bi-people-fill" style="font-size: 3rem; opacity: 0.3;"></i>
                 <h5 class="mt-3">Nenhum integrante cadastrado</h5>
                 <a href="{{ url_for('main.criar_aluno') }}" class="btn btn-primary btn-lg mt-2">

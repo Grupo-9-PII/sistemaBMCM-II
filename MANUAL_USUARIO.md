@@ -24,7 +24,7 @@ O Sistema BMCM é uma aplicação web desenvolvida para apoiar a gestão adminis
 
 ---
 
-## 2. Guia Rápido 
+## 2. Guia Rápido
 
 Siga os passos abaixo para começar a utilizar o sistema rapidamente:
 
@@ -38,7 +38,7 @@ Siga os passos abaixo para começar a utilizar o sistema rapidamente:
 ✔ Pronto! O aluno já estará cadastrado no sistema.
 
 > Dica: Utilize o menu superior para navegar entre as funcionalidades.
-> 
+>
 ## 3. Acesso ao Sistema
 
 ### 3.1 Tela de Login
@@ -189,7 +189,10 @@ Acesse o menu superior e clique em **Integrantes** para visualizar todos os alun
 - Ano letivo
 
 **Aba Instrumento:**
-- Selecione o instrumento(s) utilizado(s)
+- Selecione o instrumento atualmente associado ao integrante
+- Informe observações, quando necessário
+
+Ao trocar o instrumento, a associação anterior recebe uma data de devolução e permanece no histórico. Instrumentos inativos não podem ser associados a novos integrantes.
 
 **Aba Responsáveis (para menores):**
 - Nome do responsável
@@ -201,7 +204,7 @@ Acesse o menu superior e clique em **Integrantes** para visualizar todos os alun
 - Termo de autorização de foto (obrigatório para menores)
 
 4. Clique em **"Salvar"**
-   
+
 
 ### 5.3  Cadastro de Aluno Menor de Idade
 
@@ -341,9 +344,85 @@ Gerencie as seções da banda (ex: metais, madeiras, percussão).
 
 ---
 
-## 9. Relatórios
+## 9. Presença, Ensaios e Eventos
 
-### 9.1 Relatório Geral de Alunos
+### 9.1 Criar um Ensaio
+
+1. No menu superior, clique em **Presença**
+2. Clique em **Novo ensaio**
+3. Informe:
+  - título;
+  - data;
+  - horário;
+  - local;
+  - observações;
+  - status.
+4. Clique em **Criar e registrar chamada**
+
+Após o cadastro, o sistema abrirá automaticamente a folha de chamada.
+
+### 9.2 Registrar Presença em um Ensaio
+
+Na folha de chamada, os integrantes ativos são agrupados pelo instrumento atualmente associado. Para cada integrante, marque uma situação:
+
+- **Presente**;
+- **Ausente**;
+- **Justificado**.
+
+Clique em **Salvar presença** para registrar ou atualizar a chamada. O usuário responsável e o horário do registro são armazenados para auditoria.
+
+O botão **Imprimir** gera uma versão adequada para impressão e conferência durante o ensaio.
+
+### 9.3 Editar ou Cancelar um Ensaio
+
+Na tela **Presença**, use:
+
+- **Editar** para alterar título, data, horário, local, observações ou status;
+- **Cancelar** para alterar o status para cancelado.
+
+O cancelamento não exclui o ensaio nem suas presenças, preservando o histórico administrativo.
+
+### 9.4 Criar um Evento ou Apresentação
+
+1. No menu superior, clique em **Eventos**
+2. Clique em **Novo evento**
+3. Informe:
+  - nome do evento;
+  - data;
+  - cidade ou local;
+  - status;
+  - responsável;
+  - telefone.
+4. Clique em **Criar e registrar chamada**
+
+Os status disponíveis são **A confirmar**, **Confirmado** e **Cancelado**.
+
+### 9.5 Registrar Presença em Evento
+
+Na listagem de **Eventos**, clique em **Chamada**. A folha funciona da mesma forma que a folha de ensaio, agrupando integrantes por instrumento e permitindo marcar presença, ausência ou justificativa.
+
+### 9.6 Editar ou Cancelar um Evento
+
+Na tela **Eventos**, use **Editar** para atualizar os dados do evento. Use **Cancelar** quando a apresentação não for realizada.
+
+O cancelamento é lógico: os dados do evento e os registros de presença permanecem disponíveis para consulta.
+
+### 9.7 Consultar Histórico e Frequência
+
+1. Acesse **Presença**
+2. Clique em **Histórico**
+3. Selecione um integrante ou mantenha **Todos os integrantes**
+4. Clique em **Filtrar histórico**
+
+O sistema exibirá as chamadas, datas, atividades, locais, integrantes e situações. Quando um integrante for selecionado, será exibido o percentual de frequência calculado com base nos registros disponíveis.
+
+Use **Imprimir** para gerar uma cópia do histórico.
+
+---
+
+## 10. Relatórios
+
+### 10.1 Relatório Geral de Alunos
 Acesse para visualizar todos os alunos cadastrados com filtros por:
 - Escola
 - Status
@@ -351,28 +430,28 @@ Acesse para visualizar todos os alunos cadastrados com filtros por:
 
 ![Rel alunos](./assets/imgs/tela-relatorio-geral.png)
 
-### 9.2 Relatório Individual de Aluno
+### 10.2 Relatório Individual de Aluno
 Acesse através da visualização de cada aluno para obter um relatório detalhado.
 
 ![Rel Aluno](./assets/imgs/tela-relatorio-aluno.png)
 
-### 9.3 Relatório de Escolas
+### 10.3 Relatório de Escolas
 Acesse para visualizar todas as escolas e seus alunos vinculados.
 
 ![Rel Escolas](./assets/imgs/tela-relatorio-escolas.png)
 
 ---
 
-## 10. Backup do Sistema
+## 11. Backup do Sistema
 
-### 10.1 Criar Backup
+### 11.1 Criar Backup
 1. No menu do usuário, no canto superior direito, selecione **Backup do Banco**
 2. Clique em **"Criar Backup Agora"**
 3. O sistema gerará uma cópia do banco de dados
 
 ![Backup](./assets/imgs/tela-admin-backup.png)
 
-### 10.2 Restaurar Backup
+### 11.2 Restaurar Backup
 1. No menu do usuário, selecione **Backup do Banco**
 2. Selecione o backup desejado da lista
 3. Clique em **"Restaurar"**
@@ -380,16 +459,16 @@ Acesse para visualizar todas as escolas e seus alunos vinculados.
 
 **Aviso**: A restauração substituirá todos os dados atuais. Faça um backup antes se necessário.
 
-### 10.3 Excluir Backup
+### 11.3 Excluir Backup
 1. No menu do usuário, selecione **Backup do Banco**
 2. Selecione o backup desejado
 3. Clique em **"Excluir"**
 
 ---
 
-## 11. Alteração de Senha
+## 12. Alteração de Senha
 
-### 11.1 Alterar Própria Senha
+### 12.1 Alterar Própria Senha
 1. Clique no seu nome de usuário no menu superior
 2. Selecione **"Alterar Senha"**
 3. Preencha:
@@ -403,17 +482,17 @@ Acesse para visualizar todas as escolas e seus alunos vinculados.
 
 ---
 
-## 12. Logout
+## 13. Logout
 
-### 12.1 Sair do Sistema
+### 13.1 Sair do Sistema
 1. Clique no seu nome de usuário no menu superior
 2. Selecione **"Sair"**
 
 ---
 
-## 13. Perfis de Usuário
+## 14. Perfis de Usuário
 
-### 13.1 Administrador
+### 14.1 Administrador
 Acesso completo a todas as funcionalidades:
 - Gestão de usuários
 - Gestão de alunos
@@ -423,27 +502,27 @@ Acesso completo a todas as funcionalidades:
 - Backup
 - Configurações do sistema
 
-### 13.2 Profissional
+### 14.2 Profissional
 Acesso às funcionalidades de gestão:
 - Gestão de alunos
 - Gestão de escolas
 - Gestão de instrumentos
 - Relatórios
 
-### 13.3 Usuário Comum
+### 14.3 Usuário Comum
 Acesso básico:
 - Visualização de dados
 - Relatórios
 
 ---
 
-## 14. Dicas de Segurança
+## 15. Dicas de Segurança
 
 1. **Senhas**: Use senhas fortes com no mínimo 6 caracteres
 2. **Logout**: Sempre saia do sistema após o uso
 3. **Compartilhamento**: Não compartilhe suas credenciais
 4. **Bloqueio**: O sistema bloqueia o usuário após 3 tentativas de login incorretas por 12 horas
-### 14.1 Boas Práticas de Segurança
+### 15.1 Boas Práticas de Segurança
 
 - Utilize senhas com:
   - mínimo de 8 caracteres
@@ -459,22 +538,22 @@ Acesso básico:
 - Altere sua senha periodicamente
 ---
 
-## 15. Solução de Problemas
+## 16. Solução de Problemas
 
-### 15.1 Esqueci minha senha
+### 16.1 Esqueci minha senha
 Entre em contato com o administrador do sistema para resetar sua senha.
 
-### 15.2 Usuário bloqueado
+### 16.2 Usuário bloqueado
 O sistema bloqueia automaticamente após 3 tentativas incorretas. Aguarde 12 horas ou entre em contato com o administrador.
 
-### 15.3 Não consigo acessar uma funcionalidade
+### 16.3 Não consigo acessar uma funcionalidade
 Verifique se seu perfil de usuário tem permissão para acessar aquela funcionalidade. Entre em contato com o administrador se necessário.
 
-### 15.4 Dados não aparecem
+### 16.4 Dados não aparecem
 Verifique se você tem permissão de acesso. Alguns dados podem estar filtrados por perfil.
 
 ---
-## 16. Problemas Comuns e Soluções
+## 17. Problemas Comuns e Soluções
 
 ### ❌ Não consigo salvar o aluno
 - Verifique campos obrigatórios
@@ -506,13 +585,25 @@ Verifique se você tem permissão de acesso. Alguns dados podem estar filtrados 
 
 ---
 
-## 17. Contato e Suporte
+## 18. Contato e Suporte
 
 Para dúvidas ou problemas técnicos, entre em contato com o administrador do sistema.
 
+### 18.1 Identificação da versão
+
+A versão atual da aplicação é exibida na tela de login, na área de créditos e nas configurações administrativas.
+
+O formato possui três partes, como em `1.4.6`:
+
+- primeira parte: versão principal;
+- segunda parte: atualização ou etapa funcional;
+- terceira parte: quantidade de alterações contabilizadas no dia.
+
+Essa identificação é mantida pela equipe responsável pelo desenvolvimento. O usuário não deve alterar a versão pelas configurações do sistema.
+
 ---
 
-**Versão do Manual**: 1.0
+**Versão do Manual**: 1.1
 **Sistema**: Sistema BMCM - Banda Marcial Municipal de Marília
 **Data de Criação**: 2026
 

@@ -196,13 +196,38 @@ class Uniforme(db.Model):
     observacoes = db.Column(db.Text)
 
 
+# Tabela: Ensaios
+class Ensaio(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    titulo = db.Column(db.String(200), nullable=False, default="ENSAIO")
+    data_ensaio = db.Column(db.Date, nullable=False)
+    horario = db.Column(db.String(20))
+    local = db.Column(db.String(200))
+    observacoes = db.Column(db.Text)
+    status = db.Column(db.String(20), nullable=False, default="AGENDADO")
+    criado_por_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    criado_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    criado_por = db.relationship('User', foreign_keys=[criado_por_id])
+    presencas = db.relationship(
+        'Presenca', backref='ensaio', lazy=True, cascade='all, delete-orphan'
+    )
+
+
 # Tabela: Presenças
 class Presenca(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     aluno_id = db.Column(db.Integer, db.ForeignKey('aluno.id'), nullable=False)
+    ensaio_id = db.Column(db.Integer, db.ForeignKey('ensaio.id'), nullable=True, index=True)
+    evento_id = db.Column(db.Integer, db.ForeignKey('evento.id'), nullable=True, index=True)
     data_presenca = db.Column(db.Date, default=datetime.utcnow().date)
     presente = db.Column(db.Boolean, default=True)
     observacoes = db.Column(db.Text)
+    registrado_por_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    registrado_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    registrado_por = db.relationship('User', foreign_keys=[registrado_por_id])
+    evento = db.relationship('Evento', foreign_keys=[evento_id], back_populates='presencas')
 
 
 
@@ -254,7 +279,7 @@ class AutorizacaoViagem(db.Model):
 
     aluno = db.relationship('Aluno', backref='autorizacoes')
 
-    evento = db.relationship('Evento', backref=db.backref('evento_viagem', uselist=False))
+    evento = db.relationship('Evento', back_populates='autorizacoes_evento')
 
 
 
@@ -272,9 +297,17 @@ class Evento(db.Model):
     isento = db.Column(db.Boolean, default=False)
     status = db.Column(db.String(20), default="A_CONFIRMAR")
 
+    presencas = db.relationship(
+        'Presenca', back_populates='evento', lazy=True, cascade='all, delete-orphan'
+    )
 
 
-    autorizacoes_evento = db.relationship('AutorizacaoViagem', backref=db.backref('evento_aut', uselist=False), lazy=True)
+
+    autorizacoes_evento = db.relationship(
+        'AutorizacaoViagem',
+        back_populates='evento',
+        lazy=True,
+    )
 
 
 

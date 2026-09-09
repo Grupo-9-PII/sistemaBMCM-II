@@ -1,6 +1,6 @@
 
 import os
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from datetime import timedelta
@@ -39,14 +39,25 @@ def create_app():
         carregar_configuracoes_app,
         limpar_logs_antigos,
         obter_todas_configuracoes,
+        obter_token_csrf,
+        validar_csrf,
     )
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
 
+    @app.before_request
+    def protect_post_requests():
+        if request.method == "POST":
+            validar_csrf()
+
     @app.context_processor
     def inject_system_settings():
-        return {"system_settings": obter_todas_configuracoes()}
+        return {
+            "system_settings": obter_todas_configuracoes(),
+            "csrf_token": obter_token_csrf(),
+            "app_version": app.config["APP_VERSION"],
+        }
 
     with app.app_context():
         instance_dir = os.path.join(Config.BASE_DIR, "instance")

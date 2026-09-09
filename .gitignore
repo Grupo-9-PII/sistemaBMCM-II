@@ -1,6 +1,12 @@
 venv/
+.env
+*.env
 instalacao_waitress_flask.md
 servidores.md
 comandogit
 .cursorrules
+PROJECT_CONTEXT.md
+conceito.png
+PROJECT_CONTEXT.md
+relatorio_plano_trabalho_presenca.md
 TODO.md

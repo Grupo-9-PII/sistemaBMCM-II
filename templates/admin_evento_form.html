@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar evento' if evento else 'Novo evento' }} — Sistema BMCM{% endblock %}
+{% block content %}
+<div class="container mt-5 fade-in"><div class="row justify-content-center"><div class="col-lg-7"><div class="card">
+  <div class="card-header"><h1 class="h4 mb-0">{{ 'Editar evento ou apresentação' if evento else 'Novo evento ou apresentação' }}</h1></div>
+  <div class="card-body">
+    <form method="POST">
+      <div class="mb-3"><label for="nome_evento" class="form-label">Nome do evento</label><input id="nome_evento" name="nome_evento" class="form-control" maxlength="200" value="{{ evento.nome_evento if evento else '' }}" required></div>
+      <div class="row g-3">
+        <div class="col-md-4"><label for="data_evento" class="form-label">Data</label><input id="data_evento" name="data_evento" type="date" class="form-control" value="{{ evento.data_evento.strftime('%Y-%m-%d') if evento and evento.data_evento else '' }}" required></div>
+        <div class="col-md-4"><label for="cidade" class="form-label">Cidade/local</label><input id="cidade" name="cidade" class="form-control" maxlength="100" value="{{ evento.cidade if evento else '' }}"></div>
+        <div class="col-md-4"><label for="status" class="form-label">Status</label><select id="status" name="status" class="form-select"><option value="A_CONFIRMAR" {% if not evento or evento.status == 'A_CONFIRMAR' %}selected{% endif %}>A confirmar</option><option value="CONFIRMADO" {% if evento and evento.status == 'CONFIRMADO' %}selected{% endif %}>Confirmado</option><option value="CANCELADO" {% if evento and evento.status == 'CANCELADO' %}selected{% endif %}>Cancelado</option></select></div>
+      </div>
+      <div class="row g-3 mt-1">
+        <div class="col-md-6"><label for="responsavel" class="form-label">Responsável</label><input id="responsavel" name="responsavel" class="form-control" maxlength="150" value="{{ evento.responsavel if evento else '' }}"></div>
+        <div class="col-md-6"><label for="telefone" class="form-label">Telefone</label><input id="telefone" name="telefone" class="form-control" maxlength="20" value="{{ evento.telefone if evento else '' }}"></div>
+      </div>
+      <div class="d-flex gap-2 mt-4"><button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i>{{ 'Salvar alterações' if evento else 'Criar e registrar chamada' }}</button><a href="{{ url_for('main.listar_eventos') }}" class="btn btn-outline-secondary">Cancelar</a></div>
+    </form>
+  </div>
+</div></div></div></div>
+{% endblock %}

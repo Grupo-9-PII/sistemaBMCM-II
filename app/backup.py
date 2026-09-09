@@ -1,6 +1,6 @@
 """
 Módulo de backup e restauração do banco de dados SQLite.
-Utiliza compactação ZIP com senha padrão do sistema.
+Utiliza compactação ZIP para cópias locais do banco de dados.
 """
 
 import os
@@ -10,11 +10,25 @@ from datetime import datetime
 from pathlib import Path
 from flask import current_app
 
-# Senha padrão do sistema para backup/restauração
+# Mantida por compatibilidade com chamadas existentes; o ZIP não é criptografado.
 SENHA_BACKUP_PADRAO = "SISTBMCM2024"
 
 # Nome da subpasta de backups na pasta do usuário
 PASTA_BACKUP = "BKPSISTBMCM"
+
+
+def obter_caminho_backup(nome_backup):
+    """Retorna um caminho de backup válido dentro da pasta configurada."""
+    if not nome_backup or os.path.basename(nome_backup) != nome_backup:
+        return None
+    if not nome_backup.startswith("backup_") or not nome_backup.endswith(".zip"):
+        return None
+
+    pasta_backup = Path(obter_pasta_backup_usuario()).resolve()
+    caminho_backup = (pasta_backup / nome_backup).resolve()
+    if caminho_backup.parent != pasta_backup or not caminho_backup.is_file():
+        return None
+    return str(caminho_backup)
 
 
 def obter_pasta_backup_usuario():
@@ -78,13 +92,8 @@ def criar_backup(caminho_db):
     nome_backup = f"backup_{timestamp}.zip"
     caminho_backup = os.path.join(pasta_backup, nome_backup)
 
-    # Criar ZIP com senha
+    # O módulo zipfile padrão não oferece criptografia AES.
     with zipfile.ZipFile(caminho_backup, "w", zipfile.ZIP_DEFLATED) as zf:
-        # A senha no zipfile é aplicada na leitura, mas podemos usar pyzipper
-        # para criptografia real. Como zipfile padrão não suporta criptografia
-        # AES, vamos usar a abordagem de ZIP tradicional com senha.
-        # Para compatibilidade máxima, salvamos o arquivo e depois
-        # usamos a senha na extração.
         zf.write(caminho_db, arcname="database.db")
 
     return caminho_backup

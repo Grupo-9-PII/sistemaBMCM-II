@@ -1,10 +1,12 @@
 from functools import wraps
-from flask import session, flash, redirect, url_for, current_app
+from flask import abort, session, flash, redirect, url_for, current_app, request
 from flask_login import logout_user, current_user
 from datetime import datetime, date, timedelta
 import os
 import base64
 import binascii
+import hmac
+import secrets
 from flask import redirect, url_for, flash
 from flask_login import current_user
 from .models import User, TipoInstrumento, Naipe, FuncaoBanda, Cidade, Logradouro, SistemaConfig
@@ -16,6 +18,25 @@ SENHA_PADRAO = "123456"
 
 # Versão do texto do termo (auditoria LGPD — atualize quando o texto legal mudar).
 TERMO_AUTORIZACAO_FOTO_VERSAO = "2026-04-13"
+
+
+def obter_token_csrf():
+    """Retorna o token CSRF associado a sessão atual."""
+    token = session.get("csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["csrf_token"] = token
+    return token
+
+
+def validar_csrf():
+    """Bloqueia POSTs sem token correspondente à sessão atual."""
+    token_enviado = request.form.get("csrf_token") or request.headers.get("X-CSRFToken")
+    token_esperado = session.get("csrf_token")
+    if not token_esperado or not token_enviado or not hmac.compare_digest(
+        token_enviado, token_esperado
+    ):
+        abort(400, description="Token CSRF ausente ou inválido.")
 
 
 def idade_anos_hoje(data_nascimento):
@@ -421,6 +442,24 @@ def migrar_banco_novos_campos():
         # Adicionar coluna data_desligamento_banda se não existir
         if 'data_desligamento_banda' not in columns:
             db.session.execute(text("ALTER TABLE aluno ADD COLUMN data_desligamento_banda DATE"))
+
+        presenca_result = db.session.execute(text("PRAGMA table_info(presenca)"))
+        presenca_columns = [row[1] for row in presenca_result.fetchall()]
+        if 'ensaio_id' not in presenca_columns:
+            db.session.execute(text("ALTER TABLE presenca ADD COLUMN ensaio_id INTEGER"))
+        if 'evento_id' not in presenca_columns:
+            db.session.execute(text("ALTER TABLE presenca ADD COLUMN evento_id INTEGER"))
+        if 'registrado_por_id' not in presenca_columns:
+            db.session.execute(text("ALTER TABLE presenca ADD COLUMN registrado_por_id INTEGER"))
+        if 'registrado_at' not in presenca_columns:
+            db.session.execute(text("ALTER TABLE presenca ADD COLUMN registrado_at DATETIME"))
+
+        ensaio_result = db.session.execute(text("PRAGMA table_info(ensaio)"))
+        ensaio_columns = [row[1] for row in ensaio_result.fetchall()]
+        if 'status' not in ensaio_columns:
+            db.session.execute(text(
+                "ALTER TABLE ensaio ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'AGENDADO'"
+            ))
         
         db.session.commit()
     except Exception as e:

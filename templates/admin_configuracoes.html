@@ -26,6 +26,7 @@
             <div class="col-md-9">
               <p class="mb-1"><strong>Título de login:</strong> {{ system_settings.get('login_title', 'Sistema de Controle') }}</p>
               <p class="mb-1"><strong>Subtítulo de login:</strong> {{ system_settings.get('login_subtitle', 'Banda Marcial Cidade de Marília') }}</p>
+              <p class="mb-1"><strong>Versão da aplicação:</strong> {{ app_version }}</p>
               <p class="mb-1"><strong>Backup atual:</strong> {{ system_settings.get('backup_folder', 'instance/backups') }}</p>
               <p class="mb-0"><strong>Upload máximo:</strong> {{ system_settings.get('upload_maximo', '50') }} MB • <strong>Retenção de logs:</strong> {{ system_settings.get('log_retention_days', '30') }} dias</p>
             </div>
@@ -125,10 +126,6 @@
             <div class="mb-3">
               <label for="texto-rodape" class="form-label">Texto de Rodapé</label>
               <input type="text" name="texto-rodape" class="form-control" id="texto-rodape" value="{{ system_settings.get('footer_text', 'Grupo 9 — DPR7 - UNIVESP') }}" placeholder="Digite o texto do rodapé">
-            </div>
-            <div class="mb-3">
-              <label for="texto-versao" class="form-label">Texto de Versão</label>
-              <input type="text" name="texto-versao" class="form-control" id="texto-versao" value="{{ system_settings.get('version_text', 'Versão 1.0 - Junho de 2026') }}" placeholder="Ex: v1.0.0 - Versão Estável">
             </div>
             <button type="submit" class="btn btn-primary">Salvar Personalização</button>
           </form>

@@ -17,7 +17,7 @@
     .header h1 { font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; }
     .header h2 { font-size: 14px; margin-bottom: 10px; }
     .info-top { margin-bottom: 25px; font-size: 11px; }
-    .dados-pessoais, .endereco, .responsavel, .escola { margin-bottom: 20px; }
+    .dados-pessoais, .endereco, .responsavel, .escola, .instrumento { margin-bottom: 20px; }
     .section-title { font-weight: bold; font-size: 13px; text-transform: uppercase; margin-bottom: 8px; border-bottom: 1px solid black; padding-bottom: 3px; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
     th, td { border: 1px solid black; padding: 6px 8px; text-align: left; }
@@ -96,6 +96,17 @@
     </table>
   </div>
   {% endif %}
+
+  {% set instrumento_atual = aluno.instrumentos|selectattr('data_devolucao', 'none')|list|first %}
+  <div class="instrumento">
+    <div class="section-title">INSTRUMENTO ASSOCIADO</div>
+    <table>
+      <tr><th>Instrumento</th><td>{{ instrumento_atual.instrumento.nome if instrumento_atual and instrumento_atual.instrumento else '-' }}</td></tr>
+      <tr><th>Patrimônio</th><td>{{ instrumento_atual.instrumento.patrimonio if instrumento_atual and instrumento_atual.instrumento and instrumento_atual.instrumento.patrimonio else '-' }}</td></tr>
+      <tr><th>Data de empréstimo</th><td>{{ instrumento_atual.data_emprestimo.strftime('%d/%m/%Y') if instrumento_atual and instrumento_atual.data_emprestimo else '-' }}</td></tr>
+      <tr><th>Observações</th><td>{{ instrumento_atual.observacoes if instrumento_atual and instrumento_atual.observacoes else '-' }}</td></tr>
+    </table>
+  </div>
 
   <div class="rodape">
     <strong>Sistema de Controle Banda Marcial PM Marília/SP</strong><br>

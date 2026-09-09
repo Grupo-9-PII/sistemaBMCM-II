@@ -13,6 +13,9 @@ from .models import (
     Uniforme,
     AlunoInstrumento,
     AlunoEscola,
+    Ensaio,
+    Presenca,
+    Evento,
     Logradouro,
     Cidade,
 )
@@ -41,13 +44,13 @@ from .backup import (
     restaurar_backup,
     excluir_backup,
     validar_backup,
-    obter_pasta_backup_usuario,
-    SENHA_BACKUP_PADRAO,
+    obter_caminho_backup,
 )
 from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
 from functools import wraps
+from sqlalchemy import text
 
 main_bp = Blueprint("main", __name__)
 
@@ -73,6 +76,297 @@ def dashboard():
 @admin_required
 def painel_admin():
     return render_template("dashboard.html")
+
+
+@main_bp.route("/admin/eventos")
+@login_required
+@profissional_required
+def listar_eventos():
+    eventos = Evento.query.order_by(Evento.data_evento.desc(), Evento.id.desc()).all()
+    return render_template("admin_eventos.html", eventos=eventos)
+
+
+@main_bp.route("/admin/evento/create", methods=["GET", "POST"])
+@login_required
+@profissional_required
+def criar_evento():
+    if request.method == "POST":
+        nome_evento = normalizar_campo_texto(request.form.get("nome_evento"))
+        data_evento = request.form.get("data_evento")
+        if not nome_evento:
+            flash("Informe o nome do evento.", "danger")
+            return redirect(url_for("main.criar_evento"))
+        try:
+            data_evento = datetime.strptime(data_evento, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            flash("Informe uma data válida para o evento.", "danger")
+            return redirect(url_for("main.criar_evento"))
+
+        evento = Evento(
+            nome_evento=nome_evento,
+            data_evento=data_evento,
+            cidade=normalizar_campo_texto(request.form.get("cidade")),
+            responsavel=normalizar_campo_texto(request.form.get("responsavel")),
+            telefone=normalizar_telefone(request.form.get("telefone")),
+            status=request.form.get("status") or "A_CONFIRMAR",
+        )
+        db.session.add(evento)
+        db.session.commit()
+        flash("Evento criado. Registre a lista de chamada.", "success")
+        return redirect(url_for("main.registrar_presenca_evento", evento_id=evento.id))
+
+    return render_template("admin_evento_form.html", evento=None)
+
+
+@main_bp.route("/admin/evento/<int:evento_id>/edit", methods=["GET", "POST"])
+@login_required
+@profissional_required
+def editar_evento(evento_id):
+    evento = Evento.query.get_or_404(evento_id)
+    if request.method == "POST":
+        nome_evento = normalizar_campo_texto(request.form.get("nome_evento"))
+        try:
+            data_evento = datetime.strptime(
+                request.form.get("data_evento"), "%Y-%m-%d"
+            ).date()
+        except (TypeError, ValueError):
+            flash("Informe uma data válida para o evento.", "danger")
+            return redirect(url_for("main.editar_evento", evento_id=evento.id))
+        if not nome_evento:
+            flash("Informe o nome do evento.", "danger")
+            return redirect(url_for("main.editar_evento", evento_id=evento.id))
+        evento.nome_evento = nome_evento
+        evento.data_evento = data_evento
+        evento.cidade = normalizar_campo_texto(request.form.get("cidade"))
+        evento.responsavel = normalizar_campo_texto(request.form.get("responsavel"))
+        evento.telefone = normalizar_telefone(request.form.get("telefone"))
+        evento.status = request.form.get("status") or "A_CONFIRMAR"
+        db.session.commit()
+        flash("Evento atualizado com sucesso.", "success")
+        return redirect(url_for("main.listar_eventos"))
+    return render_template("admin_evento_form.html", evento=evento)
+
+
+@main_bp.route("/admin/evento/<int:evento_id>/cancel", methods=["POST"])
+@login_required
+@profissional_required
+def cancelar_evento(evento_id):
+    evento = Evento.query.get_or_404(evento_id)
+    evento.status = "CANCELADO"
+    db.session.commit()
+    flash("Evento cancelado. O histórico de presença foi preservado.", "warning")
+    return redirect(url_for("main.listar_eventos"))
+
+
+@main_bp.route("/admin/ensaios")
+@login_required
+@profissional_required
+def listar_ensaios():
+    ensaios = Ensaio.query.order_by(
+        Ensaio.data_ensaio.desc(), Ensaio.id.desc()
+    ).all()
+    return render_template("admin_ensaios.html", ensaios=ensaios)
+
+
+@main_bp.route("/admin/ensaio/create", methods=["GET", "POST"])
+@login_required
+@profissional_required
+def criar_ensaio():
+    if request.method == "POST":
+        titulo = normalizar_campo_texto(request.form.get("titulo")) or "ENSAIO"
+        data_ensaio = request.form.get("data_ensaio")
+        try:
+            data_ensaio = datetime.strptime(data_ensaio, "%Y-%m-%d").date()
+        except (TypeError, ValueError):
+            flash("Informe uma data válida para o ensaio.", "danger")
+            return redirect(url_for("main.criar_ensaio"))
+
+        ensaio = Ensaio(
+            titulo=titulo,
+            data_ensaio=data_ensaio,
+            horario=request.form.get("horario", "").strip() or None,
+            local=normalizar_campo_texto(request.form.get("local")),
+            observacoes=request.form.get("observacoes", "").strip() or None,
+            status="AGENDADO",
+            criado_por_id=current_user.id,
+        )
+        db.session.add(ensaio)
+        db.session.commit()
+        flash("Ensaio criado. Registre a chamada para iniciar a presença.", "success")
+        return redirect(url_for("main.registrar_presenca", ensaio_id=ensaio.id))
+
+    return render_template("admin_ensaio_form.html", ensaio=None)
+
+
+@main_bp.route("/admin/ensaio/<int:ensaio_id>/edit", methods=["GET", "POST"])
+@login_required
+@profissional_required
+def editar_ensaio(ensaio_id):
+    ensaio = Ensaio.query.get_or_404(ensaio_id)
+    if request.method == "POST":
+        titulo = normalizar_campo_texto(request.form.get("titulo")) or "ENSAIO"
+        try:
+            data_ensaio = datetime.strptime(
+                request.form.get("data_ensaio"), "%Y-%m-%d"
+            ).date()
+        except (TypeError, ValueError):
+            flash("Informe uma data válida para o ensaio.", "danger")
+            return redirect(url_for("main.editar_ensaio", ensaio_id=ensaio.id))
+        ensaio.titulo = titulo
+        ensaio.data_ensaio = data_ensaio
+        ensaio.horario = request.form.get("horario", "").strip() or None
+        ensaio.local = normalizar_campo_texto(request.form.get("local"))
+        ensaio.observacoes = request.form.get("observacoes", "").strip() or None
+        ensaio.status = request.form.get("status") or "AGENDADO"
+        db.session.commit()
+        flash("Ensaio atualizado com sucesso.", "success")
+        return redirect(url_for("main.listar_ensaios"))
+    return render_template("admin_ensaio_form.html", ensaio=ensaio)
+
+
+@main_bp.route("/admin/ensaio/<int:ensaio_id>/cancel", methods=["POST"])
+@login_required
+@profissional_required
+def cancelar_ensaio(ensaio_id):
+    ensaio = Ensaio.query.get_or_404(ensaio_id)
+    ensaio.status = "CANCELADO"
+    db.session.commit()
+    flash("Ensaio cancelado. O histórico de presença foi preservado.", "warning")
+    return redirect(url_for("main.listar_ensaios"))
+
+
+@main_bp.route("/admin/ensaio/<int:ensaio_id>/presenca", methods=["GET", "POST"])
+@login_required
+@profissional_required
+def registrar_presenca(ensaio_id):
+    ensaio = Ensaio.query.get_or_404(ensaio_id)
+    alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
+
+    if request.method == "POST":
+        for aluno in alunos:
+            status = request.form.get(f"presenca_{aluno.id}", "ausente")
+            presente = status == "presente"
+            observacoes = "JUSTIFICADO" if status == "justificado" else None
+            registro = Presenca.query.filter_by(
+                aluno_id=aluno.id, ensaio_id=ensaio.id
+            ).first()
+            if registro is None:
+                registro = Presenca(aluno_id=aluno.id, ensaio_id=ensaio.id)
+                db.session.add(registro)
+            registro.presente = presente
+            registro.observacoes = observacoes
+            registro.data_presenca = ensaio.data_ensaio
+            registro.registrado_por_id = current_user.id
+            registro.registrado_at = datetime.utcnow()
+
+        db.session.commit()
+        flash("Lista de presença salva com sucesso.", "success")
+        return redirect(url_for("main.registrar_presenca", ensaio_id=ensaio.id))
+
+    registros = {
+        registro.aluno_id: registro
+        for registro in Presenca.query.filter_by(ensaio_id=ensaio.id).all()
+    }
+    grupos = {}
+    for aluno in alunos:
+        associacao = next(
+            (item for item in aluno.instrumentos if item.data_devolucao is None), None
+        )
+        grupo = associacao.instrumento.nome if associacao and associacao.instrumento else "SEM INSTRUMENTO"
+        grupos.setdefault(grupo, []).append(aluno)
+
+    return render_template(
+        "admin_presenca.html",
+        atividade_titulo=ensaio.titulo,
+        atividade_data=ensaio.data_ensaio,
+        atividade_horario=ensaio.horario,
+        atividade_local=ensaio.local,
+        atividade_url=url_for("main.listar_ensaios"),
+        grupos=sorted(grupos.items()),
+        registros=registros,
+    )
+
+
+@main_bp.route("/admin/evento/<int:evento_id>/presenca", methods=["GET", "POST"])
+@login_required
+@profissional_required
+def registrar_presenca_evento(evento_id):
+    evento = Evento.query.get_or_404(evento_id)
+    alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
+
+    if request.method == "POST":
+        for aluno in alunos:
+            status = request.form.get(f"presenca_{aluno.id}", "ausente")
+            registro = Presenca.query.filter_by(
+                aluno_id=aluno.id, evento_id=evento.id
+            ).first()
+            if registro is None:
+                registro = Presenca(aluno_id=aluno.id, evento_id=evento.id)
+                db.session.add(registro)
+            registro.presente = status == "presente"
+            registro.observacoes = "JUSTIFICADO" if status == "justificado" else None
+            registro.data_presenca = evento.data_evento
+            registro.registrado_por_id = current_user.id
+            registro.registrado_at = datetime.utcnow()
+        db.session.commit()
+        flash("Lista de presença do evento salva com sucesso.", "success")
+        return redirect(url_for("main.registrar_presenca_evento", evento_id=evento.id))
+
+    registros = {
+        registro.aluno_id: registro
+        for registro in Presenca.query.filter_by(evento_id=evento.id).all()
+    }
+    grupos = {}
+    for aluno in alunos:
+        associacao = next(
+            (item for item in aluno.instrumentos if item.data_devolucao is None), None
+        )
+        grupo = associacao.instrumento.nome if associacao and associacao.instrumento else "SEM INSTRUMENTO"
+        grupos.setdefault(grupo, []).append(aluno)
+
+    return render_template(
+        "admin_presenca.html",
+        atividade_titulo=evento.nome_evento,
+        atividade_data=evento.data_evento,
+        atividade_horario=None,
+        atividade_local=evento.cidade,
+        atividade_url=url_for("main.listar_eventos"),
+        grupos=sorted(grupos.items()),
+        registros=registros,
+    )
+
+
+@main_bp.route("/admin/presencas/historico")
+@login_required
+@profissional_required
+def historico_presencas():
+    aluno_id = request.args.get("aluno_id", type=int)
+    alunos = Aluno.query.order_by(Aluno.nome).all()
+    registros_query = Presenca.query.filter(
+        db.or_(Presenca.ensaio_id.isnot(None), Presenca.evento_id.isnot(None))
+    )
+    if aluno_id:
+        registros_query = registros_query.filter_by(aluno_id=aluno_id)
+    registros = registros_query.order_by(Presenca.data_presenca.desc()).all()
+
+    estatisticas = {}
+    for aluno in alunos:
+        registros_aluno = [item for item in registros if item.aluno_id == aluno.id]
+        total = len(registros_aluno)
+        presentes = sum(1 for item in registros_aluno if item.presente)
+        estatisticas[aluno.id] = {
+            "total": total,
+            "presentes": presentes,
+            "percentual": round((presentes / total) * 100, 1) if total else None,
+        }
+
+    return render_template(
+        "admin_historico_presencas.html",
+        alunos=alunos,
+        aluno_id=aluno_id,
+        registros=registros,
+        estatisticas=estatisticas,
+    )
 
 
 @main_bp.route("/admin/users")
@@ -396,6 +690,23 @@ def criar_aluno():
                 escola_id=int(escola_id)
             )
             db.session.add(aluno_escola)
+
+        instrumento_id = request.form.get("instrumento_id")
+        if instrumento_id:
+            instrumento = Instrumento.query.filter_by(
+                id=instrumento_id, ativo=True
+            ).first()
+            if not instrumento:
+                db.session.rollback()
+                flash("Instrumento selecionado é inválido ou está inativo.")
+                return redirect(url_for("main.criar_aluno"))
+            db.session.add(AlunoInstrumento(
+                aluno_id=novo_aluno.id,
+                instrumento_id=instrumento.id,
+                observacoes=normalizar_campo_texto(
+                    request.form.get("instrumento_observacoes")
+                ),
+            ))
         
         db.session.commit()
         
@@ -427,6 +738,15 @@ def editar_aluno(aluno_id):
     escolas = Escola.query.all()
     funcoes = FuncaoBanda.query.all()
     instrumentos = Instrumento.query.filter_by(ativo=True).all()
+    associacao_instrumento_atual = AlunoInstrumento.query.filter_by(
+        aluno_id=aluno.id, data_devolucao=None
+    ).first()
+    if (
+        associacao_instrumento_atual
+        and associacao_instrumento_atual.instrumento
+        and associacao_instrumento_atual.instrumento not in instrumentos
+    ):
+        instrumentos.append(associacao_instrumento_atual.instrumento)
     tipos_instrumento = TipoInstrumento.query.all()
     naipes = Naipe.query.all()
     
@@ -574,6 +894,40 @@ def editar_aluno(aluno_id):
                 escola_id=int(escola_id)
             )
             db.session.add(aluno_escola)
+
+        instrumento_id = request.form.get("instrumento_id")
+        instrumento_atual = AlunoInstrumento.query.filter_by(
+            aluno_id=aluno.id, data_devolucao=None
+        ).first()
+        instrumento_novo = None
+        if instrumento_id:
+            instrumento_novo = Instrumento.query.filter_by(
+                id=instrumento_id, ativo=True
+            ).first()
+            if not instrumento_novo:
+                db.session.rollback()
+                flash("Instrumento selecionado é inválido ou está inativo.")
+                return redirect(url_for("main.editar_aluno", aluno_id=aluno_id))
+
+        if instrumento_atual and (
+            not instrumento_novo or instrumento_atual.instrumento_id != instrumento_novo.id
+        ):
+            instrumento_atual.data_devolucao = datetime.utcnow().date()
+
+        if instrumento_novo and (
+            not instrumento_atual or instrumento_atual.instrumento_id != instrumento_novo.id
+        ):
+            db.session.add(AlunoInstrumento(
+                aluno_id=aluno.id,
+                instrumento_id=instrumento_novo.id,
+                observacoes=normalizar_campo_texto(
+                    request.form.get("instrumento_observacoes")
+                ),
+            ))
+        elif instrumento_atual:
+            instrumento_atual.observacoes = normalizar_campo_texto(
+                request.form.get("instrumento_observacoes")
+            )
         
         db.session.commit()
         
@@ -1215,7 +1569,6 @@ def painel_backup():
         backups=backups,
         db_existe=db_existe,
         db_tamanho=db_tamanho,
-        senha_padrao=SENHA_BACKUP_PADRAO,
     )
 
 
@@ -1244,10 +1597,8 @@ def restore_backup():
         flash("Nenhum backup selecionado.", "error")
         return redirect(url_for("main.painel_backup"))
 
-    pasta_backup = obter_pasta_backup_usuario()
-    caminho_backup = os.path.join(pasta_backup, nome_backup)
-
-    if not os.path.exists(caminho_backup):
+    caminho_backup = obter_caminho_backup(nome_backup)
+    if not caminho_backup:
         flash("Arquivo de backup não encontrado.", "error")
         return redirect(url_for("main.painel_backup"))
 
@@ -1280,10 +1631,8 @@ def deletar_backup():
         flash("Nenhum backup selecionado.", "error")
         return redirect(url_for("main.painel_backup"))
 
-    pasta_backup = obter_pasta_backup_usuario()
-    caminho_backup = os.path.join(pasta_backup, nome_backup)
-
-    if not os.path.exists(caminho_backup):
+    caminho_backup = obter_caminho_backup(nome_backup)
+    if not caminho_backup:
         flash("Arquivo de backup não encontrado.", "error")
         return redirect(url_for("main.painel_backup"))
 
@@ -1362,8 +1711,6 @@ def configuracoes():
             valores["tab_inactive_bg"] = request.form.get("cor-fundo-aba-inativa", "#212529")
         if "texto-rodape" in request.form:
             valores["footer_text"] = request.form.get("texto-rodape", "").strip()
-        if "texto-versao" in request.form:
-            valores["version_text"] = request.form.get("texto-versao", "").strip()
         if "timeout-sessao" in request.form:
             valores["session_timeout_minutes"] = request.form.get("timeout-sessao", "30").strip()
         if "tentativas-login" in request.form:
@@ -1463,14 +1810,17 @@ def verificar_integridade():
         from .models import db
 
         # Verificar conexão com banco
-        db.engine.execute("SELECT 1")
+        db.session.execute(text("SELECT 1"))
 
         # Verificar tabelas principais
         tabelas = ['aluno', 'user', 'tipo_instrumento', 'naipe', 'funcao_banda']
         tabelas_faltando = []
 
         for tabela in tabelas:
-            result = db.engine.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{tabela}'")
+            result = db.session.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name=:tabela"),
+                {"tabela": tabela},
+            )
             if not result.fetchone():
                 tabelas_faltando.append(tabela)
 
@@ -1499,7 +1849,7 @@ def reindexar_banco():
         for tabela in tabelas:
             try:
                 # Para SQLite, podemos executar ANALYZE para atualizar estatísticas
-                db.engine.execute(f"ANALYZE {tabela}")
+                db.session.execute(text(f"ANALYZE {tabela}"))
             except Exception:
                 pass  # Ignorar erros em tabelas que podem não existir
 

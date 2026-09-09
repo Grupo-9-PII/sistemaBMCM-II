@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Ensaios — Sistema BMCM{% endblock %}
+{% block content %}
+<div class="container mt-5 fade-in">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Ensaios</h1>
+      <p class="text-muted mb-0">Crie uma atividade e registre a lista de chamada da banda.</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('main.historico_presencas') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-clock-history me-1" aria-hidden="true"></i>Histórico
+      </a>
+      <a href="{{ url_for('main.criar_ensaio') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Novo ensaio
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-dark table-hover mb-0">
+        <caption class="visually-hidden">Ensaios cadastrados</caption>
+        <thead>
+          <tr>
+            <th scope="col">Data</th>
+            <th scope="col">Título</th>
+            <th scope="col">Horário</th>
+            <th scope="col">Local</th>
+            <th scope="col">Status</th>
+            <th scope="col" class="text-end">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ensaio in ensaios %}
+          <tr>
+            <td>{{ ensaio.data_ensaio.strftime('%d/%m/%Y') }}</td>
+            <td>{{ ensaio.titulo }}</td>
+            <td>{{ ensaio.horario or '-' }}</td>
+            <td>{{ ensaio.local or '-' }}</td>
+            <td>{{ ensaio.status or 'AGENDADO' }}</td>
+            <td class="text-end">
+              <div class="d-flex justify-content-end gap-1">
+                <a href="{{ url_for('main.editar_ensaio', ensaio_id=ensaio.id) }}" class="btn btn-sm btn-outline-light">Editar</a>
+                <a href="{{ url_for('main.registrar_presenca', ensaio_id=ensaio.id) }}" class="btn btn-sm btn-outline-info">Chamada</a>
+                {% if ensaio.status != 'CANCELADO' %}
+                <form method="POST" action="{{ url_for('main.cancelar_ensaio', ensaio_id=ensaio.id) }}">
+                  <button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Cancelar este ensaio?')">Cancelar</button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center py-4">Nenhum ensaio cadastrado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

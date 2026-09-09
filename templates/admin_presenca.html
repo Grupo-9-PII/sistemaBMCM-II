@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Lista de chamada — Sistema BMCM{% endblock %}
+{% block content %}
+<div class="container mt-5 fade-in">
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+      <h1 class="h3 mb-1">Lista de chamada</h1>
+      <p class="mb-1"><strong>{{ atividade_titulo }}</strong></p>
+      <p class="text-muted mb-0">
+        {{ atividade_data.strftime('%d/%m/%Y') }}
+        {% if atividade_horario %} às {{ atividade_horario }}{% endif %}
+        {% if atividade_local %} · {{ atividade_local }}{% endif %}
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+        <i class="bi bi-printer me-1" aria-hidden="true"></i>Imprimir
+      </button>
+      <a href="{{ atividade_url }}" class="btn btn-outline-secondary">Voltar</a>
+    </div>
+  </div>
+
+  <form method="POST">
+    {% for grupo, alunos in grupos %}
+    <section class="card mb-4" aria-labelledby="grupo-{{ loop.index }}">
+      <div class="card-header">
+        <h2 id="grupo-{{ loop.index }}" class="h5 mb-0">
+          <i class="bi bi-music-note-beamed me-1" aria-hidden="true"></i>{{ grupo }}
+        </h2>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0 align-middle">
+          <caption class="visually-hidden">Integrantes do grupo {{ grupo }}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Integrante</th>
+              <th scope="col" class="text-center">Presença</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for aluno in alunos %}
+            {% set registro = registros.get(aluno.id) %}
+            <tr>
+              <td>{{ aluno.nome }}</td>
+              <td>
+                <fieldset class="d-flex justify-content-center gap-3 border-0 m-0 p-0">
+                  <legend class="visually-hidden">Presença de {{ aluno.nome }}</legend>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="presenca_{{ aluno.id }}" id="presente_{{ aluno.id }}" value="presente" {% if registro and registro.presente %}checked{% endif %}>
+                    <label class="form-check-label" for="presente_{{ aluno.id }}">Presente</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="presenca_{{ aluno.id }}" id="ausente_{{ aluno.id }}" value="ausente" {% if not registro or (not registro.presente and registro.observacoes != 'JUSTIFICADO') %}checked{% endif %}>
+                    <label class="form-check-label" for="ausente_{{ aluno.id }}">Ausente</label>
+                  </div>
+                  <div class="form-check">
+                    <input class="form-check-input" type="radio" name="presenca_{{ aluno.id }}" id="justificado_{{ aluno.id }}" value="justificado" {% if registro and registro.observacoes == 'JUSTIFICADO' %}checked{% endif %}>
+                    <label class="form-check-label" for="justificado_{{ aluno.id }}">Justificado</label>
+                  </div>
+                </fieldset>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% else %}
+    <div class="alert alert-warning" role="alert">Não há integrantes ativos para esta chamada.</div>
+    {% endfor %}
+
+    <div class="d-grid d-md-flex justify-content-md-end gap-2 mb-5">
+      <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-save me-1" aria-hidden="true"></i>Salvar presença</button>
+    </div>
+  </form>
+</div>
+<style>
+@media print {
+  nav, .btn, .navbar { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .card, .table { color: #000 !important; background: #fff !important; }
+}
+</style>
+{% endblock %}

@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="csrf-token" content="{{ csrf_token }}">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -109,6 +110,16 @@
               <i class="bi bi-music-note-beamed"></i> Instrumentos
             </a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.listar_ensaios') }}">
+              <i class="bi bi-clipboard-check me-1" aria-hidden="true"></i>Presença
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('main.listar_eventos') }}">
+              <i class="bi bi-calendar-event me-1" aria-hidden="true"></i>Eventos
+            </a>
+          </li>
         </ul>
         <ul class="navbar-nav">
           <li class="nav-item dropdown">
@@ -173,6 +184,33 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    (() => {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+      if (!csrfToken) return;
+
+      document.querySelectorAll('form').forEach((form) => {
+        if (form.method.toUpperCase() !== 'POST' || form.querySelector('input[name="csrf_token"]')) return;
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'csrf_token';
+        input.value = csrfToken;
+        form.appendChild(input);
+      });
+
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = (resource, options = {}) => {
+        const method = (options.method || resource.method || 'GET').toUpperCase();
+        const target = new URL(typeof resource === 'string' ? resource : resource.url, window.location.href);
+        if (method === 'POST' && target.origin === window.location.origin) {
+          const headers = new Headers(options.headers || {});
+          headers.set('X-CSRFToken', csrfToken);
+          options = { ...options, headers };
+        }
+        return originalFetch(resource, options);
+      };
+    })();
+  </script>
 </body>
 
 </html>

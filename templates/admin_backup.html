@@ -34,7 +34,7 @@
         </div>
         <div class="col-md-6">
           <p><strong>Tamanho:</strong> {{ db_tamanho|filesizeformat if db_existe else '—' }}</p>
-          <p><strong>Senha padrão de backup:</strong> <code class="bg-dark text-warning px-2 py-1 rounded">{{ senha_padrao }}</code></p>
+          <p class="text-warning mb-0"><strong>Proteção:</strong> arquivo ZIP sem criptografia; armazene-o em local protegido.</p>
         </div>
       </div>
     </div>

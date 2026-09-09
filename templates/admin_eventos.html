@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Eventos — Sistema BMCM{% endblock %}
+{% block content %}
+<div class="container mt-5 fade-in">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Eventos e apresentações</h1>
+      <p class="text-muted mb-0">Organize compromissos e registre a presença da banda.</p>
+    </div>
+    <a href="{{ url_for('main.criar_evento') }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Novo evento
+    </a>
+  </div>
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-dark table-hover mb-0">
+        <caption class="visually-hidden">Eventos cadastrados</caption>
+        <thead><tr><th scope="col">Data</th><th scope="col">Evento</th><th scope="col">Cidade</th><th scope="col">Status</th><th scope="col" class="text-end">Ações</th></tr></thead>
+        <tbody>
+          {% for evento in eventos %}
+          <tr>
+            <td>{{ evento.data_evento.strftime('%d/%m/%Y') if evento.data_evento else '-' }}</td>
+            <td>{{ evento.nome_evento }}</td>
+            <td>{{ evento.cidade or '-' }}</td>
+            <td>{{ evento.status or '-' }}</td>
+            <td class="text-end"><div class="d-flex justify-content-end gap-1"><a href="{{ url_for('main.editar_evento', evento_id=evento.id) }}" class="btn btn-sm btn-outline-light">Editar</a><a href="{{ url_for('main.registrar_presenca_evento', evento_id=evento.id) }}" class="btn btn-sm btn-outline-info">Chamada</a>{% if evento.status != 'CANCELADO' %}<form method="POST" action="{{ url_for('main.cancelar_evento', evento_id=evento.id) }}"><button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Cancelar este evento?')">Cancelar</button></form>{% endif %}</div></td>
+          </tr>
+          {% else %}<tr><td colspan="5" class="text-center py-4">Nenhum evento cadastrado.</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

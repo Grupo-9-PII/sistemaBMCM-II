@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Histórico de presença — Sistema BMCM{% endblock %}
+{% block content %}
+<div class="container mt-5 fade-in">
+  <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+    <div>
+      <h1 class="h3 mb-1">Histórico de presença</h1>
+      <p class="text-muted mb-0">Consulte as chamadas e a frequência dos integrantes.</p>
+    </div>
+    <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
+      <i class="bi bi-printer me-1" aria-hidden="true"></i>Imprimir
+    </button>
+  </div>
+
+  <form method="GET" class="card card-body mb-4 no-print">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-8">
+        <label for="aluno_id" class="form-label">Integrante</label>
+        <select id="aluno_id" name="aluno_id" class="form-select">
+          <option value="">Todos os integrantes</option>
+          {% for aluno in alunos %}
+          <option value="{{ aluno.id }}" {% if aluno_id == aluno.id %}selected{% endif %}>{{ aluno.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <button type="submit" class="btn btn-primary w-100">Filtrar histórico</button>
+      </div>
+    </div>
+  </form>
+
+  {% if aluno_id %}
+  {% set aluno_selecionado = alunos|selectattr('id', 'equalto', aluno_id)|list|first %}
+  {% if aluno_selecionado %}
+  {% set resumo = estatisticas[aluno_selecionado.id] %}
+  <section class="card mb-4" aria-labelledby="resumo-title">
+    <div class="card-body">
+      <h2 id="resumo-title" class="h5">Resumo de {{ aluno_selecionado.nome }}</h2>
+      <p class="mb-0">Presenças: <strong>{{ resumo.presentes }}</strong> de <strong>{{ resumo.total }}</strong> chamadas · Frequência: <strong>{{ resumo.percentual is not none and (resumo.percentual ~ '%') or 'Sem registros' }}</strong></p>
+    </div>
+  </section>
+  {% endif %}
+  {% endif %}
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-dark table-hover mb-0">
+        <caption class="visually-hidden">Registros históricos de presença</caption>
+        <thead>
+          <tr>
+            <th scope="col">Data</th>
+            <th scope="col">Atividade</th>
+            <th scope="col">Local</th>
+            <th scope="col">Integrante</th>
+            <th scope="col">Situação</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for registro in registros %}
+          <tr>
+            <td>{{ registro.data_presenca.strftime('%d/%m/%Y') if registro.data_presenca else '-' }}</td>
+            <td>{{ registro.ensaio.titulo if registro.ensaio else (registro.evento.nome_evento if registro.evento else '-') }}</td>
+            <td>{{ registro.ensaio.local if registro.ensaio and registro.ensaio.local else (registro.evento.cidade if registro.evento and registro.evento.cidade else '-') }}</td>
+            <td>{{ registro.aluno.nome if registro.aluno else '-' }}</td>
+            <td>
+              {% if registro.observacoes == 'JUSTIFICADO' %}
+              <span class="badge bg-warning text-dark">Justificado</span>
+              {% elif registro.presente %}
+              <span class="badge bg-success">Presente</span>
+              {% else %}
+              <span class="badge bg-danger">Ausente</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center py-4">Nenhum registro de presença encontrado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<style>
+@media print {
+  .no-print, nav, .navbar { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .card, .table { color: #000 !important; background: #fff !important; }
+}
+</style>
+{% endblock %}
