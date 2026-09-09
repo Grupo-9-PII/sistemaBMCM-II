@@ -2,6 +2,7 @@
 from datetime import datetime
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy import CheckConstraint, Index
 from . import db
 
 
@@ -216,6 +217,21 @@ class Ensaio(db.Model):
 
 # Tabela: Presenças
 class Presenca(db.Model):
+    __table_args__ = (
+        CheckConstraint(
+            "(ensaio_id IS NOT NULL AND evento_id IS NULL) OR "
+            "(ensaio_id IS NULL AND evento_id IS NOT NULL)",
+            name="ck_presenca_uma_atividade",
+        ),
+        Index(
+            "uq_presenca_aluno_ensaio", "aluno_id", "ensaio_id", unique=True,
+            sqlite_where=db.text("ensaio_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_presenca_aluno_evento", "aluno_id", "evento_id", unique=True,
+            sqlite_where=db.text("evento_id IS NOT NULL"),
+        ),
+    )
     id = db.Column(db.Integer, primary_key=True)
     aluno_id = db.Column(db.Integer, db.ForeignKey('aluno.id'), nullable=False)
     ensaio_id = db.Column(db.Integer, db.ForeignKey('ensaio.id'), nullable=True, index=True)
@@ -308,7 +324,6 @@ class Evento(db.Model):
         back_populates='evento',
         lazy=True,
     )
-
 
 
 

@@ -593,11 +593,11 @@ Para dúvidas ou problemas técnicos, entre em contato com o administrador do si
 
 A versão atual da aplicação é exibida na tela de login, na área de créditos e nas configurações administrativas.
 
-O formato possui três partes, como em `1.4.6`:
+O formato possui três partes, como em `1.4.8`:
 
 - primeira parte: versão principal;
 - segunda parte: atualização ou etapa funcional;
-- terceira parte: quantidade de alterações contabilizadas no dia.
+- terceira parte: contagem incremental de alterações. Ao passar de `99`, o segundo componente é incrementado; se ele também passar de `99`, o primeiro componente é incrementado.
 
 Essa identificação é mantida pela equipe responsável pelo desenvolvimento. O usuário não deve alterar a versão pelas configurações do sistema.
 
@@ -608,4 +608,3 @@ Essa identificação é mantida pela equipe responsável pelo desenvolvimento. O
 **Data de Criação**: 2026
 
 ---
-

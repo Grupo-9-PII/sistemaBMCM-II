@@ -473,7 +473,7 @@ def excluir_usuario(user_id):
     return redirect(url_for("main.listar_usuarios"))
 
 
-@main_bp.route("/admin/reset-password/<int:user_id>")
+@main_bp.route("/admin/reset-password/<int:user_id>", methods=["POST"])
 @login_required
 @admin_required
 def resetar_senha(user_id):
@@ -492,7 +492,7 @@ def resetar_senha(user_id):
     return redirect(url_for("main.listar_usuarios"))
 
 
-@main_bp.route("/admin/toggle-user/<int:user_id>")
+@main_bp.route("/admin/toggle-user/<int:user_id>", methods=["POST"])
 @login_required
 @admin_required
 def toggle_usuario(user_id):
@@ -958,7 +958,7 @@ def editar_aluno(aluno_id):
     )
 
 
-@main_bp.route("/admin/aluno/toggle/<int:aluno_id>")
+@main_bp.route("/admin/aluno/toggle/<int:aluno_id>", methods=["POST"])
 @login_required
 @profissional_required
 def toggle_aluno(aluno_id):
@@ -1235,7 +1235,7 @@ def editar_instrumento(instrumento_id):
                           instrumento=inst, tipos_instrumento=tipos, naipes=naipes)
 
 
-@main_bp.route("/admin/instrumento/toggle/<int:instrumento_id>")
+@main_bp.route("/admin/instrumento/toggle/<int:instrumento_id>", methods=["POST"])
 @login_required
 @profissional_required
 def toggle_instrumento(instrumento_id):
@@ -1859,5 +1859,4 @@ def reindexar_banco():
         flash(f"Erro na reindexação: {str(e)}", "danger")
 
     return redirect(url_for("main.configuracoes"))
-
 

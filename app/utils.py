@@ -2,6 +2,7 @@ from functools import wraps
 from flask import abort, session, flash, redirect, url_for, current_app, request
 from flask_login import logout_user, current_user
 from datetime import datetime, date, timedelta
+import csv
 import os
 import base64
 import binascii
@@ -317,7 +318,8 @@ def importar_municipios():
     if not os.path.exists(sql_file):
         return
     
-    # Ler e executar o arquivo SQL
+    # O arquivo é um dump SQL e contém vírgulas em campos textuais. O parser
+    # anterior usava split(',') e interrompia a inicialização em bancos novos.
     with open(sql_file, 'r', encoding='utf-8') as f:
         sql_content = f.read()
     
@@ -340,14 +342,14 @@ def importar_municipios():
                 part = part.strip().strip('()')
                 if part:
                     # Separar os campos
-                    campos = part.split(',')
+                    campos = next(csv.reader([part], quotechar="'", skipinitialspace=True))
                     if len(campos) >= 5:
 
                         id_val = int(campos[0].strip())
-                        nome = normalizar_campo_texto(campos[1].strip().strip("'"))
-                        uf = campos[2].strip().strip("'")
+                        nome = normalizar_campo_texto(campos[1].strip())
+                        uf = campos[2].strip()
                         cod_ibge = int(campos[3].strip())
-                        ddd = campos[4].strip().strip("'")
+                        ddd = campos[4].strip()
                         
                         cidade = Cidade(
                             id=id_val,
@@ -359,6 +361,13 @@ def importar_municipios():
                         db.session.add(cidade)
     
     db.session.commit()
+
+    # A carga completa tem centenas de milhares de logradouros e não deve
+    # bloquear a primeira inicialização. Consultas não existentes continuam
+    # usando ViaCEP e são gravadas localmente. Para uma instalação que precise
+    # da base completa, defina IMPORTAR_LOGRADOUROS_INICIAIS=1.
+    if not current_app.config.get("IMPORTAR_LOGRADOUROS_INICIAIS", False):
+        return
     
     # Executar INSERTs da tabela logradouro
     logradouro_pattern = r"INSERT INTO `logradouro` VALUES ([^;]+);"
@@ -373,14 +382,14 @@ def importar_municipios():
             for part in parts:
                 part = part.strip().strip('()')
                 if part:
-                    campos = part.split(',')
+                    campos = next(csv.reader([part], quotechar="'", skipinitialspace=True))
                     if len(campos) >= 11:
-                        cep = campos[0].strip().strip("'")
+                        cep = campos[0].strip()
                         id_val = int(campos[1].strip())
-                        tipo = normalizar_campo_texto(campos[2].strip().strip("'"))
-                        descricao = normalizar_campo_texto(campos[3].strip().strip("'"))
+                        tipo = normalizar_campo_texto(campos[2].strip())
+                        descricao = normalizar_campo_texto(campos[3].strip())
                         cidade_id = int(campos[4].strip())
-                        uf = campos[5].strip().strip("'")
+                        uf = campos[5].strip()
                         complemento = normalizar_campo_texto(campos[6].strip().strip("'")) if campos[6].strip() != 'NULL' else None
                         descricao_sem_numero = normalizar_campo_texto(campos[7].strip().strip("'")) if campos[7].strip() != 'NULL' else None
                         descricao_cidade = normalizar_campo_texto(campos[8].strip().strip("'")) if campos[8].strip() != 'NULL' else None
@@ -460,6 +469,17 @@ def migrar_banco_novos_campos():
             db.session.execute(text(
                 "ALTER TABLE ensaio ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'AGENDADO'"
             ))
+
+        # Impede mais de uma chamada para o mesmo integrante e atividade,
+        # inclusive quando duas requisições chegam simultaneamente.
+        db.session.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_presenca_aluno_ensaio "
+            "ON presenca (aluno_id, ensaio_id) WHERE ensaio_id IS NOT NULL"
+        ))
+        db.session.execute(text(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_presenca_aluno_evento "
+            "ON presenca (aluno_id, evento_id) WHERE evento_id IS NOT NULL"
+        ))
         
         db.session.commit()
     except Exception as e:
@@ -526,25 +546,36 @@ def get_session_timeout_minutes():
         return SESSION_TIMEOUT_MINUTES
 
 
+def verificar_timeout_sessao():
+    """Atualiza a atividade ou encerra uma sessão autenticada expirada."""
+    if not current_user.is_authenticated:
+        return None
+
+    last_activity_str = session.get('last_activity')
+    if last_activity_str:
+        try:
+            last_activity = datetime.fromisoformat(last_activity_str)
+            timeout_minutes = get_session_timeout_minutes()
+            if datetime.utcnow() - last_activity > timedelta(minutes=timeout_minutes):
+                logout_user()
+                flash(
+                    f'Sessão expirada por inatividade ({timeout_minutes} minutos). Faça login novamente.',
+                    'warning',
+                )
+                return redirect(url_for('auth.login'))
+        except ValueError:
+            pass
+
+    update_activity()
+    return None
+
+
 def session_timeout(f):
-    """Decorator: Verifica inatividade > timeout → logout auto."""
+    """Compatibilidade para rotas antigas; a validação agora é global."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if current_user.is_authenticated:
-            last_activity_str = session.get('last_activity')
-            if last_activity_str:
-                try:
-                    last_activity = datetime.fromisoformat(last_activity_str)
-                    timeout_minutes = get_session_timeout_minutes()
-                    if datetime.utcnow() - last_activity > timedelta(minutes=timeout_minutes):
-                        logout_user()
-                        flash(f'Sessão expirada por inatividade ({timeout_minutes} minutos). Faça login novamente.', 'warning')
-                        return redirect(url_for('auth.login'))
-                except ValueError:
-                    # Timestamp inválido, reset
-                    update_activity()
-            else:
-                update_activity()
+        resposta = verificar_timeout_sessao()
+        if resposta is not None:
+            return resposta
         return f(*args, **kwargs)
     return decorated_function
-

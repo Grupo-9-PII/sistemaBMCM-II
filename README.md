@@ -186,18 +186,18 @@ O sistema utiliza uma versão de três partes no formato `principal.atualizaçã
 Exemplo:
 
 ```text
-1.4.6
+1.4.8
 ```
 
 Nesse formato:
 
 * `1`: versão principal da aplicação;
 * `4`: etapa ou atualização funcional;
-* `6`: quantidade de alterações contabilizadas no dia.
+* `8`: contagem incremental de alterações.
 
-A versão oficial fica centralizada em `config.py`, nas constantes `APP_VERSION_MAJOR`, `APP_VERSION_UPDATE` e `APP_VERSION_DAILY_COUNT`. Ao criar uma nova rotina, formulário ou correção, o responsável pelo desenvolvimento deve atualizar a contagem final. Ao iniciar uma nova etapa funcional, o segundo componente deve ser incrementado; mudanças estruturais maiores podem incrementar o primeiro.
+A versão oficial fica centralizada em `config.py`, nas constantes `APP_VERSION_MAJOR`, `APP_VERSION_UPDATE` e `APP_VERSION_COUNT`. Cada correção, rotina ou formulário concluído incrementa o terceiro componente a partir da versão atual. Ao passar de `99`, a contagem volta a `0` e o segundo componente é incrementado; se ele também passar de `99`, volta a `0` e o primeiro componente é incrementado. A função `proxima_versao()` formaliza essa regra. Mudanças estruturais maiores podem incrementar o primeiro componente.
 
-A versão é exibida no login, na área de créditos e nas configurações administrativas. A contagem representa o controle de alterações do desenvolvimento e não é alterada automaticamente pelo uso do sistema em produção.
+A versão é exibida no login, na área de créditos e nas configurações administrativas. A contagem representa o controle acumulado de alterações do desenvolvimento e não é alterada automaticamente pelo uso do sistema em produção.
 
 ---
 
@@ -716,8 +716,9 @@ O projeto utiliza **Waitress** como servidor WSGI.
 
 As seguintes variáveis podem ser utilizadas:
 
-* `SECRET_KEY`: chave utilizada para proteção das sessões Flask.
+* `SECRET_KEY`: recomendada em produção; chave forte e estável utilizada para proteção das sessões Flask. Em instalações locais sem essa variável, o sistema cria uma chave persistente em `instance/.secret_key`, que não é versionada.
 * `DATABASE_URL`: URL de conexão com o banco de dados.
+* `IMPORTAR_LOGRADOUROS_INICIAIS=1`: opcional; importa a base local completa de logradouros na primeira execução. Por padrão, os endereços são obtidos sob demanda pelo ViaCEP e armazenados localmente.
 
 Exemplo:
 

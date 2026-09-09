@@ -112,10 +112,10 @@
                   <a href="{{ url_for('main.editar_instrumento', instrumento_id=inst.id) }}" class="btn btn-sm btn-primary" title="Editar">
                     <i class="bi bi-pencil"></i>
                   </a>
-                  <a href="{{ url_for('main.toggle_instrumento', instrumento_id=inst.id) }}" 
-                     class="btn btn-sm {{ 'btn-warning' if inst.ativo else 'btn-success' }}" title="Ativar/Desativar">
-                    <i class="bi {{ 'bi-pause-circle' if inst.ativo else 'bi-play-circle' }}"></i>
-                  </a>
+                  <form action="{{ url_for('main.toggle_instrumento', instrumento_id=inst.id) }}" method="POST" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-sm {{ 'btn-warning' if inst.ativo else 'btn-success' }}" title="Ativar/Desativar"><i class="bi {{ 'bi-pause-circle' if inst.ativo else 'bi-play-circle' }}"></i></button>
+                  </form>
                   <form action="{{ url_for('main.excluir_instrumento', instrumento_id=inst.id) }}" method="POST" style="display:inline">
                     <button class="btn btn-sm btn-danger" onclick="return confirm('Excluir {{ inst.nome }}?')" title="Excluir">
                       <i class="bi bi-trash"></i>
@@ -149,4 +149,3 @@
 </div>
 
 {% endblock %}
-

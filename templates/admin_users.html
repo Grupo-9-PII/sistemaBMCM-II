@@ -77,13 +77,15 @@
                   </a>
                   
                   {% if user.id != current_user.id %}
-                  <a href="{{ url_for('main.resetar_senha', user_id=user.id) }}" class="btn btn-sm btn-warning" title="Resetar Senha">
-                    <i class="bi bi-key"></i>
-                  </a>
+                  <form action="{{ url_for('main.resetar_senha', user_id=user.id) }}" method="POST" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-sm btn-warning" title="Resetar senha" onclick="return confirm('Redefinir a senha de {{ user.username }}?')"><i class="bi bi-key"></i></button>
+                  </form>
 
-                  <a href="{{ url_for('main.toggle_usuario', user_id=user.id) }}" class="btn btn-sm btn-secondary" title="{{ 'Bloquear' if user.is_active else 'Ativar' }}">
-                    <i class="bi {{ 'bi-lock' if user.is_active else 'bi-unlock' }}"></i>
-                  </a>
+                  <form action="{{ url_for('main.toggle_usuario', user_id=user.id) }}" method="POST" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-sm btn-secondary" title="{{ 'Bloquear' if user.is_active else 'Ativar' }}"><i class="bi {{ 'bi-lock' if user.is_active else 'bi-unlock' }}"></i></button>
+                  </form>
                   {% endif %}
 
                   {% if user.id != current_user.id %}
@@ -110,4 +112,3 @@
 </div>
 
 {% endblock %}
-

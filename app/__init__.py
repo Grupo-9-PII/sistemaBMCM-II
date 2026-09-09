@@ -4,7 +4,7 @@ from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from datetime import timedelta
-from config import Config
+from config import Config, obter_secret_key_local
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -25,6 +25,9 @@ def create_app():
     app.config.from_object(Config)
     app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=15)
 
+    if not app.config.get("SECRET_KEY"):
+        app.config["SECRET_KEY"] = obter_secret_key_local(Config.BASE_DIR)
+
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -41,13 +44,17 @@ def create_app():
         obter_todas_configuracoes,
         obter_token_csrf,
         validar_csrf,
+        verificar_timeout_sessao,
     )
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
 
     @app.before_request
-    def protect_post_requests():
+    def proteger_requisicoes():
+        resposta_timeout = verificar_timeout_sessao()
+        if resposta_timeout is not None:
+            return resposta_timeout
         if request.method == "POST":
             validar_csrf()
 
@@ -84,4 +91,3 @@ def create_app():
         limpar_logs_antigos()
 
     return app
-

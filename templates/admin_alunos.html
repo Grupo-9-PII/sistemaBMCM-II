@@ -136,10 +136,10 @@
                     <i class="bi bi-file-earmark-person",></i>
                   </a>
                   {% if current_user.is_admin %}
-                  <a href="{{ url_for('main.toggle_aluno', aluno_id=a.id) }}" class="btn {% if a.ativo %}btn-warning{% else %}btn-success{% endif %}" 
-                     title="{% if a.ativo %}Inativar{% else %}Ativar{% endif %}">
-                    <i class="bi {% if a.ativo %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i>
-                  </a>
+                  <form action="{{ url_for('main.toggle_aluno', aluno_id=a.id) }}" method="POST" style="display: inline-block;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn {% if a.ativo %}btn-warning{% else %}btn-success{% endif %}" title="{% if a.ativo %}Inativar{% else %}Ativar{% endif %}"><i class="bi {% if a.ativo %}bi-pause-circle{% else %}bi-play-circle{% endif %}"></i></button>
+                  </form>
 
                   <form action="{{ url_for('main.excluir_aluno', aluno_id=a.id) }}" method="POST" style="display: inline-block;">
                     <button type="submit" class="btn btn-danger" title="Inativar" 
@@ -195,4 +195,3 @@
 </style>
 
 {% endblock %}
-
