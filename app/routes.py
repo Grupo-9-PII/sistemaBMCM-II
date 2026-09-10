@@ -336,6 +336,42 @@ def registrar_presenca_evento(evento_id):
     )
 
 
+@main_bp.route("/admin/evento/<int:evento_id>/relatorio")
+@login_required
+@profissional_required
+def relatorio_presenca_evento(evento_id):
+    evento = Evento.query.get_or_404(evento_id)
+    alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
+    registros = Presenca.query.filter_by(evento_id=evento.id).all()
+    registros_por_aluno = {registro.aluno_id: registro for registro in registros}
+
+    grupos = {}
+    for aluno in alunos:
+        associacao = next(
+            (item for item in aluno.instrumentos if item.data_devolucao is None), None
+        )
+        instrumento = associacao.instrumento if associacao else None
+        grupo = instrumento.nome if instrumento else "SEM INSTRUMENTO"
+        grupos.setdefault(grupo, []).append({
+            "aluno": aluno,
+            "registro": registros_por_aluno.get(aluno.id),
+        })
+
+    return render_template(
+        "admin_relatorio_presenca_evento.html",
+        evento=evento,
+        grupos=sorted(grupos.items(), key=lambda item: item[0].casefold()),
+        total_alunos=len(alunos),
+        total_presentes=sum(
+            1 for registro in registros if registro.presente
+        ),
+        total_justificados=sum(
+            1 for registro in registros if registro.observacoes == "JUSTIFICADO"
+        ),
+        total_registrados=len(registros),
+    )
+
+
 @main_bp.route("/admin/presencas/historico")
 @login_required
 @profissional_required
@@ -366,6 +402,62 @@ def historico_presencas():
         aluno_id=aluno_id,
         registros=registros,
         estatisticas=estatisticas,
+    )
+
+
+@main_bp.route("/admin/presencas/diaria")
+@login_required
+@profissional_required
+def relatorio_presenca_diaria():
+    data_str = request.args.get("data", "")
+    try:
+        data_relatorio = datetime.strptime(data_str, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        data_relatorio = datetime.utcnow().date()
+
+    alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
+    registros = (
+        Presenca.query.filter_by(data_presenca=data_relatorio)
+        .order_by(Presenca.registrado_at.desc(), Presenca.id.desc())
+        .all()
+    )
+    registros_por_aluno = {}
+    for registro in registros:
+        registros_por_aluno.setdefault(registro.aluno_id, registro)
+
+    grupos = {}
+    for aluno in alunos:
+        associacao = next(
+            (item for item in aluno.instrumentos if item.data_devolucao is None), None
+        )
+        instrumento = associacao.instrumento if associacao else None
+        grupo = instrumento.nome if instrumento else "SEM INSTRUMENTO"
+        grupos.setdefault(grupo, []).append({
+            "aluno": aluno,
+            "registro": registros_por_aluno.get(aluno.id),
+        })
+
+    atividades = []
+    atividades.extend(
+        f"Ensaio: {ensaio.titulo}"
+        + (f" · {ensaio.local}" if ensaio.local else "")
+        for ensaio in Ensaio.query.filter_by(data_ensaio=data_relatorio).all()
+    )
+    atividades.extend(
+        f"Evento: {evento.nome_evento}"
+        + (f" · {evento.cidade}" if evento.cidade else "")
+        for evento in Evento.query.filter_by(data_evento=data_relatorio).all()
+    )
+
+    return render_template(
+        "admin_relatorio_presenca_diaria.html",
+        data_relatorio=data_relatorio,
+        grupos=sorted(grupos.items(), key=lambda item: item[0].casefold()),
+        atividades=atividades,
+        total_alunos=len(alunos),
+        total_presentes=sum(
+            1 for registro in registros_por_aluno.values() if registro.presente
+        ),
     )
 
 

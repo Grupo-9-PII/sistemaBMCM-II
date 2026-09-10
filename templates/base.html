@@ -110,15 +110,24 @@
               <i class="bi bi-music-note-beamed"></i> Instrumentos
             </a>
           </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('main.listar_ensaios') }}">
-              <i class="bi bi-clipboard-check me-1" aria-hidden="true"></i>Presença
+         
+        </ul>
+        <ul class="navbar-nav">
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-calendar2-x-fill"></i> Atividades
             </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('main.listar_eventos') }}">
-              <i class="bi bi-calendar-event me-1" aria-hidden="true"></i>Eventos
-            </a>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="{{ url_for('main.listar_ensaios') }}">
+                  <i class="bi bi-clipboard-check me-2"></i>Ensaios
+                </a></li>
+              <li><a class="dropdown-item" href="{{ url_for('main.relatorio_presenca_diaria') }}">
+                  <i class="bi bi-file-earmark-spreadsheet me-2"></i>Relatório de presença
+                </a></li>
+                <li><a class="dropdown-item" href="{{ url_for('main.listar_eventos') }}">
+                  <i class="bi bi-calendar-event me-1"></i>Eventos
+                </a></li>              
+            </ul>
           </li>
         </ul>
         <ul class="navbar-nav">

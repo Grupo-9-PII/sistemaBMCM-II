@@ -23,7 +23,7 @@
             <td>{{ evento.nome_evento }}</td>
             <td>{{ evento.cidade or '-' }}</td>
             <td>{{ evento.status or '-' }}</td>
-            <td class="text-end"><div class="d-flex justify-content-end gap-1"><a href="{{ url_for('main.editar_evento', evento_id=evento.id) }}" class="btn btn-sm btn-outline-light">Editar</a><a href="{{ url_for('main.registrar_presenca_evento', evento_id=evento.id) }}" class="btn btn-sm btn-outline-info">Chamada</a>{% if evento.status != 'CANCELADO' %}<form method="POST" action="{{ url_for('main.cancelar_evento', evento_id=evento.id) }}"><button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Cancelar este evento?')">Cancelar</button></form>{% endif %}</div></td>
+            <td class="text-end"><div class="d-flex justify-content-end gap-1"><a href="{{ url_for('main.editar_evento', evento_id=evento.id) }}" class="btn btn-sm btn-outline-light">Editar</a><a href="{{ url_for('main.registrar_presenca_evento', evento_id=evento.id) }}" class="btn btn-sm btn-outline-info">Chamada</a><a href="{{ url_for('main.relatorio_presenca_evento', evento_id=evento.id) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true"></i>Relatório</a>{% if evento.status != 'CANCELADO' %}<form method="POST" action="{{ url_for('main.cancelar_evento', evento_id=evento.id) }}"><button type="submit" class="btn btn-sm btn-outline-warning" onclick="return confirm('Cancelar este evento?')">Cancelar</button></form>{% endif %}</div></td>
           </tr>
           {% else %}<tr><td colspan="5" class="text-center py-4">Nenhum evento cadastrado.</td></tr>{% endfor %}
         </tbody>
