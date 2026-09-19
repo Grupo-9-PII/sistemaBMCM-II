@@ -148,8 +148,9 @@ def restaurar_backup(caminho_backup, caminho_db, senha=None):
             shutil.rmtree(pasta_temp, ignore_errors=True)
 
         return True, "Backup restaurado com sucesso."
-    except Exception as e:
-        return False, f"Erro ao restaurar backup: {str(e)}"
+    except Exception:
+        current_app.logger.exception("Erro ao restaurar backup")
+        return False, "Não foi possível restaurar o backup. Verifique o log do sistema."
 
 
 def excluir_backup(caminho_backup):
@@ -158,5 +159,6 @@ def excluir_backup(caminho_backup):
         os.remove(caminho_backup)
         return True, "Backup excluído com sucesso."
     except Exception as e:
-        return False, f"Erro ao excluir backup: {str(e)}"
+        current_app.logger.exception("Erro ao excluir backup")
+        return False, "Não foi possível excluir o backup. Verifique o log do sistema."
 

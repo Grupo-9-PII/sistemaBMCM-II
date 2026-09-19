@@ -63,4 +63,6 @@ class Config:
         "sqlite:///" + os.path.join(BASE_DIR, "instance", "database.db")
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Tamanho máximo por solicitação (upload de fotos/arquivos): 5 MB.
+    MAX_CONTENT_LENGTH = 5 * 1024 * 1024
     IMPORTAR_LOGRADOUROS_INICIAIS = os.environ.get("IMPORTAR_LOGRADOUROS_INICIAIS") == "1"

@@ -46,7 +46,7 @@ from .backup import (
     validar_backup,
     obter_caminho_backup,
 )
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from werkzeug.utils import secure_filename
 from functools import wraps
@@ -257,7 +257,7 @@ def registrar_presenca(ensaio_id):
             registro.observacoes = observacoes
             registro.data_presenca = ensaio.data_ensaio
             registro.registrado_por_id = current_user.id
-            registro.registrado_at = datetime.utcnow()
+            registro.registrado_at = datetime.now(timezone.utc)
 
         db.session.commit()
         flash("Lista de presença salva com sucesso.", "success")
@@ -307,7 +307,7 @@ def registrar_presenca_evento(evento_id):
             registro.observacoes = "JUSTIFICADO" if status == "justificado" else None
             registro.data_presenca = evento.data_evento
             registro.registrado_por_id = current_user.id
-            registro.registrado_at = datetime.utcnow()
+            registro.registrado_at = datetime.now(timezone.utc)
         db.session.commit()
         flash("Lista de presença do evento salva com sucesso.", "success")
         return redirect(url_for("main.registrar_presenca_evento", evento_id=evento.id))
@@ -413,7 +413,7 @@ def relatorio_presenca_diaria():
     try:
         data_relatorio = datetime.strptime(data_str, "%Y-%m-%d").date()
     except (TypeError, ValueError):
-        data_relatorio = datetime.utcnow().date()
+        data_relatorio = datetime.now(timezone.utc).date()
 
     alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
     registros = (
@@ -1004,7 +1004,7 @@ def editar_aluno(aluno_id):
         if instrumento_atual and (
             not instrumento_novo or instrumento_atual.instrumento_id != instrumento_novo.id
         ):
-            instrumento_atual.data_devolucao = datetime.utcnow().date()
+            instrumento_atual.data_devolucao = datetime.now(timezone.utc).date()
 
         if instrumento_novo and (
             not instrumento_atual or instrumento_atual.instrumento_id != instrumento_novo.id
@@ -1580,25 +1580,47 @@ def salvar_foto_aluno(foto_file, aluno_id):
     """Salva a foto do aluno e retorna o caminho"""
     if not foto_file or foto_file.filename == '':
         return None
-    
+
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-    
+
     def allowed_file(filename):
         return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-    
+
     if allowed_file(foto_file.filename):
         ext = foto_file.filename.rsplit('.', 1)[1].lower()
+
+        # Verificação real do conteúdo (magic bytes): rejeita um .txt renomeado
+        # para .png ou qualquer arquivo que não seja uma imagem de verdade.
+        if not _eh_imagem_valida(foto_file):
+            return None
+
         filename = f"aluno_{aluno_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.{ext}"
-        
+
         upload_folder = os.path.join('static', 'uploads', 'alunos')
         os.makedirs(upload_folder, exist_ok=True)
-        
+
         filepath = os.path.join(upload_folder, filename)
         foto_file.save(filepath)
-        
+
         return os.path.join('uploads', 'alunos', filename)
-    
+
     return None
+
+
+def _eh_imagem_valida(foto_file):
+    """Confirma que os primeiros bytes do arquivo correspondem a uma imagem real."""
+    try:
+        cabecera = foto_file.read(12)
+        foto_file.seek(0)
+    except Exception:
+        return False
+    return (
+        cabecera.startswith(b'\xff\xd8\xff')            # JPEG
+        or cabecera.startswith(b'\x89PNG\r\n\x1a\n')     # PNG
+        or cabecera.startswith(b'GIF87a')
+        or cabecera.startswith(b'GIF89a')
+        or (cabecera[:4] == b'RIFF' and cabecera[8:12] == b'WEBP')  # WebP
+    )
 
 
 @main_bp.route("/admin/relatorios-alunos")
@@ -1675,7 +1697,8 @@ def gerar_backup():
         nome_arquivo = os.path.basename(caminho_backup)
         flash(f"Backup criado com sucesso: {nome_arquivo}")
     except Exception as e:
-        flash(f"Erro ao criar backup: {str(e)}", "error")
+        current_app.logger.exception("Erro ao criar backup")
+        flash("Não foi possível criar o backup. Tente novamente.", "error")
     return redirect(url_for("main.painel_backup"))
 
 
@@ -1708,7 +1731,8 @@ def restore_backup():
         else:
             flash(msg, "error")
     except Exception as e:
-        flash(f"Erro ao restaurar backup: {str(e)}", "error")
+        current_app.logger.exception("Erro ao restaurar backup")
+        flash("Não foi possível restaurar o backup. Tente novamente.", "error")
 
     return redirect(url_for("main.painel_backup"))
 
@@ -1887,8 +1911,9 @@ def limpar_cache():
                 pass
 
         flash("Cache limpo com sucesso.", "success")
-    except Exception as e:
-        flash(f"Erro ao limpar cache: {str(e)}", "danger")
+    except Exception:
+        current_app.logger.exception("Erro ao limpar cache")
+        flash("Não foi possível limpar o cache. Tente novamente.", "danger")
 
     return redirect(url_for("main.configuracoes"))
 
@@ -1921,8 +1946,9 @@ def verificar_integridade():
         else:
             flash("Integridade do banco verificada com sucesso.", "success")
 
-    except Exception as e:
-        flash(f"Erro na verificação de integridade: {str(e)}", "danger")
+    except Exception:
+        current_app.logger.exception("Erro na verificação de integridade")
+        flash("Não foi possível verificar a integridade do banco. Tente novamente.", "danger")
 
     return redirect(url_for("main.configuracoes"))
 
@@ -1947,8 +1973,9 @@ def reindexar_banco():
 
         flash("Reindexação concluída com sucesso.", "success")
 
-    except Exception as e:
-        flash(f"Erro na reindexação: {str(e)}", "danger")
+    except Exception:
+        current_app.logger.exception("Erro na reindexação")
+        flash("Não foi possível reindexar o banco. Tente novamente.", "danger")
 
     return redirect(url_for("main.configuracoes"))
 

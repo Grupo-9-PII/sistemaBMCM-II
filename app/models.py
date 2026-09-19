@@ -1,5 +1,5 @@
 
-from datetime import datetime
+from datetime import datetime, timezone
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import CheckConstraint, Index
@@ -157,7 +157,7 @@ class AlunoEscola(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     aluno_id = db.Column(db.Integer, db.ForeignKey('aluno.id'), nullable=False)
     escola_id = db.Column(db.Integer, db.ForeignKey('escola.id'), nullable=False)
-    data_matricula = db.Column(db.Date, default=datetime.utcnow().date)
+    data_matricula = db.Column(db.Date, default=lambda: datetime.now(timezone.utc).date())
 
 
 # Tabela: Instrumentos
@@ -183,7 +183,7 @@ class AlunoInstrumento(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     aluno_id = db.Column(db.Integer, db.ForeignKey('aluno.id'), nullable=False)
     instrumento_id = db.Column(db.Integer, db.ForeignKey('instrumento.id'), nullable=False)
-    data_emprestimo = db.Column(db.Date, default=datetime.utcnow().date)
+    data_emprestimo = db.Column(db.Date, default=lambda: datetime.now(timezone.utc).date())
     data_devolucao = db.Column(db.Date, nullable=True)
     observacoes = db.Column(db.Text)
 
@@ -207,7 +207,7 @@ class Ensaio(db.Model):
     observacoes = db.Column(db.Text)
     status = db.Column(db.String(20), nullable=False, default="AGENDADO")
     criado_por_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    criado_at = db.Column(db.DateTime, default=datetime.utcnow)
+    criado_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     criado_por = db.relationship('User', foreign_keys=[criado_por_id])
     presencas = db.relationship(
@@ -236,11 +236,11 @@ class Presenca(db.Model):
     aluno_id = db.Column(db.Integer, db.ForeignKey('aluno.id'), nullable=False)
     ensaio_id = db.Column(db.Integer, db.ForeignKey('ensaio.id'), nullable=True, index=True)
     evento_id = db.Column(db.Integer, db.ForeignKey('evento.id'), nullable=True, index=True)
-    data_presenca = db.Column(db.Date, default=datetime.utcnow().date)
+    data_presenca = db.Column(db.Date, default=lambda: datetime.now(timezone.utc).date())
     presente = db.Column(db.Boolean, default=True)
     observacoes = db.Column(db.Text)
     registrado_por_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    registrado_at = db.Column(db.DateTime, default=datetime.utcnow)
+    registrado_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     registrado_por = db.relationship('User', foreign_keys=[registrado_por_id])
     evento = db.relationship('Evento', foreign_keys=[evento_id], back_populates='presencas')

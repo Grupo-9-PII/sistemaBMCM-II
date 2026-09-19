@@ -8,9 +8,11 @@ comandogit
 conceito.png
 relatorio_plano_trabalho_presenca.md
 TODO.md
-instance/*.db
-instance/*.db.*
-instance/.secret_key
+instance/
 static/uploads/alunos/*
 static/uploads/autorizacoes_menor/*
 !static/uploads/autorizacoes_menor/.gitkeep
+app.py
+__pycache__/
+*.pyc
+OAuth20 SistemaBMCM.txt

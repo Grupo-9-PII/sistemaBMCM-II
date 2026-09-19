@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from .utils import session_timeout, update_activity, validar_senha_complexidade
-from datetime import datetime, timedelta
+from .utils import session_timeout, update_activity, validar_senha_complexidade, permitir_tentativa_login
+from datetime import datetime, timedelta, timezone
 from .models import User
 from . import db
 
@@ -10,6 +10,14 @@ auth_bp = Blueprint("auth", __name__)
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        # Proteção contra força bruta distribuída: máx. 10 tentativas por IP/minuto.
+        if not permitir_tentativa_login(request.remote_addr or ""):
+            current_app.logger.warning(
+                "LOGIN BLOQUEADO POR LIMITE ip=%s", request.remote_addr
+            )
+            flash("Muitas tentativas. Aguarde um minuto e tente novamente.", "danger")
+            return redirect(url_for("auth.login"))
+
         username = request.form.get("username")
         password = request.form.get("password")
 
@@ -20,7 +28,7 @@ def login():
             return redirect(url_for("auth.login"))
 
         # Verifica bloqueio
-        if user.blocked_until and user.blocked_until > datetime.utcnow():
+        if user.blocked_until and user.blocked_until > datetime.now(timezone.utc):
             flash("Usuário bloqueado por 12 horas.")
             return redirect(url_for("auth.login"))
 
@@ -39,6 +47,9 @@ def login():
 
         else:
             user.login_attempts += 1
+            current_app.logger.warning(
+                "LOGIN FALHOU user=%s ip=%s", username, request.remote_addr
+            )
             limite_tentativas = current_app.config.get("LOGIN_ATTEMPTS_LIMIT", 3)
             try:
                 limite_tentativas = int(limite_tentativas)
@@ -48,7 +59,7 @@ def login():
                 limite_tentativas = 3
 
             if user.login_attempts >= limite_tentativas:
-                user.blocked_until = datetime.utcnow() + timedelta(hours=12)
+                user.blocked_until = datetime.now(timezone.utc) + timedelta(hours=12)
                 user.login_attempts = 0
                 flash("Usuário bloqueado por 12 horas.")
             else:

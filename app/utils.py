@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import abort, session, flash, redirect, url_for, current_app, request
 from flask_login import logout_user, current_user
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 import csv
 import os
 import base64
@@ -16,9 +16,32 @@ from sqlalchemy import text
 from werkzeug.utils import secure_filename
 
 SENHA_PADRAO = "123456"
-
-# Versão do texto do termo (auditoria LGPD — atualize quando o texto legal mudar).
 TERMO_AUTORIZACAO_FOTO_VERSAO = "2026-04-13"
+
+# ---------------------------------------------------------------------------
+# Rate limit por IP para o login (sem dependências externas).
+# Guarda timestamps em memória; suficiente para um servidor de instância única.
+# ---------------------------------------------------------------------------
+from collections import defaultdict, deque
+import time
+
+_LOGIN_TENTATIVAS_IP = defaultdict(deque)
+LOGIN_LIMITE_IP_POR_MINUTO = 10
+LOGIN_VENTANA_SEGUNDOS = 60
+
+
+def permitir_tentativa_login(ip):
+    """Retorna True se o IP ainda pode tentar login; False se excedeu o limite."""
+    if not ip:
+        ip = "desconhecida"
+    agora = time.time()
+    cola = _LOGIN_TENTATIVAS_IP[ip]
+    while cola and cola[0] < agora - LOGIN_VENTANA_SEGUNDOS:
+        cola.popleft()
+    if len(cola) >= LOGIN_LIMITE_IP_POR_MINUTO:
+        return False
+    cola.append(agora)
+    return True
 
 
 def obter_token_csrf():
@@ -114,7 +137,7 @@ def salvar_assinatura_data_url(data_url, aluno_id):
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     upload_abs = os.path.join(base_dir, "static", "uploads", "autorizacoes_menor")
     os.makedirs(upload_abs, exist_ok=True)
-    fn = f"assinatura_aluno_{aluno_id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}.png"
+    fn = f"assinatura_aluno_{aluno_id}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}.png"
     path_abs = os.path.join(upload_abs, fn)
     with open(path_abs, "wb") as f:
         f.write(raw)
@@ -251,7 +274,7 @@ def limpar_logs_antigos():
         return
 
     from .models import HardDeleteAlunoLog
-    limite = datetime.utcnow() - timedelta(days=dias)
+    limite = datetime.now(timezone.utc) - timedelta(days=dias)
     HardDeleteAlunoLog.query.filter(HardDeleteAlunoLog.created_at < limite).delete(synchronize_session=False)
     db.session.commit()
 
@@ -532,7 +555,7 @@ SESSION_TIMEOUT_MINUTES = 15
 def update_activity():
     """Atualiza timestamp da última atividade na session."""
     session.modified = True
-    session['last_activity'] = datetime.utcnow().isoformat()
+    session['last_activity'] = datetime.now(timezone.utc).isoformat()
 
 
 def get_session_timeout_minutes():
@@ -556,7 +579,7 @@ def verificar_timeout_sessao():
         try:
             last_activity = datetime.fromisoformat(last_activity_str)
             timeout_minutes = get_session_timeout_minutes()
-            if datetime.utcnow() - last_activity > timedelta(minutes=timeout_minutes):
+            if datetime.now(timezone.utc) - last_activity > timedelta(minutes=timeout_minutes):
                 logout_user()
                 flash(
                     f'Sessão expirada por inatividade ({timeout_minutes} minutos). Faça login novamente.',
