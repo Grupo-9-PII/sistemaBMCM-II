@@ -1,6 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
 from flask_login import login_required, current_user
 from datetime import timedelta
+from dotenv import set_key
 from .models import (
     User,
     Aluno,
@@ -18,6 +19,11 @@ from .models import (
     Evento,
     Logradouro,
     Cidade,
+    Comunicacao,
+    ComunicacaoDestinatario,
+    ComunicacaoAnexo,
+    ContatoComunicacao,
+    GoogleCalendarSync,
 )
 from . import db
 from .utils import (
@@ -36,6 +42,7 @@ from .utils import (
     validar_senha_complexidade,
     limpar_logs_antigos,
     definir_configuracao,
+    obter_configuracao,
 )
 
 from .backup import (
@@ -45,14 +52,119 @@ from .backup import (
     excluir_backup,
     validar_backup,
     obter_caminho_backup,
+    obter_senha_backup,
 )
+from .google_oauth import authorization_url, exchange_code, save_token
+from .google_oauth import (
+    GOOGLE_CALENDAR_EVENTS_SCOPE,
+    GOOGLE_DRIVE_FILE_SCOPE,
+    GMAIL_SEND_SCOPE,
+    google_workspace_status,
+    has_scope,
+    is_gmail_sender,
+)
+from .google_mail import enviar_email_gmail
+from .google_calendar import sincronizar_atividade, sincronizar_se_vinculada
+from .google_drive import enviar_backup_para_drive, listar_backups_drive
 from datetime import datetime, timezone
+from pathlib import Path
+import hmac
 import os
+import requests
 from werkzeug.utils import secure_filename
 from functools import wraps
 from sqlalchemy import text
 
 main_bp = Blueprint("main", __name__)
+
+
+def _status_google_workspace():
+    return google_workspace_status(obter_configuracao("communication_sender_email"))
+
+
+def _bloquear_central_comunicacoes():
+    status = _status_google_workspace()
+    if status["available"]:
+        return None
+    flash(f"Central de comunicação desativada: {status['reason']}", "warning")
+    return redirect(url_for("main.dashboard"))
+
+
+def _sincronizar_calendar(activity_type, activity, somente_vinculada=False):
+    try:
+        if somente_vinculada:
+            result = sincronizar_se_vinculada(activity_type, activity)
+        else:
+            result = sincronizar_atividade(activity_type, activity)
+    except (RuntimeError, ValueError, requests.RequestException):
+        current_app.logger.warning(
+            "Falha ao sincronizar %s %s com o Google Calendar.",
+            activity_type,
+            activity.id,
+            exc_info=True,
+        )
+        flash(
+            "A atividade foi salva no BMCM, mas não foi sincronizada com o Google Calendar. Verifique a autorização e tente novamente.",
+            "warning",
+        )
+        return False
+
+    if result is None:
+        return None
+    if result is False:
+        flash(
+            "A atividade foi cancelada antes de ser sincronizada e não foi publicada no Google Calendar.",
+            "info",
+        )
+    else:
+        flash("Atividade sincronizada com o Google Calendar.", "success")
+    return result
+
+
+def _reautenticar_admin_para_senha_backup(senha_admin):
+    tentativas = session.get("backup_password_reauth_failures", 0)
+    if tentativas >= 5:
+        return "Muitas tentativas. Encerre a sessão e autentique-se novamente.", 429
+    if not current_user.check_password(senha_admin or ""):
+        session["backup_password_reauth_failures"] = tentativas + 1
+        return "Senha do administrador incorreta.", 403
+    session.pop("backup_password_reauth_failures", None)
+    return None
+
+
+def _resposta_senha_backup(payload, status=200):
+    response = jsonify(payload)
+    response.status_code = status
+    response.headers["Cache-Control"] = "no-store, private"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    return response
+
+
+@main_bp.route("/admin/google/oauth/start")
+@login_required
+@admin_required
+def iniciar_google_oauth():
+    return redirect(authorization_url())
+
+
+@main_bp.route("/google/oauth/callback")
+def callback_google_oauth():
+    erro = request.args.get("error")
+    if erro:
+        flash(f"Autorização Google cancelada: {erro}.", "warning")
+        return redirect(url_for("auth.login"))
+
+    try:
+        token = exchange_code(request.args.get("code"), request.args.get("state"))
+        save_token(token)
+    except (ValueError, requests.RequestException) as exc:
+        current_app.logger.warning("Falha na autorização OAuth do Google: %s", exc)
+        flash("Não foi possível concluir a autorização do Google.", "danger")
+        return redirect(url_for("auth.login"))
+
+    flash("Autorização OAuth do Google concluída.", "success")
+    return redirect(url_for("main.configuracoes"))
 
 
 @main_bp.route("/")
@@ -83,7 +195,24 @@ def painel_admin():
 @profissional_required
 def listar_eventos():
     eventos = Evento.query.order_by(Evento.data_evento.desc(), Evento.id.desc()).all()
-    return render_template("admin_eventos.html", eventos=eventos)
+    calendar_syncs = {
+        sync.evento_id: sync
+        for sync in GoogleCalendarSync.query.filter(
+            GoogleCalendarSync.evento_id.isnot(None)
+        ).all()
+    }
+    return render_template(
+        "admin_eventos.html", eventos=eventos, calendar_syncs=calendar_syncs
+    )
+
+
+@main_bp.route("/admin/evento/<int:evento_id>/calendar/sincronizar", methods=["POST"])
+@login_required
+@profissional_required
+def sincronizar_evento_calendar(evento_id):
+    evento = Evento.query.get_or_404(evento_id)
+    _sincronizar_calendar("evento", evento)
+    return redirect(url_for("main.listar_eventos"))
 
 
 @main_bp.route("/admin/evento/create", methods=["GET", "POST"])
@@ -142,6 +271,7 @@ def editar_evento(evento_id):
         evento.telefone = normalizar_telefone(request.form.get("telefone"))
         evento.status = request.form.get("status") or "A_CONFIRMAR"
         db.session.commit()
+        _sincronizar_calendar("evento", evento, somente_vinculada=True)
         flash("Evento atualizado com sucesso.", "success")
         return redirect(url_for("main.listar_eventos"))
     return render_template("admin_evento_form.html", evento=evento)
@@ -154,6 +284,7 @@ def cancelar_evento(evento_id):
     evento = Evento.query.get_or_404(evento_id)
     evento.status = "CANCELADO"
     db.session.commit()
+    _sincronizar_calendar("evento", evento, somente_vinculada=True)
     flash("Evento cancelado. O histórico de presença foi preservado.", "warning")
     return redirect(url_for("main.listar_eventos"))
 
@@ -165,7 +296,24 @@ def listar_ensaios():
     ensaios = Ensaio.query.order_by(
         Ensaio.data_ensaio.desc(), Ensaio.id.desc()
     ).all()
-    return render_template("admin_ensaios.html", ensaios=ensaios)
+    calendar_syncs = {
+        sync.ensaio_id: sync
+        for sync in GoogleCalendarSync.query.filter(
+            GoogleCalendarSync.ensaio_id.isnot(None)
+        ).all()
+    }
+    return render_template(
+        "admin_ensaios.html", ensaios=ensaios, calendar_syncs=calendar_syncs
+    )
+
+
+@main_bp.route("/admin/ensaio/<int:ensaio_id>/calendar/sincronizar", methods=["POST"])
+@login_required
+@profissional_required
+def sincronizar_ensaio_calendar(ensaio_id):
+    ensaio = Ensaio.query.get_or_404(ensaio_id)
+    _sincronizar_calendar("ensaio", ensaio)
+    return redirect(url_for("main.listar_ensaios"))
 
 
 @main_bp.route("/admin/ensaio/create", methods=["GET", "POST"])
@@ -219,6 +367,7 @@ def editar_ensaio(ensaio_id):
         ensaio.observacoes = request.form.get("observacoes", "").strip() or None
         ensaio.status = request.form.get("status") or "AGENDADO"
         db.session.commit()
+        _sincronizar_calendar("ensaio", ensaio, somente_vinculada=True)
         flash("Ensaio atualizado com sucesso.", "success")
         return redirect(url_for("main.listar_ensaios"))
     return render_template("admin_ensaio_form.html", ensaio=ensaio)
@@ -231,6 +380,7 @@ def cancelar_ensaio(ensaio_id):
     ensaio = Ensaio.query.get_or_404(ensaio_id)
     ensaio.status = "CANCELADO"
     db.session.commit()
+    _sincronizar_calendar("ensaio", ensaio, somente_vinculada=True)
     flash("Ensaio cancelado. O histórico de presença foi preservado.", "warning")
     return redirect(url_for("main.listar_ensaios"))
 
@@ -459,6 +609,344 @@ def relatorio_presenca_diaria():
             1 for registro in registros_por_aluno.values() if registro.presente
         ),
     )
+
+
+@main_bp.route("/admin/comunicacoes")
+@login_required
+@profissional_required
+@session_timeout
+def listar_comunicacoes():
+    bloqueio = _bloquear_central_comunicacoes()
+    if bloqueio:
+        return bloqueio
+    update_activity()
+    comunicacoes = Comunicacao.query.order_by(Comunicacao.criado_em.desc()).all()
+    return render_template("admin_comunicacoes.html", comunicacoes=comunicacoes)
+
+
+@main_bp.route("/admin/comunicacoes/nova", methods=["GET", "POST"])
+@login_required
+@profissional_required
+def nova_comunicacao():
+    bloqueio = _bloquear_central_comunicacoes()
+    if bloqueio:
+        return bloqueio
+    ensaios = Ensaio.query.order_by(Ensaio.data_ensaio.desc()).all()
+    eventos = Evento.query.order_by(Evento.data_evento.desc()).all()
+
+    naipes = Naipe.query.order_by(Naipe.nome.asc()).all()
+    contatos_externos = ContatoComunicacao.query.filter_by(ativo=True).order_by(ContatoComunicacao.nome.asc()).all()
+
+    if request.method == "POST":
+        assunto = (request.form.get("assunto") or "").strip()
+        mensagem = (request.form.get("mensagem") or "").strip()
+        tipo = (request.form.get("tipo") or "aviso").strip().lower()
+        publico = (request.form.get("publico") or "geral").strip().lower()
+        canal = (request.form.get("canal") or "email").strip().lower()
+        evento_id = request.form.get("evento_id", type=int)
+        ensaio_id = request.form.get("ensaio_id", type=int)
+        naipe_id = request.form.get("naipe_id", type=int)
+        contato_email = (request.form.get("contato_email") or "").strip().lower()
+        destinatario_nome = (request.form.get("destinatario_nome") or "").strip()
+        destinatario_email = (request.form.get("destinatario_email") or "").strip().lower()
+
+        contato_externo = None
+        if publico == "externo":
+            if contato_email:
+                contato_externo = ContatoComunicacao.query.filter_by(
+                    email=contato_email,
+                    ativo=True,
+                ).first()
+                if contato_externo:
+                    destinatario_nome = contato_externo.nome
+                    destinatario_email = contato_externo.email.strip().lower()
+                else:
+                    flash("Selecione um contato cadastrado ou informe um e-mail avulso.", "danger")
+                    return redirect(url_for("main.nova_comunicacao"))
+
+            if not destinatario_email or "@" not in destinatario_email:
+                flash("Informe o e-mail do destinatário externo.", "danger")
+                return redirect(url_for("main.nova_comunicacao"))
+            if not destinatario_nome:
+                destinatario_nome = destinatario_email
+
+        if not assunto or not mensagem:
+            flash("Informe o assunto e o texto da comunicação.", "danger")
+            return redirect(url_for("main.nova_comunicacao"))
+
+        comunicacao = Comunicacao(
+            assunto=assunto,
+            mensagem=mensagem,
+            tipo=tipo,
+            publico=publico,
+            canal=canal,
+            status="rascunho",
+            criado_por_id=current_user.id,
+            evento_id=evento_id,
+            ensaio_id=ensaio_id,
+            naipe_id=naipe_id,
+            contato_externo_id=contato_externo.id if contato_externo else None,
+            destinatario_nome=destinatario_nome if publico == "externo" else None,
+            destinatario_email=destinatario_email if publico == "externo" else None,
+        )
+        db.session.add(comunicacao)
+        db.session.commit()
+
+        pasta_anexos = os.path.join(
+            current_app.config["BASE_DIR"], "instance", "uploads", "comunicacoes"
+        )
+        os.makedirs(pasta_anexos, exist_ok=True)
+        for arquivo in request.files.getlist("anexos"):
+            if not arquivo or not arquivo.filename:
+                continue
+            nome_original = arquivo.filename
+            nome_seguro = secure_filename(nome_original)
+            if not nome_seguro:
+                continue
+            nome_arquivo = f"{comunicacao.id}_{nome_seguro}"
+            caminho = os.path.join(pasta_anexos, nome_arquivo)
+            arquivo.save(caminho)
+            db.session.add(ComunicacaoAnexo(
+                comunicacao_id=comunicacao.id,
+                nome_original=nome_original,
+                nome_arquivo=nome_arquivo,
+                caminho=caminho,
+                tipo_mime=arquivo.mimetype,
+                tamanho=os.path.getsize(caminho),
+            ))
+        db.session.commit()
+        flash("Comunicação criada em rascunho. Revise e confirme o envio.", "success")
+        return redirect(url_for("main.listar_comunicacoes"))
+
+    return render_template(
+        "admin_comunicacao_form.html",
+        comunicacao=None,
+        ensaios=ensaios,
+        eventos=eventos,
+        naipes=naipes,
+        contatos_externos=contatos_externos,
+    )
+
+
+@main_bp.route("/admin/comunicacoes/<int:comunicacao_id>")
+@login_required
+@profissional_required
+def detalhar_comunicacao(comunicacao_id):
+    bloqueio = _bloquear_central_comunicacoes()
+    if bloqueio:
+        return bloqueio
+    comunicacao = Comunicacao.query.get_or_404(comunicacao_id)
+    destinatarios = comunicacao.destinatarios.order_by(ComunicacaoDestinatario.criado_em.desc()).all()
+
+    detalhes = []
+    for destinatario in destinatarios:
+        nome_destinatario = "Destinatário removido"
+        if destinatario.tipo_destinatario == "integrante":
+            aluno = Aluno.query.get(destinatario.destinatario_id)
+            if aluno:
+                nome_destinatario = aluno.nome
+        elif destinatario.tipo_destinatario == "contato_externo":
+            nome_destinatario = destinatario.destinatario_nome or "Destinatário externo"
+            if destinatario.destinatario_email:
+                nome_destinatario += f" ({destinatario.destinatario_email})"
+        detalhes.append({
+            "destinatario": destinatario,
+            "nome": nome_destinatario,
+        })
+
+    return render_template(
+        "admin_comunicacao_detail.html",
+        comunicacao=comunicacao,
+        detalhes=detalhes,
+        destinatarios=destinatarios,
+    )
+
+
+@main_bp.route("/admin/comunicacoes/<int:comunicacao_id>/excluir", methods=["POST"])
+@login_required
+@profissional_required
+def excluir_comunicacao(comunicacao_id):
+    comunicacao = Comunicacao.query.get_or_404(comunicacao_id)
+    if comunicacao.status != "rascunho":
+        flash("Somente comunicações em rascunho podem ser excluídas.", "warning")
+        return redirect(url_for("main.listar_comunicacoes"))
+
+    db.session.delete(comunicacao)
+    for anexo in comunicacao.anexos:
+        try:
+            os.remove(anexo.caminho)
+        except FileNotFoundError:
+            pass
+    db.session.commit()
+    flash("Rascunho excluído.", "success")
+    return redirect(url_for("main.listar_comunicacoes"))
+
+
+@main_bp.route("/admin/comunicacoes/<int:comunicacao_id>/enviar", methods=["POST"])
+@login_required
+@profissional_required
+def enviar_comunicacao(comunicacao_id):
+    comunicacao = Comunicacao.query.get_or_404(comunicacao_id)
+    google_status = google_workspace_status(
+        obter_configuracao("communication_sender_email")
+    )
+    if not google_status["available"]:
+        flash(
+            f"Central de comunicação desativada: {google_status['reason']}",
+            "warning",
+        )
+        return redirect(url_for("main.listar_comunicacoes"))
+
+    destinatarios_criados = 0
+    novos_destinatarios = []
+
+    if comunicacao.publico == "geral":
+        alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
+        for aluno in alunos:
+            if not aluno.email:
+                continue
+            existente = ComunicacaoDestinatario.query.filter_by(
+                comunicacao_id=comunicacao.id,
+                tipo_destinatario="integrante",
+                destinatario_id=aluno.id,
+            ).first()
+            if existente:
+                continue
+            destinatario = ComunicacaoDestinatario(
+                comunicacao_id=comunicacao.id,
+                tipo_destinatario="integrante",
+                destinatario_id=aluno.id,
+                destinatario_nome=aluno.nome,
+                destinatario_email=aluno.email,
+                canal="email",
+                status="pendente",
+            )
+            db.session.add(destinatario)
+            novos_destinatarios.append(destinatario)
+            destinatarios_criados += 1
+    elif comunicacao.publico == "responsaveis":
+        alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
+        for aluno in alunos:
+            responsavel = Responsavel.query.filter_by(aluno_id=aluno.id).order_by(Responsavel.id.asc()).first()
+            if not responsavel or not responsavel.email:
+                continue
+            existente = ComunicacaoDestinatario.query.filter_by(
+                comunicacao_id=comunicacao.id,
+                tipo_destinatario="responsavel",
+                destinatario_id=responsavel.id,
+            ).first()
+            if existente:
+                continue
+            destinatario = ComunicacaoDestinatario(
+                comunicacao_id=comunicacao.id,
+                tipo_destinatario="responsavel",
+                destinatario_id=responsavel.id,
+                destinatario_nome=responsavel.nome_pai or responsavel.nome_mae or "Responsável",
+                destinatario_email=responsavel.email,
+                canal="email",
+                status="pendente",
+            )
+            db.session.add(destinatario)
+            novos_destinatarios.append(destinatario)
+            destinatarios_criados += 1
+    elif comunicacao.publico == "naipe":
+        if not comunicacao.naipe_id:
+            flash("Selecione um naipe para enviar a este público.", "warning")
+            return redirect(url_for("main.listar_comunicacoes"))
+        alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
+        for aluno in alunos:
+            instrumentos = [assoc.instrumento for assoc in aluno.instrumentos if assoc.instrumento and assoc.instrumento.naipe_id == comunicacao.naipe_id]
+            if not instrumentos:
+                continue
+            if not aluno.email:
+                continue
+            existente = ComunicacaoDestinatario.query.filter_by(
+                comunicacao_id=comunicacao.id,
+                tipo_destinatario="integrante",
+                destinatario_id=aluno.id,
+            ).first()
+            if existente:
+                continue
+            destinatario = ComunicacaoDestinatario(
+                comunicacao_id=comunicacao.id,
+                tipo_destinatario="integrante",
+                destinatario_id=aluno.id,
+                destinatario_nome=aluno.nome,
+                destinatario_email=aluno.email,
+                canal="email",
+                status="pendente",
+            )
+            db.session.add(destinatario)
+            novos_destinatarios.append(destinatario)
+            destinatarios_criados += 1
+    elif comunicacao.publico == "externo":
+        if not comunicacao.destinatario_email:
+            flash("Este rascunho não possui um e-mail externo definido.", "warning")
+            return redirect(url_for("main.listar_comunicacoes"))
+
+        existente = ComunicacaoDestinatario.query.filter_by(
+            comunicacao_id=comunicacao.id,
+            tipo_destinatario="contato_externo",
+        ).first()
+        if not existente:
+            destinatario = ComunicacaoDestinatario(
+                comunicacao_id=comunicacao.id,
+                tipo_destinatario="contato_externo",
+                destinatario_id=comunicacao.contato_externo_id or 0,
+                destinatario_nome=comunicacao.destinatario_nome,
+                destinatario_email=comunicacao.destinatario_email,
+                canal="email",
+                status="pendente",
+            )
+            db.session.add(destinatario)
+            novos_destinatarios.append(destinatario)
+            destinatarios_criados += 1
+    else:
+        flash("Este público ainda não está configurado.", "info")
+
+    envios_sucesso = 0
+    envios_falha = 0
+    db.session.flush()
+    for destinatario in novos_destinatarios:
+        if current_app.testing:
+            destinatario.status = "enviado"
+            destinatario.enviado_em = datetime.now(timezone.utc)
+            envios_sucesso += 1
+            continue
+        try:
+            enviar_email_gmail(
+                destinatario.destinatario_email,
+                comunicacao.assunto,
+                comunicacao.mensagem,
+                comunicacao.anexos,
+            )
+            destinatario.status = "enviado"
+            destinatario.enviado_em = datetime.now(timezone.utc)
+            envios_sucesso += 1
+        except Exception as exc:
+            destinatario.status = "erro"
+            destinatario.ultimo_erro = str(exc)[:2000]
+            envios_falha += 1
+
+    if envios_sucesso > 0 and envios_falha == 0:
+        comunicacao.status = "enviado"
+    elif envios_sucesso > 0:
+        comunicacao.status = "parcial"
+    elif envios_falha > 0:
+        comunicacao.status = "erro"
+    elif comunicacao.destinatarios.count() > 0:
+        comunicacao.status = "parcial"
+    else:
+        comunicacao.status = "rascunho"
+
+    comunicacao.enviado_em = datetime.now(timezone.utc)
+    db.session.commit()
+
+    if envios_falha:
+        flash("A comunicação foi processada com falhas. Consulte o histórico.", "warning")
+    else:
+        flash("Envio confirmado para os destinatários elegíveis do público selecionado.", "success")
+    return redirect(url_for("main.listar_comunicacoes"))
 
 
 @main_bp.route("/admin/users")
@@ -1678,11 +2166,26 @@ def painel_backup():
     caminho_db = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "instance", "database.db")
     db_existe = os.path.exists(caminho_db)
     db_tamanho = os.path.getsize(caminho_db) if db_existe else 0
+    try:
+        google_drive_authorized = has_scope(GOOGLE_DRIVE_FILE_SCOPE)
+    except RuntimeError:
+        google_drive_authorized = False
+    google_drive_backups = []
+    google_drive_error = None
+    if google_drive_authorized:
+        try:
+            google_drive_backups = listar_backups_drive()
+        except (RuntimeError, ValueError, requests.RequestException):
+            current_app.logger.exception("Falha ao listar backups no Google Drive")
+            google_drive_error = "Não foi possível consultar o Google Drive. Tente novamente."
     return render_template(
         "admin_backup.html",
         backups=backups,
         db_existe=db_existe,
         db_tamanho=db_tamanho,
+        google_drive_authorized=google_drive_authorized,
+        google_drive_backups=google_drive_backups,
+        google_drive_error=google_drive_error,
     )
 
 
@@ -1699,6 +2202,30 @@ def gerar_backup():
     except Exception as e:
         current_app.logger.exception("Erro ao criar backup")
         flash("Não foi possível criar o backup. Tente novamente.", "error")
+    return redirect(url_for("main.painel_backup"))
+
+
+@main_bp.route("/admin/backup/enviar-drive", methods=["POST"])
+@login_required
+@admin_required
+def enviar_backup_drive():
+    nome_backup = request.form.get("nome_backup")
+    caminho_backup = obter_caminho_backup(nome_backup)
+    if not caminho_backup:
+        flash("Arquivo de backup local não encontrado.", "danger")
+        return redirect(url_for("main.painel_backup"))
+
+    try:
+        backup_drive = enviar_backup_para_drive(caminho_backup)
+        flash(f"Backup enviado ao Google Drive: {backup_drive['name']}.", "success")
+    except ValueError as exc:
+        flash(str(exc), "warning")
+    except (RuntimeError, OSError, requests.RequestException):
+        current_app.logger.exception("Falha ao enviar backup para o Google Drive")
+        flash(
+            "O backup local foi preservado, mas não foi possível enviá-lo ao Google Drive. Verifique a autorização e tente novamente.",
+            "warning",
+        )
     return redirect(url_for("main.painel_backup"))
 
 
@@ -1782,6 +2309,108 @@ def logs_hard_delete_alunos():
     return render_template("admin_logs_hard_delete_alunos.html", logs=logs)
 
 
+@main_bp.route("/admin/configuracoes/backup-password/revelar", methods=["POST"])
+@login_required
+@admin_required
+def revelar_senha_backup():
+    erro = _reautenticar_admin_para_senha_backup(
+        request.form.get("admin_password")
+    )
+    if erro:
+        return _resposta_senha_backup({"error": erro[0]}, erro[1])
+
+    try:
+        senha_backup = obter_senha_backup(criar=False)
+    except (RuntimeError, ValueError):
+        current_app.logger.exception("Falha ao ler a senha de criptografia dos backups")
+        return _resposta_senha_backup(
+            {"error": "Não foi possível ler a configuração da senha de backup."}, 500
+        )
+    if not senha_backup:
+        return _resposta_senha_backup(
+            {"error": "A senha será criada ao gerar o primeiro backup ou pode ser definida abaixo."},
+            404,
+        )
+    return _resposta_senha_backup({"backup_password": senha_backup})
+
+
+@main_bp.route("/admin/configuracoes/backup-password/registrar", methods=["POST"])
+@login_required
+@admin_required
+def registrar_senha_backup():
+    erro = _reautenticar_admin_para_senha_backup(
+        request.form.get("admin_password")
+    )
+    if erro:
+        return _resposta_senha_backup({"error": erro[0]}, erro[1])
+
+    senha = request.form.get("backup_password", "")
+    confirmacao = request.form.get("backup_password_confirm", "")
+    if len(senha) < 16:
+        return _resposta_senha_backup(
+            {"error": "Use uma senha com pelo menos 16 caracteres."}, 400
+        )
+    if not hmac.compare_digest(senha, confirmacao):
+        return _resposta_senha_backup(
+            {"error": "A confirmação da senha não coincide."}, 400
+        )
+
+    try:
+        senha_atual = obter_senha_backup(criar=False)
+        if senha_atual and not hmac.compare_digest(senha, senha_atual):
+            return _resposta_senha_backup(
+                {
+                    "error": "Já existe uma senha que protege backups anteriores. Revele e registre a mesma senha; trocá-la exige recriar os backups existentes."
+                },
+                409,
+            )
+        local_password_path = (
+            Path(current_app.config["BASE_DIR"]) / "instance" / ".backup_password"
+        )
+        if local_password_path.is_file():
+            senha_local = local_password_path.read_text(encoding="utf-8").strip()
+            if not hmac.compare_digest(senha, senha_local):
+                return _resposta_senha_backup(
+                    {
+                        "error": "Esta instalação já usa outra chave local. Registre exatamente a chave atual para preservar os backups."
+                    },
+                    409,
+                )
+        if not senha_atual and any(
+            arquivo.get("criptografado") for arquivo in listar_backups()
+        ):
+            return _resposta_senha_backup(
+                {
+                    "error": "Há backups criptografados, mas a chave atual não está disponível. Não é seguro substituí-la."
+                },
+                409,
+            )
+
+        env_path = Path(current_app.config["BASE_DIR"]) / ".env"
+        sucesso, _, _ = set_key(
+            str(env_path),
+            "BACKUP_PASSWORD",
+            senha,
+            quote_mode="always",
+            encoding="utf-8",
+        )
+        if not sucesso:
+            raise OSError("Não foi possível atualizar o arquivo .env.")
+        os.chmod(env_path, 0o600)
+        current_app.config["BACKUP_PASSWORD"] = senha
+        if senha_atual and local_password_path.is_file():
+            local_password_path.unlink()
+    except (OSError, RuntimeError, ValueError):
+        current_app.logger.exception("Falha ao registrar a senha de backup")
+        return _resposta_senha_backup(
+            {"error": "Não foi possível registrar a senha no .env."}, 500
+        )
+
+    return _resposta_senha_backup(
+        {"message": "Senha de backup registrada no .env com segurança."}
+    )
+
+
 @main_bp.route("/admin/configuracoes", methods=["GET", "POST"])
 @login_required
 @admin_required
@@ -1827,6 +2456,14 @@ def configuracoes():
             valores["tab_inactive_bg"] = request.form.get("cor-fundo-aba-inativa", "#212529")
         if "texto-rodape" in request.form:
             valores["footer_text"] = request.form.get("texto-rodape", "").strip()
+        if "email-remetente-comunicacao" in request.form:
+            remetente = request.form.get(
+                "email-remetente-comunicacao", ""
+            ).strip().lower()
+            if remetente and not is_gmail_sender(remetente):
+                flash("O remetente deve utilizar um endereço @gmail.com.", "warning")
+                return redirect(url_for("main.configuracoes"))
+            valores["communication_sender_email"] = remetente
         if "timeout-sessao" in request.form:
             valores["session_timeout_minutes"] = request.form.get("timeout-sessao", "30").strip()
         if "tentativas-login" in request.form:
@@ -1885,7 +2522,28 @@ def configuracoes():
         flash("Configurações salvas com sucesso.", "success")
         return redirect(url_for("main.configuracoes"))
 
-    return render_template("admin_configuracoes.html")
+    try:
+        gmail_authorized = has_scope(GMAIL_SEND_SCOPE)
+        calendar_authorized = has_scope(GOOGLE_CALENDAR_EVENTS_SCOPE)
+        google_drive_authorized = has_scope(GOOGLE_DRIVE_FILE_SCOPE)
+    except RuntimeError:
+        gmail_authorized = False
+        calendar_authorized = False
+        google_drive_authorized = False
+
+    return render_template(
+        "admin_configuracoes.html",
+        google_oauth_configured=gmail_authorized,
+        google_calendar_authorized=calendar_authorized,
+        google_drive_authorized=google_drive_authorized,
+        backup_password_env_set=bool(current_app.config.get("BACKUP_PASSWORD")),
+        backup_password_local_exists=os.path.isfile(
+            os.path.join(current_app.config["BASE_DIR"], "instance", ".backup_password")
+        ),
+        google_workspace_status=google_workspace_status(
+            obter_configuracao("communication_sender_email")
+        ),
+    )
 
 
 @main_bp.route("/admin/manutencao/limpar-cache", methods=["POST"])

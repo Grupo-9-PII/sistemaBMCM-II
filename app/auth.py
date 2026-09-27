@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
 from .utils import session_timeout, update_activity, validar_senha_complexidade, permitir_tentativa_login
 from datetime import datetime, timedelta, timezone
@@ -77,6 +77,7 @@ def login():
 def logout():
     update_activity()
     logout_user()
+    session.pop("backup_password_reauth_failures", None)
     return redirect(url_for("auth.login"))
 
 

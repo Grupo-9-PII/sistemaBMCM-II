@@ -34,7 +34,7 @@
         </div>
         <div class="col-md-6">
           <p><strong>Tamanho:</strong> {{ db_tamanho|filesizeformat if db_existe else '—' }}</p>
-          <p class="text-warning mb-0"><strong>Proteção:</strong> arquivo ZIP sem criptografia; armazene-o em local protegido.</p>
+          <p class="text-warning mb-0"><strong>Proteção:</strong> backups protegidos com AES-256. Preserve a senha ou o arquivo-chave fora dos backups e restrinja o acesso à conta Google.</p>
         </div>
       </div>
     </div>
@@ -78,7 +78,7 @@
           <tbody>
             {% for backup in backups %}
             <tr>
-              <td><code class="text-info">{{ backup.nome }}</code></td>
+              <td><code class="text-info">{{ backup.nome }}</code><br>{% if backup.criptografado %}<span class="badge bg-success">AES-256</span>{% else %}<span class="badge bg-warning text-dark">Legado sem criptografia</span>{% endif %}</td>
               <td>{{ backup.data.strftime('%d/%m/%Y %H:%M:%S') }}</td>
               <td>{{ backup.tamanho_formatado }}</td>
               <td>
@@ -99,6 +99,16 @@
                       <i class="bi bi-trash"></i>
                     </button>
                   </form>
+                  {% if google_drive_authorized and backup.criptografado %}
+                  <form action="{{ url_for('main.enviar_backup_drive') }}" method="POST" style="display: inline;">
+                    <input type="hidden" name="nome_backup" value="{{ backup.nome }}">
+                    <button type="submit" class="btn btn-sm btn-outline-primary" title="Enviar backup ao Google Drive">
+                      <i class="bi bi-cloud-upload me-1" aria-hidden="true"></i>Drive
+                    </button>
+                  </form>
+                  {% elif google_drive_authorized %}
+                  <span class="text-warning small">Crie uma nova cópia AES-256 para enviar</span>
+                  {% endif %}
                 </div>
               </td>
             </tr>
@@ -121,10 +131,45 @@
     </div>
   </div>
 
+  <div class="card mt-4">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+      <span><i class="bi bi-cloud me-2"></i>Backups no Google Drive</span>
+      <span class="badge bg-secondary">{{ google_drive_backups|length }} arquivo(s)</span>
+    </div>
+    <div class="card-body p-0">
+      {% if not google_drive_authorized %}
+      <div class="alert alert-warning m-3 mb-0" role="status">
+        Autorize o escopo Google Drive em <a href="{{ url_for('main.configuracoes') }}">Configurações</a> para consultar ou enviar backups.
+      </div>
+      {% elif google_drive_error %}
+      <div class="alert alert-warning m-3 mb-0" role="status">{{ google_drive_error }}</div>
+      {% elif google_drive_backups %}
+      <div class="table-responsive">
+        <table class="table table-dark table-striped table-hover mb-0">
+          <caption class="visually-hidden">Backups armazenados no Google Drive</caption>
+          <thead><tr><th scope="col">Nome</th><th scope="col">Modificado em</th><th scope="col">Tamanho</th><th scope="col">Ação</th></tr></thead>
+          <tbody>
+            {% for backup in google_drive_backups %}
+            <tr>
+              <td><code class="text-info">{{ backup.name }}</code></td>
+              <td>{{ backup.modifiedTime or '—' }}</td>
+              <td>{{ backup.size|filesizeformat if backup.size else '—' }}</td>
+              <td><a class="btn btn-sm btn-outline-light" href="{{ backup.webViewLink or ('https://drive.google.com/file/d/' ~ backup.id ~ '/view') }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Abrir</a></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted m-3">Nenhum backup BMCM encontrado no Google Drive.</p>
+      {% endif %}
+    </div>
+  </div>
+
   <div class="mt-3">
     <small class="text-muted">
       <i class="bi bi-info-circle me-1"></i>
-      Os backups são salvos na pasta <code>{{ request.environ.get('HOME', '~') }}/BKPSISTBMCM</code> com a senha padrão do sistema.
+      Backups locais em <code>{{ request.environ.get('HOME', '~') }}/BKPSISTBMCM</code>. Sem <code>BACKUP_PASSWORD</code>, a senha aleatória fica em <code>instance/.backup_password</code>; mantenha uma cópia segura fora do servidor.
     </small>
   </div>
 </div>

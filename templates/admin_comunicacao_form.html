@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Nova comunicação — Sistema BMCM{% endblock %}
+{% block content %}
+<div class="container mt-5 fade-in">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0">
+        <div class="card-header bg-dark text-white">
+          <h1 class="h4 mb-0">
+            <i class="bi bi-chat-left-text me-2"></i>
+            Nova comunicação
+          </h1>
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('main.nova_comunicacao') }}" enctype="multipart/form-data">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label for="assunto" class="form-label">Assunto</label>
+                <input id="assunto" name="assunto" class="form-control" maxlength="200" required>
+              </div>
+              <div class="col-md-6">
+                <label for="tipo" class="form-label">Tipo</label>
+                <select id="tipo" name="tipo" class="form-select">
+                  <option value="aviso">Aviso</option>
+                  <option value="convite">Convite</option>
+                  <option value="informativo">Informativo</option>
+                  <option value="urgente">Urgente</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="publico" class="form-label">Público-alvo</label>
+                <select id="publico" name="publico" class="form-select">
+                  <option value="geral">Integrantes ativos</option>
+                  <option value="responsaveis">Responsáveis</option>
+                  <option value="evento">Participantes de evento</option>
+                  <option value="naipe">Por naipe</option>
+                  <option value="externo">Contatos externos (prefeituras/órgãos)</option>
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="canal" class="form-label">Canal preferencial</label>
+                <select id="canal" name="canal" class="form-select">
+                  <option value="email">E-mail</option>
+                  <option value="whatsapp" disabled>WhatsApp (em desenvolvimento)</option>
+                </select>
+                <div class="form-text text-light">Remetente e respostas: <strong class="text-white">{{ system_settings.get('communication_sender_email') or 'Não configurado' }}</strong></div>
+              </div>
+              <div class="col-md-6">
+                <label for="evento_id" class="form-label">Vincular a evento</label>
+                <select id="evento_id" name="evento_id" class="form-select">
+                  <option value="">Nenhum</option>
+                  {% for evento in eventos %}
+                  <option value="{{ evento.id }}">{{ evento.nome_evento }} ({{ evento.data_evento.strftime('%d/%m/%Y') if evento.data_evento else '-' }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="ensaio_id" class="form-label">Vincular a ensaio</label>
+                <select id="ensaio_id" name="ensaio_id" class="form-select">
+                  <option value="">Nenhum</option>
+                  {% for ensaio in ensaios %}
+                  <option value="{{ ensaio.id }}">{{ ensaio.titulo }} ({{ ensaio.data_ensaio.strftime('%d/%m/%Y') if ensaio.data_ensaio else '-' }})</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label for="naipe_id" class="form-label">Naipe do público</label>
+                <select id="naipe_id" name="naipe_id" class="form-select">
+                  <option value="">Qualquer naipe</option>
+                  {% for naipe in naipes %}
+                  <option value="{{ naipe.id }}">{{ naipe.nome }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-12 border rounded p-3 bg-body-tertiary">
+                <label for="contato_email" class="form-label">Contato externo cadastrado</label>
+                <input id="contato_email" name="contato_email" class="form-control" type="email"
+                       list="contatos_externos" placeholder="Busque por nome ou e-mail">
+                <datalist id="contatos_externos">
+                  {% for contato in contatos_externos %}
+                  <option value="{{ contato.email }}" label="{{ contato.nome }}">{{ contato.nome }}</option>
+                  {% endfor %}
+                </datalist>
+                <div class="form-text">O público externo é sempre um único destinatário por comunicação.</div>
+              </div>
+              <div class="col-md-6">
+                <label for="destinatario_nome" class="form-label">Nome do destinatário avulso</label>
+                <input id="destinatario_nome" name="destinatario_nome" class="form-control" maxlength="200"
+                       placeholder="Use quando não houver contato cadastrado">
+              </div>
+              <div class="col-md-6">
+                <label for="destinatario_email" class="form-label">E-mail avulso</label>
+                <input id="destinatario_email" name="destinatario_email" class="form-control" type="email"
+                       maxlength="200" placeholder="destinatario@orgao.gov.br">
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <label for="mensagem" class="form-label">Mensagem</label>
+              <textarea id="mensagem" name="mensagem" rows="8" class="form-control" required></textarea>
+            </div>
+
+            <div class="mt-3">
+              <label for="anexos" class="form-label">Anexos locais</label>
+              <input id="anexos" name="anexos" type="file" class="form-control" multiple>
+              <div class="form-text">Os arquivos serão armazenados localmente e enviados junto à mensagem.</div>
+            </div>
+
+            <div class="d-flex gap-2 mt-4">
+              <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check2-circle me-1"></i>Criar comunicação
+              </button>
+              <a href="{{ url_for('main.listar_comunicacoes') }}" class="btn btn-outline-secondary">Cancelar</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

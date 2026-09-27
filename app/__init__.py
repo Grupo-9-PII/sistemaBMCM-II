@@ -97,8 +97,27 @@ def create_app():
 
     @app.context_processor
     def inject_system_settings():
+        from .google_oauth import (
+            GOOGLE_CALENDAR_EVENTS_SCOPE,
+            GOOGLE_DRIVE_FILE_SCOPE,
+            google_workspace_status,
+            has_scope,
+        )
+
+        system_settings = obter_todas_configuracoes()
+        try:
+            google_calendar_authorized = has_scope(GOOGLE_CALENDAR_EVENTS_SCOPE)
+            google_drive_authorized = has_scope(GOOGLE_DRIVE_FILE_SCOPE)
+        except RuntimeError:
+            google_calendar_authorized = False
+            google_drive_authorized = False
         return {
-            "system_settings": obter_todas_configuracoes(),
+            "system_settings": system_settings,
+            "google_workspace_status": google_workspace_status(
+                system_settings.get("communication_sender_email")
+            ),
+            "google_calendar_authorized": google_calendar_authorized,
+            "google_drive_authorized": google_drive_authorized,
             "csrf_token": obter_token_csrf(),
             "app_version": app.config["APP_VERSION"],
         }

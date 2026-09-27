@@ -317,8 +317,6 @@ class Evento(db.Model):
         'Presenca', back_populates='evento', lazy=True, cascade='all, delete-orphan'
     )
 
-
-
     autorizacoes_evento = db.relationship(
         'AutorizacaoViagem',
         back_populates='evento',
@@ -326,5 +324,114 @@ class Evento(db.Model):
     )
 
 
+class GoogleCalendarSync(db.Model):
+    __tablename__ = 'google_calendar_sync'
+    __table_args__ = (
+        CheckConstraint(
+            "(ensaio_id IS NOT NULL AND evento_id IS NULL) OR "
+            "(ensaio_id IS NULL AND evento_id IS NOT NULL)",
+            name="ck_google_calendar_sync_uma_atividade",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    ensaio_id = db.Column(db.Integer, db.ForeignKey('ensaio.id'), unique=True)
+    evento_id = db.Column(db.Integer, db.ForeignKey('evento.id'), unique=True)
+    google_event_id = db.Column(db.String(255), nullable=False, unique=True)
+    sincronizado_em = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class Comunicacao(db.Model):
+    __tablename__ = 'comunicacao'
+
+    id = db.Column(db.Integer, primary_key=True)
+    assunto = db.Column(db.String(200), nullable=False)
+    mensagem = db.Column(db.Text, nullable=False)
+    tipo = db.Column(db.String(50), default='aviso')
+    publico = db.Column(db.String(50), default='geral')
+    canal = db.Column(db.String(50), default='email')
+    status = db.Column(db.String(20), default='rascunho')
+    criado_por_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    evento_id = db.Column(db.Integer, db.ForeignKey('evento.id'), nullable=True)
+    ensaio_id = db.Column(db.Integer, db.ForeignKey('ensaio.id'), nullable=True)
+    naipe_id = db.Column(db.Integer, db.ForeignKey('naipe.id'), nullable=True)
+    contato_externo_id = db.Column(db.Integer, db.ForeignKey('contato_comunicacao.id'), nullable=True)
+    destinatario_nome = db.Column(db.String(200), nullable=True)
+    destinatario_email = db.Column(db.String(200), nullable=True)
+    criado_em = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    enviado_em = db.Column(db.DateTime, nullable=True)
+
+    criado_por = db.relationship('User', foreign_keys=[criado_por_id])
+    destinatarios = db.relationship(
+        'ComunicacaoDestinatario',
+        back_populates='comunicacao',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+    )
+    anexos = db.relationship(
+        'ComunicacaoAnexo',
+        back_populates='comunicacao',
+        lazy=True,
+        cascade='all, delete-orphan',
+    )
+
+    @property
+    def alvo_descricao(self):
+        if self.publico == 'responsaveis':
+            return 'Responsáveis'
+        if self.publico == 'geral':
+            return 'Integrantes ativos'
+        if self.publico == 'naipe':
+            return 'Por naipe'
+        if self.publico == 'externo':
+            return 'Contatos externos'
+        return self.publico.replace('_', ' ').title()
+
+
+class ComunicacaoDestinatario(db.Model):
+    __tablename__ = 'comunicacao_destinatario'
+
+    id = db.Column(db.Integer, primary_key=True)
+    comunicacao_id = db.Column(db.Integer, db.ForeignKey('comunicacao.id'), nullable=False)
+    tipo_destinatario = db.Column(db.String(30), nullable=False, default='integrante')
+    destinatario_id = db.Column(db.Integer, nullable=False)
+    destinatario_nome = db.Column(db.String(200), nullable=True)
+    destinatario_email = db.Column(db.String(200), nullable=True)
+    canal = db.Column(db.String(30), nullable=False, default='email')
+    status = db.Column(db.String(20), default='pendente')
+    ultimo_erro = db.Column(db.Text, nullable=True)
+    enviado_em = db.Column(db.DateTime, nullable=True)
+    criado_em = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    comunicacao = db.relationship('Comunicacao', back_populates='destinatarios')
+
+
+class ComunicacaoAnexo(db.Model):
+    __tablename__ = 'comunicacao_anexo'
+
+    id = db.Column(db.Integer, primary_key=True)
+    comunicacao_id = db.Column(db.Integer, db.ForeignKey('comunicacao.id'), nullable=False)
+    nome_original = db.Column(db.String(255), nullable=False)
+    nome_arquivo = db.Column(db.String(255), nullable=False)
+    caminho = db.Column(db.String(500), nullable=False)
+    tipo_mime = db.Column(db.String(120), nullable=True)
+    tamanho = db.Column(db.Integer, nullable=False, default=0)
+    criado_em = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    comunicacao = db.relationship('Comunicacao', back_populates='anexos')
+
+
+class ContatoComunicacao(db.Model):
+    __tablename__ = 'contato_comunicacao'
+
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(200), nullable=False)
+    email = db.Column(db.String(200), nullable=True)
+    telefone = db.Column(db.String(30), nullable=True)
+    autorizacao_email = db.Column(db.Boolean, default=False)
+    autorizacao_whatsapp = db.Column(db.Boolean, default=False)
+    observacoes = db.Column(db.Text, nullable=True)
+    ativo = db.Column(db.Boolean, default=True)
+    criado_em = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 

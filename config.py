@@ -1,10 +1,13 @@
 import os
 import secrets
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Controle de versão incremental: principal.atualização.contagem.
 APP_VERSION_MAJOR = 1
 APP_VERSION_UPDATE = 4
-APP_VERSION_COUNT = 8
+APP_VERSION_COUNT = 9
 APP_VERSION = f"{APP_VERSION_MAJOR}.{APP_VERSION_UPDATE}.{APP_VERSION_COUNT}"
 APP_VERSION_COMPONENT_LIMIT = 99
 
@@ -58,6 +61,7 @@ class Config:
     # A variável de ambiente tem prioridade. Sem ela, create_app() cria uma
     # chave local persistente em instance/.secret_key, ignorada pelo Git.
     SECRET_KEY = os.environ.get("SECRET_KEY")
+    BACKUP_PASSWORD = os.environ.get("BACKUP_PASSWORD")
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL") or (
         "sqlite:///" + os.path.join(BASE_DIR, "instance", "database.db")

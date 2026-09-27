@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Central de comunicações — Sistema BMCM{% endblock %}
+{% block content %}
+<div class="container mt-5 fade-in">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h1 class="h3 mb-1">Central de comunicações</h1>
+      <p class="text-muted mb-0">Crie avisos, convites e mensagens para públicos específicos sem usar WhatsApp ainda.</p>
+    </div>
+    <a href="{{ url_for('main.nova_comunicacao') }}" class="btn btn-primary">
+      <i class="bi bi-plus-circle me-1"></i>Nova comunicação
+    </a>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-dark table-hover mb-0 align-middle">
+          <thead>
+            <tr>
+              <th>Assunto</th>
+              <th>Tipo</th>
+              <th>Público</th>
+              <th>Canal</th>
+              <th>Status</th>
+              <th>Criação</th>
+              <th class="text-end">Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for comunicacao in comunicacoes %}
+            <tr>
+              <td><strong>{{ comunicacao.assunto }}</strong></td>
+              <td>{{ comunicacao.tipo|title }}</td>
+              <td>{{ comunicacao.publico|title }}</td>
+              <td>{{ comunicacao.canal|title }}</td>
+              <td>
+                <span class="badge bg-{{ 'secondary' if comunicacao.status == 'rascunho' else 'success' if comunicacao.status == 'enviado' else 'warning' if comunicacao.status == 'parcial' else 'danger' }}">
+                  {{ comunicacao.status|title }}
+                </span>
+              </td>
+              <td>{{ comunicacao.criado_em.strftime('%d/%m/%Y %H:%M') if comunicacao.criado_em else '-' }}</td>
+              <td class="text-end">
+                <div class="btn-group" role="group">
+                  <a href="{{ url_for('main.detalhar_comunicacao', comunicacao_id=comunicacao.id) }}" class="btn btn-sm btn-outline-light">Detalhes</a>
+                  <form method="POST" action="{{ url_for('main.enviar_comunicacao', comunicacao_id=comunicacao.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-success">Enviar</button>
+                  </form>
+                  {% if comunicacao.status == 'rascunho' %}
+                  <form method="POST" action="{{ url_for('main.excluir_comunicacao', comunicacao_id=comunicacao.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Excluir rascunho</button>
+                  </form>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" class="text-center py-4 text-muted">Nenhuma comunicação cadastrada.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

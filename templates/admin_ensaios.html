@@ -38,10 +38,15 @@
             <td>{{ ensaio.titulo }}</td>
             <td>{{ ensaio.horario or '-' }}</td>
             <td>{{ ensaio.local or '-' }}</td>
-            <td>{{ ensaio.status or 'AGENDADO' }}</td>
+            <td>{{ ensaio.status or 'AGENDADO' }}{% if calendar_syncs.get(ensaio.id) %}<br><span class="badge bg-success mt-1">Google Calendar</span>{% endif %}</td>
             <td class="text-end">
               <div class="d-flex justify-content-end gap-1">
                 <a href="{{ url_for('main.editar_ensaio', ensaio_id=ensaio.id) }}" class="btn btn-sm btn-outline-light">Editar</a>
+                <form method="POST" action="{{ url_for('main.sincronizar_ensaio_calendar', ensaio_id=ensaio.id) }}">
+                  <button type="submit" class="btn btn-sm btn-outline-primary" title="{{ 'Atualizar no Google Calendar' if calendar_syncs.get(ensaio.id) else 'Enviar ao Google Calendar' }}">
+                    <i class="bi bi-calendar-event me-1" aria-hidden="true"></i>{{ 'Atualizar calendário' if calendar_syncs.get(ensaio.id) else 'Sincronizar' }}
+                  </button>
+                </form>
                 <a href="{{ url_for('main.registrar_presenca', ensaio_id=ensaio.id) }}" class="btn btn-sm btn-outline-info">Chamada</a>
                 {% if ensaio.status != 'CANCELADO' %}
                 <form method="POST" action="{{ url_for('main.cancelar_ensaio', ensaio_id=ensaio.id) }}">

@@ -21,6 +21,7 @@ O Sistema BMCM é uma aplicação web desenvolvida para apoiar a gestão adminis
 - Navegador web moderno (Chrome, Firefox, Edge, Safari)
 - Conexão com o servidor onde o sistema está hospedado
 - Credenciais de acesso (usuário e senha)
+- Arquivo local `.env` configurado com as variáveis de ambiente do sistema e do Google OAuth, quando a integração do Google estiver habilitada
 
 ---
 
@@ -59,7 +60,28 @@ No primeiro acesso, o sistema solicitará a alteração da senha padrão. O usu�
 3. Confirmar a nova senha
 
 ![Tela de Login](./assets/imgs/tela-alterar-senha.png)
-### 3.3 Recuperação de Senha
+
+### 3.3 Configuração do arquivo `.env`
+Antes de utilizar integrações com o Google, o administrador deve configurar o arquivo `.env` do projeto com as credenciais do Google OAuth 2.0 e a chave secreta da aplicação.
+
+Variáveis principais:
+- `GOOGLE_OAUTH_CLIENT_ID`
+- `GOOGLE_OAUTH_CLIENT_SECRET`
+- `GOOGLE_OAUTH_REDIRECT_URI`
+- `GOOGLE_OAUTH_SCOPES`
+- `SECRET_KEY`
+- `BACKUP_PASSWORD` (opcional; senha de backup com pelo menos 16 caracteres)
+
+O arquivo `.env` deve permanecer fora do Git e não deve ser enviado para repositórios públicos.
+
+A senha do backup também pode ser registrada na guia **Configurações > Sistema/Manutenção**, após informar a senha atual do administrador. A senha salva no `.env` pode ser revelada somente após nova reautenticação administrativa. Se já existir uma chave local ou backups protegidos, a interface só aceita registrar a mesma chave para preservar a restauração.
+
+### 3.4 OAuth do Google e Google Workspace
+Na área de configurações administrativas, o administrador pode autorizar os escopos Gmail, Google Calendar e Google Drive solicitados pelo sistema. O escopo Drive é `drive.file` e limita o acesso aos arquivos e pastas criados pela aplicação.
+
+Após a autorização, o sistema salva o token localmente em `instance/google_oauth_token.json`. O token é usado para enviar mensagens pelo Gmail, sincronizar ensaios e eventos para o Google Calendar e enviar backups ao Google Drive, conforme os escopos autorizados.
+
+### 3.5 Recuperação de Senha
 Em caso de esquecimento de senha, entre em contato com o administrador do sistema.
 
 ---
@@ -382,6 +404,8 @@ Na tela **Presença**, use:
 
 O cancelamento não exclui o ensaio nem suas presenças, preservando o histórico administrativo.
 
+Na listagem de ensaios, use **Sincronizar** para publicar o ensaio no Google Calendar. Após a primeira sincronização, edições e cancelamentos feitos no BMCM tentam atualizar o evento vinculado. Se a API estiver indisponível ou a autorização tiver expirado, o ensaio permanece salvo no BMCM e uma mensagem informa a falha. Ensaios com horário são enviados com duração padrão de uma hora; sem horário, são enviados como eventos de dia inteiro. A sincronização depende da autorização do escopo Calendar.
+
 ### 9.4 Criar um Evento ou Apresentação
 
 1. No menu superior, clique em **Eventos**
@@ -406,6 +430,8 @@ Na listagem de **Eventos**, clique em **Chamada**. A folha funciona da mesma for
 Na tela **Eventos**, use **Editar** para atualizar os dados do evento. Use **Cancelar** quando a apresentação não for realizada.
 
 O cancelamento é lógico: os dados do evento e os registros de presença permanecem disponíveis para consulta.
+
+Na listagem de eventos, use **Sincronizar** para publicar o evento no Google Calendar como evento de dia inteiro. Depois da primeira sincronização, edições e cancelamentos feitos no BMCM tentam atualizar o evento vinculado. Se a API estiver indisponível ou a autorização tiver expirado, o evento permanece salvo no BMCM e uma mensagem informa a falha. Alterações feitas diretamente no Google Calendar não são importadas para o BMCM.
 
 ### 9.7 Consultar Histórico e Frequência
 
@@ -445,9 +471,16 @@ Acesse para visualizar todas as escolas e seus alunos vinculados.
 ## 11. Backup do Sistema
 
 ### 11.1 Criar Backup
-1. No menu do usuário, no canto superior direito, selecione **Backup do Banco**
-2. Clique em **"Criar Backup Agora"**
-3. O sistema gerará uma cópia do banco de dados
+1. No menu do usuário, no canto superior direito, selecione **Backup do Banco**.
+2. Clique em **Criar Backup Agora** para gerar uma cópia local do banco.
+3. Na lista de backups locais, clique em **Drive** ao lado do arquivo para enviá-lo à pasta `BMCM Backups` no Google Drive.
+4. Consulte as cópias remotas na seção **Backups no Google Drive** e use **Abrir** para visualizá-las no Drive.
+
+O envio ao Drive exige que um administrador autorize o escopo Google Drive em **Configurações**. Se o envio falhar, a cópia local continua disponível e pode ser enviada novamente. Repetir o envio de um arquivo com o mesmo nome atualiza a cópia remota.
+
+Os novos arquivos ZIP são protegidos com AES-256. Se `BACKUP_PASSWORD` não estiver configurada, o sistema gera uma senha aleatória e a salva em `instance/.backup_password` com permissões restritas. O backup automático anterior à restauração também é criptografado.
+
+**Aviso:** preserve `BACKUP_PASSWORD` ou `instance/.backup_password` em local seguro e separado dos ZIPs. Para restaurar em outro servidor, configure a mesma senha ou transfira o arquivo-chave por um meio seguro. Sem a chave, não será possível restaurar backups criptografados. Não troque a senha enquanto existirem backups AES-256; a interface bloqueia uma troca que os tornaria irrecuperáveis. Backups antigos sem criptografia continuam compatíveis. A restauração direta do Google Drive ainda não está disponível.
 
 ![Backup](./assets/imgs/tela-admin-backup.png)
 
@@ -466,7 +499,39 @@ Acesse para visualizar todas as escolas e seus alunos vinculados.
 
 ---
 
-## 12. Alteração de Senha
+## 12. Central de Comunicações
+
+### 12.1 Acesso à Central
+A Central de Comunicações fica disponível para usuários com permissão administrativa ou profissional. A partir dela, o administrador pode criar mensagens para públicos específicos, anexos, comunicação com contatos externos e histórico de envios.
+
+### 12.2 Criar uma comunicação
+1. Acesse **Comunicações** no painel administrativo.
+2. Informe assunto e mensagem.
+3. Selecione o público-alvo:
+   - integrante específico;
+   - responsáveis;
+   - alunos ativos;
+   - naipe;
+   - contato externo;
+   - outros públicos configurados.
+4. Anexe arquivos, quando necessário.
+5. Revise a mensagem e confirme o envio.
+
+### 12.3 Status do envio
+A comunicação pode aparecer com os seguintes status:
+- **Rascunho**
+- **Enviado**
+- **Parcial**
+- **Falhou**
+
+O sistema registra o resultado por destinatário e mantém o histórico do envio para auditoria.
+
+### 12.4 Uso do Gmail na comunicação
+Quando a conexão com o Google estiver autorizada, a comunicação pode ser enviada por Gmail, respeitando o remetente configurado no sistema e os escopos do OAuth. O canal é controlado e não substitui automaticamente outras formas de envio autorizadas.
+
+---
+
+## 13. Alteração de Senha
 
 ### 12.1 Alterar Própria Senha
 1. Clique no seu nome de usuário no menu superior
@@ -482,17 +547,17 @@ Acesse para visualizar todas as escolas e seus alunos vinculados.
 
 ---
 
-## 13. Logout
+## 14. Logout
 
-### 13.1 Sair do Sistema
+### 14.1 Sair do Sistema
 1. Clique no seu nome de usuário no menu superior
 2. Selecione **"Sair"**
 
 ---
 
-## 14. Perfis de Usuário
+## 15. Perfis de Usuário
 
-### 14.1 Administrador
+### 15.1 Administrador
 Acesso completo a todas as funcionalidades:
 - Gestão de usuários
 - Gestão de alunos
@@ -501,28 +566,31 @@ Acesso completo a todas as funcionalidades:
 - Relatórios
 - Backup
 - Configurações do sistema
+- Autorização do Google Workspace
+- Central de Comunicações
 
-### 14.2 Profissional
+### 15.2 Profissional
 Acesso às funcionalidades de gestão:
 - Gestão de alunos
 - Gestão de escolas
 - Gestão de instrumentos
 - Relatórios
+- Central de Comunicações
 
-### 14.3 Usuário Comum
+### 15.3 Usuário Comum
 Acesso básico:
 - Visualização de dados
 - Relatórios
 
 ---
 
-## 15. Dicas de Segurança
+## 16. Dicas de Segurança
 
 1. **Senhas**: Use senhas fortes com no mínimo 6 caracteres
 2. **Logout**: Sempre saia do sistema após o uso
 3. **Compartilhamento**: Não compartilhe suas credenciais
 4. **Bloqueio**: O sistema bloqueia o usuário após 3 tentativas de login incorretas por 12 horas
-### 15.1 Boas Práticas de Segurança
+### 16.1 Boas Práticas de Segurança
 
 - Utilize senhas com:
   - mínimo de 8 caracteres
@@ -536,24 +604,31 @@ Acesso básico:
 - Sempre realize logout após o uso
 
 - Altere sua senha periodicamente
+
+- Mantenha o arquivo `.env` protegido e fora do GitHub
+
+- Não exponha tokens de OAuth, senhas ou chaves em arquivos do projeto
 ---
 
-## 16. Solução de Problemas
+## 17. Solução de Problemas
 
-### 16.1 Esqueci minha senha
+### 17.1 Esqueci minha senha
 Entre em contato com o administrador do sistema para resetar sua senha.
 
-### 16.2 Usuário bloqueado
+### 17.2 Usuário bloqueado
 O sistema bloqueia automaticamente após 3 tentativas incorretas. Aguarde 12 horas ou entre em contato com o administrador.
 
-### 16.3 Não consigo acessar uma funcionalidade
+### 17.3 Não consigo acessar uma funcionalidade
 Verifique se seu perfil de usuário tem permissão para acessar aquela funcionalidade. Entre em contato com o administrador se necessário.
 
-### 16.4 Dados não aparecem
+### 17.4 Dados não aparecem
 Verifique se você tem permissão de acesso. Alguns dados podem estar filtrados por perfil.
 
+### 17.5 Google OAuth não funciona
+Verifique se o arquivo `.env` está corretamente preenchido, se as variáveis do Google estão corretas e se a URI de retorno coincide com a configuração registrada no Google Cloud.
+
 ---
-## 17. Problemas Comuns e Soluções
+## 18. Problemas Comuns e Soluções
 
 ### ❌ Não consigo salvar o aluno
 - Verifique campos obrigatórios
@@ -585,15 +660,15 @@ Verifique se você tem permissão de acesso. Alguns dados podem estar filtrados 
 
 ---
 
-## 18. Contato e Suporte
+## 19. Contato e Suporte
 
 Para dúvidas ou problemas técnicos, entre em contato com o administrador do sistema.
 
-### 18.1 Identificação da versão
+### 19.1 Identificação da versão
 
 A versão atual da aplicação é exibida na tela de login, na área de créditos e nas configurações administrativas.
 
-O formato possui três partes, como em `1.4.8`:
+O formato possui três partes, como em `1.4.5`:
 
 - primeira parte: versão principal;
 - segunda parte: atualização ou etapa funcional;

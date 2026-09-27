@@ -38,11 +38,18 @@ O BMCM já possui ou possui em desenvolvimento os seguintes recursos:
 * Personalização visual;
 * Tema claro e escuro;
 * Personalização de cores da interface;
+* Ajustes iniciais de acessibilidade e contraste;
 * Estrutura preparada para acessibilidade;
 * Controle de versão utilizando Git/GitHub;
 * Estrutura de API;
 * Sistema de gerenciamento relacionado à banda;
-* Estrutura inicial para controle de presença.
+* Central de comunicações administrativa com base funcional para públicos, pré-visualização, anexos e histórico, ainda em desenvolvimento e validação;
+* Fluxo OAuth 2.0 do Google e envio de mensagens pelo Gmail;
+* Persistência local do token OAuth;
+* Controle manual de presença relacionado a ensaios e eventos;
+* Base para indicadores de presença e análise de frequência.
+
+O OAuth solicita escopos para Gmail, Calendar e Drive. Gmail, sincronização unidirecional inicial do Calendar e upload/listagem de backups no Drive estão conectados a operações do sistema. Calendar e Drive ainda precisam ser validados com contas Google reais.
 
 Esses recursos devem ser considerados parte da evolução do projeto e não devem ser descartados ou reimplementados desnecessariamente.
 
@@ -92,28 +99,38 @@ O controle de presença manual é o escopo atual.
 
 # 5. Integração com serviços Google
 
-O sistema deverá explorar a utilização de APIs do Google como parte da integração com serviços externos e do conceito de computação em nuvem.
+O sistema deverá explorar APIs do Google como parte da integração com serviços externos e do conceito de computação em nuvem. A Central de Comunicações continua sendo prioridade para conclusão e validação. Os MVPs de Calendar e Drive estão disponíveis no código; a validação com contas Google do ambiente é uma etapa pendente.
 
 As três integrações principais previstas são:
 
 ## 5.1 Google Drive — backup e nuvem
 
-Utilizar o Google Drive como componente de armazenamento em nuvem para:
+O MVP atual permite enviar backups ZIP locais e consultar arquivos da pasta `BMCM Backups` no Google Drive. A integração deve ser validada com uma conta Google real. A evolução poderá utilizar o Drive como componente de armazenamento em nuvem para:
 
 * backup dos dados do sistema;
 * armazenamento de arquivos relevantes;
 * eventual armazenamento de relatórios;
 * demonstração prática do conceito de computação em nuvem.
 
-A integração deve ser implementada de forma segura.
+O escopo OAuth `drive.file` limita o acesso aos arquivos e à pasta criados pela aplicação. A restauração diretamente a partir do Drive ainda não está implementada.
 
-Credenciais, tokens e chaves de API não devem ser armazenados diretamente no código-fonte ou no GitHub.
+As credenciais do Google devem ser armazenadas em variáveis de ambiente e nunca em código-fonte, arquivos de texto do projeto ou GitHub. O projeto usa o arquivo local `.env` como mecanismo de configuração local e este arquivo deve permanecer fora do controle de versão.
 
 ---
 
 ## 5.2 Google Calendar — eventos e ensaios
 
-Integrar o sistema com o Google Calendar para auxiliar no gerenciamento de:
+O MVP de sincronização unidirecional do BMCM para o Google Calendar está implementado para ensaios e eventos. A sincronização é acionada manualmente na listagem de cada atividade. Depois de vinculada, uma edição ou cancelamento no BMCM atualiza o evento remoto. A integração exige autorização do escopo `calendar.events` e ainda precisa ser validada com uma conta Google real.
+
+O comportamento inicial é:
+
+* ensaios com horário são enviados com duração padrão de uma hora e fuso `America/Sao_Paulo`;
+* ensaios sem horário e eventos, que não possuem horário no cadastro atual, são enviados como eventos de dia inteiro;
+* cada atividade mantém um vínculo local com o ID do evento Google para evitar duplicidades;
+* cancelamentos são propagados somente se a atividade já tiver sido sincronizada;
+* alterações feitas diretamente no Google Calendar não são importadas para o BMCM.
+
+A integração auxilia no gerenciamento de:
 
 * ensaios;
 * apresentações;
@@ -130,6 +147,8 @@ A integração deverá ser planejada para evitar duplicidade desnecessária de i
 ## 5.3 Gmail — comunicação
 
 Utilizar a integração com Gmail para apoiar a comunicação relacionada à banda.
+
+A implementação atual contempla fluxo de autorização Google OAuth 2.0 por variáveis de ambiente, armazenamento local do token em `instance/google_oauth_token.json`, renovação automática via refresh token e envio de mensagens com anexos. O sistema também permite configurar o remetente a partir das configurações administrativas. O Gmail é a integração Google operacional atualmente.
 
 Possíveis utilizações:
 
@@ -197,7 +216,7 @@ Autorizações de e-mail e WhatsApp devem ser independentes, com registro de dat
 
 # 6. Conceito de computação em nuvem
 
-A utilização do Google Drive, Google Calendar e Gmail deve ser compreendida como parte da aplicação do conceito de **computação em nuvem**.
+A utilização atual do Gmail e os MVPs de integração com Google Calendar e Google Drive devem ser compreendidos como parte da aplicação do conceito de **computação em nuvem**, sujeitos à validação com contas reais.
 
 O objetivo não é apenas "usar serviços do Google".
 
@@ -219,18 +238,19 @@ O BMCM deverá possuir uma Central de Comunicações simples, administrativa e m
 
 ## 7.1 Funcionalidades da central
 
-A central deverá permitir:
+A central já possui implementação funcional para:
 
 * criar uma comunicação;
 * informar assunto e mensagem;
 * selecionar o público-alvo;
 * enviar para um integrante, responsável, grupo de integrantes ou contatos externos autorizados;
 * vincular a comunicação a um ensaio, evento ou apresentação;
-* utilizar modelos de mensagem;
 * revisar e confirmar o envio;
 * consultar o histórico de comunicações;
 * visualizar status `rascunho`, `enviado`, `parcial` ou `falhou`;
 * registrar usuário responsável, data, canal e resultado por destinatário.
+
+A funcionalidade de modelos de mensagem, quando adicionada, deve ser tratada como evolução incremental e não como requisito obrigatório para a etapa atual.
 
 Públicos inicialmente previstos:
 
@@ -290,21 +310,26 @@ A acessibilidade deve ser tratada como requisito real da aplicação e não apen
 Considerar:
 
 * navegação por teclado;
-* uso adequado de foco;
+* uso adequado de foco visível;
 * textos legíveis;
 * tamanho ajustável das fontes;
 * contraste adequado;
 * tema claro e escuro;
+* personalização de contrastes e paleta visual em painel administrativo;
 * elementos HTML semanticamente apropriados;
 * identificação adequada de campos de formulário;
 * mensagens de erro compreensíveis;
 * compatibilidade com diferentes tamanhos de tela;
 * responsividade;
-* atalhos de teclado quando forem realmente úteis.
+* atalhos de teclado quando forem realmente úteis;
+* controle de foco em modais, abas e menus;
+* indicadores visuais acessíveis para botões, links e estados ativos;
+* uso de labels, legends e descrições para leitores de tela;
+* suporte a reduções de movimento e melhor legibilidade em telas sensíveis ao contraste.
 
-A personalização de cores deve considerar contraste suficiente para preservar a legibilidade.
+A personalização de cores deve considerar contraste suficiente para preservar a legibilidade. O sistema deve permitir ajustes visuais sem comprometer uso em condições de baixa visão, contraste reduzido ou leitura assistida.
 
-O sistema não deve permitir que uma configuração visual torne a interface inutilizável.
+O sistema não deve permitir que uma configuração visual torne a interface inutilizável. A ferramenta de personalização deve incluir, quando possível, opções seguras para contraste, cor de fundo, cor de destaques e tamanho de texto, mantendo acessibilidade mínima e consistência visual.
 
 ---
 
@@ -323,6 +348,64 @@ Portanto:
 * erros devem explicar o que aconteceu e, quando possível, como corrigir;
 * menus devem possuir organização consistente;
 * a interface deve funcionar em computadores, tablets e celulares.
+
+## 9.1 Organização prevista do menu principal
+
+O menu principal deverá ser reorganizado para reduzir a quantidade de itens visíveis e melhorar a navegação em telas pequenas.
+
+### Cadastro
+
+Deverá reunir as rotinas de manutenção de dados:
+
+* usuários;
+* integrantes;
+* instrumentos;
+* escolas;
+* naipes;
+* tipos e demais cadastros auxiliares.
+
+### Atividades
+
+Deverá reunir as operações da rotina da banda:
+
+* ensaios;
+* eventos;
+* controle de presença;
+* relatórios diretamente relacionados às atividades.
+
+### Utilitários
+
+Deverá reunir ferramentas de apoio:
+
+* central de comunicações, somente quando o remetente `@gmail.com` e a autorização Google Workspace estiverem válidos;
+* Google Calendar, quando o escopo estiver autorizado;
+* relatórios gerais e ferramentas auxiliares que não pertençam ao cadastro ou às atividades.
+
+### Menu do usuário
+
+As funções administrativas deverão permanecer no menu do usuário e não no menu principal:
+
+* configurações do sistema, somente para administradores;
+* backup e restauração, somente para administradores;
+* logs administrativos, conforme a permissão do usuário;
+* encerramento da sessão.
+
+O agrupamento deverá respeitar as permissões existentes. Ocultar um item no menu não substitui a proteção da rota, que deverá continuar sendo validada no servidor.
+
+Em telas pequenas, os grupos deverão utilizar dropdowns ou seções expansíveis compatíveis com o menu hamburguer. Os controles deverão possuir foco visível, área de toque adequada, indicação do grupo aberto e comportamento acessível por teclado.
+
+## 9.2 Alterações previstas na navegação
+
+As seguintes alterações deverão ser executadas como evolução da interface:
+
+1. criar os grupos `Cadastro`, `Atividades` e `Utilitários`;
+2. mover comunicações e, futuramente, Calendar para `Utilitários`;
+3. manter backup, configurações e logs administrativos no menu do usuário;
+4. ocultar comunicações quando as pré-condições de remetente Gmail e OAuth não forem atendidas;
+5. exibir Calendar somente após a integração estar implementada e autorizada;
+6. preservar autorização por perfil e proteção de todas as rotas;
+7. revisar o comportamento dos dropdowns no menu hamburguer em celulares;
+8. validar a navegação por teclado, foco, contraste e leitura por tecnologias assistivas.
 
 Não implementar funcionalidades apenas porque são tecnicamente interessantes.
 
@@ -348,7 +431,13 @@ Considerar:
 * proteção das credenciais das APIs;
 * utilização de variáveis de ambiente para segredos;
 * não armazenar tokens, senhas ou chaves no GitHub;
+* backups protegidos por ZIP AES-256, com senha de ambiente ou chave aleatória local em `instance/.backup_password`;
+* cadastro da senha de backup com confirmação e senha atual do administrador; gravação em `.env` com permissão `0600` e revelação mascarada até nova reautenticação na guia Sistema/Manutenção;
 * registros de eventos importantes do sistema quando necessário.
+
+A senha ou o arquivo-chave dos backups deve ser preservado separadamente dos arquivos ZIP. Perder essa chave impede a restauração dos backups criptografados.
+
+A interface não permite trocar uma chave já usada por backups: o administrador pode apenas registrar no `.env` a mesma chave existente, evitando tornar cópias anteriores irrecuperáveis. Senhas administradas externamente por variável de ambiente continuam fora da edição pela interface.
 
 Não implementar mecanismos de segurança apenas superficialmente para "cumprir requisito".
 
@@ -393,21 +482,21 @@ O projeto deve demonstrar:
 * integração entre sistemas;
 * documentação das integrações.
 
-As integrações planejadas incluem principalmente:
+O estado e a ordem de prioridade das integrações são:
 
-1. Google Drive API;
-2. Google Calendar API;
-3. Gmail API;
-4. API HTTP do módulo externo de WhatsApp, quando autorizado e tecnicamente protegido.
+1. Gmail API: fluxo OAuth e envio de comunicações implementados; a Central de Comunicações está em desenvolvimento e validação;
+2. Google Calendar API: MVP de sincronização unidirecional implementado no código; falta validar com uma conta Google real após a conclusão prioritária da Central de Comunicações;
+3. Google Drive API: MVP de upload e listagem de backups implementado no código; falta validar com uma conta Google real;
+4. API HTTP do módulo externo de WhatsApp: possibilidade futura, condicionada à autorização e aos requisitos de segurança.
 
 O módulo externo de WhatsApp deverá permanecer desacoplado do Flask. O BMCM deverá consumi-lo por um cliente de serviço com timeout, tratamento de erros, autenticação e registro de auditoria.
 
-As integrações do BMCM deverão começar com escopo mínimo e controlado:
+As integrações do BMCM devem manter escopo mínimo e controlado:
 
+* Google Calendar: sincronização em uma direção, do BMCM para o calendário;
 * Google Drive: backup remoto e consulta de arquivos;
-* Google Calendar: sincronização inicial em uma direção, do BMCM para o calendário;
-* Gmail: envio de comunicações autorizadas;
-* WhatsApp: envio alternativo de mensagens de texto autorizadas através de serviço externo.
+* Gmail: envio de comunicações autorizadas, já disponível;
+* WhatsApp: envio alternativo de mensagens de texto autorizadas através de serviço externo, como possibilidade futura.
 
 Integrações bidirecionais, leitura de conversas, automações de grupo e envio de mídia deverão ser consideradas extensões posteriores, condicionadas a testes, segurança e justificativa para a Banda.
 
@@ -428,11 +517,34 @@ Priorizar inicialmente:
 * eventos;
 * integrações;
 * validações;
-* operações críticas do banco de dados.
+* operações críticas do banco de dados;
+* acessibilidade básica em telas críticas;
+* navegação por teclado e foco visual em formulários e menus.
 
 Testes devem ser automatizados sempre que possível.
 
 Também devem existir testes manuais documentados para funcionalidades que dependem de serviços externos ou interação visual.
+
+---
+
+# 13.1 Análise opcional de presença e indicadores de dados
+
+A análise de dados de presença deve ser tratada como uma evolução opcional, mas com forte valor para gestão da banda.
+
+Indicadores que podem ser implementados no futuro:
+
+* frequência individual por mês;
+* percentual médio de presença por aluno;
+* percentual médio de presença por grupo ou naipe;
+* comparação entre ensaios e eventos;
+* alunos com presença abaixo de um limite mínimo;
+* tendência de faltas por período;
+* volume de presenças e ausências por mês;
+* indicadores de assiduidade e desempenho de frequência.
+
+Esses dados podem alimentar relatórios e gráficos simples, sem exigir uma estrutura de BI complexa. O objetivo principal é transformar registros operacionais em informações úteis para gestão, acompanhamento e tomada de decisão administrativa.
+
+A análise de dados não deve substituir a operação principal do sistema, mas deve ampliar seu valor estratégico como ferramenta de acompanhamento institucional.
 
 ---
 
@@ -514,13 +626,12 @@ O objetivo final é entregar uma aplicação funcional que possa continuar sendo
 * controle manual de presença;
 * histórico de frequência.
 
-### Integrações externas
+### Integrações externas e comunicação
 
-* Google Drive;
-* Google Calendar;
-* Gmail;
-* Central de comunicações multicanal;
-* WhatsApp como módulo externo independente e canal alternativo autorizado.
+* Gmail e base funcional da Central de Comunicações: implementados; conclusão e validação da Central são a prioridade atual;
+* Google Calendar: MVP unidirecional implementado no código; validação com conta real pendente;
+* Google Drive: MVP de upload e listagem implementado; validação real pendente;
+* WhatsApp: possibilidade futura como módulo externo independente e canal alternativo autorizado.
 
 ### Requisitos técnicos
 
@@ -616,8 +727,10 @@ principal.atualizacao.contagem
 Exemplo:
 
 ```text
-1.4.8
+1.4.5
 ```
+
+A contagem deve ser atualizada a cada evolução concluída, conforme definido pelo processo de versionamento do projeto.
 
 As partes possuem os seguintes significados:
 

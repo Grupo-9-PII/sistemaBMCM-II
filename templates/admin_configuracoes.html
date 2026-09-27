@@ -127,6 +127,34 @@
               <label for="texto-rodape" class="form-label">Texto de Rodapé</label>
               <input type="text" name="texto-rodape" class="form-control" id="texto-rodape" value="{{ system_settings.get('footer_text', 'Grupo 9 — DPR7 - UNIVESP') }}" placeholder="Digite o texto do rodapé">
             </div>
+            <div class="mb-3">
+              <label for="email-remetente-comunicacao" class="form-label">E-mail remetente e para respostas</label>
+              <input type="email" name="email-remetente-comunicacao" class="form-control" id="email-remetente-comunicacao" value="{{ system_settings.get('communication_sender_email', '') }}" placeholder="comunicacao@exemplo.org.br">
+              <div class="form-text">Este endereço será exibido na central de comunicações e deverá corresponder ao remetente configurado no serviço de e-mail.</div>
+            </div>
+            <div class="alert {{ 'alert-success' if google_workspace_status.available and google_calendar_authorized else 'alert-warning' }}" role="status">
+              <strong>Gmail:</strong>
+              {% if google_workspace_status.available %}
+                OAuth autorizado e remetente configurado.
+              {% else %}
+                Indisponível. {{ google_workspace_status.reason }}
+              {% endif %}
+              <br><strong>Google Calendar:</strong>
+              {% if google_calendar_authorized %}
+                Escopo autorizado; sincronização disponível.
+              {% else %}
+                Aguardando autorização do escopo Calendar.
+              {% endif %}
+              <br><strong>Google Drive:</strong>
+              {% if google_drive_authorized %}
+                Escopo autorizado para backups.
+              {% else %}
+                Aguardando autorização do escopo Drive.
+              {% endif %}
+              <a href="{{ url_for('main.iniciar_google_oauth') }}" class="btn btn-sm btn-outline-dark ms-2">
+                Autorizar serviços Google
+              </a>
+            </div>
             <button type="submit" class="btn btn-primary">Salvar Personalização</button>
           </form>
         </div>
@@ -226,6 +254,66 @@
             <i class="bi bi-exclamation-triangle me-2"></i>
             <strong>Atenção:</strong> Algumas operações podem afetar o funcionamento do sistema. Execute com cuidado.
           </div>
+          <div class="card mb-4">
+            <div class="card-header"><h6 class="mb-0"><i class="bi bi-key me-2" aria-hidden="true"></i>Senha dos backups AES-256</h6></div>
+            <div class="card-body">
+              {% if backup_password_env_set %}
+              <p class="mb-3">Senha registrada no arquivo local `.env`.</p>
+              {% elif backup_password_local_exists %}
+              <p class="mb-3">Há uma chave aleatória local. Registre no `.env` o mesmo valor revelado abaixo para facilitar a recuperação em outra instalação.</p>
+              {% else %}
+              <p class="mb-3">Ainda não há senha definida. Cadastre uma senha forte antes do primeiro backup ou deixe o sistema gerar uma chave aleatória local.</p>
+              {% endif %}
+
+              <div class="mb-3">
+                <label for="backup-password-display" class="form-label">Senha atual</label>
+                <div class="input-group">
+                  <input id="backup-password-display" type="password" class="form-control" value="" placeholder="Protegida" readonly autocomplete="off" aria-describedby="backup-password-status">
+                  <button id="backup-password-hide" type="button" class="btn btn-outline-secondary" hidden>Ocultar</button>
+                </div>
+              </div>
+
+              {% if backup_password_env_set or backup_password_local_exists %}
+              <form id="backup-password-reveal-form" method="POST" action="{{ url_for('main.revelar_senha_backup') }}" class="mb-4">
+                <div class="row g-2 align-items-end">
+                  <div class="col-md-8">
+                    <label for="backup-reveal-admin-password" class="form-label">Senha atual do administrador</label>
+                    <input id="backup-reveal-admin-password" name="admin_password" type="password" class="form-control" required autocomplete="current-password">
+                  </div>
+                  <div class="col-md-4">
+                    <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-unlock me-1" aria-hidden="true"></i>Reautenticar e revelar</button>
+                  </div>
+                </div>
+              </form>
+              {% endif %}
+
+              {% if not backup_password_env_set %}
+              <form id="backup-password-register-form" method="POST" action="{{ url_for('main.registrar_senha_backup') }}">
+                <div class="row g-2">
+                  <div class="col-md-4">
+                    <label for="backup-new-password" class="form-label">Senha do backup</label>
+                    <input id="backup-new-password" name="backup_password" type="password" class="form-control" minlength="16" required autocomplete="new-password">
+                  </div>
+                  <div class="col-md-4">
+                    <label for="backup-confirm-password" class="form-label">Confirme a senha</label>
+                    <input id="backup-confirm-password" name="backup_password_confirm" type="password" class="form-control" minlength="16" required autocomplete="new-password">
+                  </div>
+                  <div class="col-md-4">
+                    <label for="backup-register-admin-password" class="form-label">Senha atual do administrador</label>
+                    <input id="backup-register-admin-password" name="admin_password" type="password" class="form-control" required autocomplete="current-password">
+                  </div>
+                </div>
+                {% if backup_password_local_exists %}
+                <div class="form-text mt-2">Para preservar backups existentes, registre exatamente a chave local revelada acima. Uma senha diferente será recusada.</div>
+                {% else %}
+                <div class="form-text mt-2">Use pelo menos 16 caracteres. A senha será gravada no `.env`, com permissões restritas.</div>
+                {% endif %}
+                <button type="submit" class="btn btn-primary mt-3"><i class="bi bi-shield-lock me-1" aria-hidden="true"></i>Registrar senha no .env</button>
+              </form>
+              {% endif %}
+              <div id="backup-password-status" class="form-text mt-3" role="status" aria-live="polite"></div>
+            </div>
+          </div>
           <form method="POST" enctype="multipart/form-data">
             <div class="row mb-3">
               <div class="col-md-4">
@@ -301,6 +389,59 @@ document.addEventListener('DOMContentLoaded', function() {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
         return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    const passwordDisplay = document.getElementById('backup-password-display');
+    const passwordStatus = document.getElementById('backup-password-status');
+    const hidePasswordButton = document.getElementById('backup-password-hide');
+
+    async function submitBackupPasswordForm(form, onSuccess) {
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        passwordStatus.textContent = 'Verificando...';
+        try {
+          const response = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'Accept': 'application/json' }
+          });
+          const result = await response.json();
+          if (!response.ok) {
+            passwordStatus.textContent = result.error || 'Não foi possível concluir a operação.';
+            return;
+          }
+          onSuccess(result);
+        } catch (error) {
+          passwordStatus.textContent = 'Não foi possível acessar o servidor. Tente novamente.';
+        } finally {
+          form.querySelectorAll('input[type="password"]').forEach((input) => { input.value = ''; });
+        }
+      });
+    }
+
+    const revealForm = document.getElementById('backup-password-reveal-form');
+    if (revealForm) {
+      submitBackupPasswordForm(revealForm, (result) => {
+        passwordDisplay.type = 'text';
+        passwordDisplay.value = result.backup_password;
+        hidePasswordButton.hidden = false;
+        passwordStatus.textContent = 'Senha revelada. Oculte-a ao terminar.';
+      });
+    }
+
+    const registerForm = document.getElementById('backup-password-register-form');
+    if (registerForm) {
+      submitBackupPasswordForm(registerForm, (result) => {
+        passwordStatus.textContent = result.message;
+        registerForm.hidden = true;
+      });
+    }
+
+    hidePasswordButton?.addEventListener('click', () => {
+      passwordDisplay.type = 'password';
+      passwordDisplay.value = '';
+      hidePasswordButton.hidden = true;
+      passwordStatus.textContent = 'Senha ocultada.';
     });
 });
 </script>

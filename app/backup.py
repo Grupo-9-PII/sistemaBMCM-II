@@ -4,17 +4,58 @@ Utiliza compactação ZIP para cópias locais do banco de dados.
 """
 
 import os
+import secrets
 import zipfile
 import shutil
 from datetime import datetime
 from pathlib import Path
-from flask import current_app
 
-# Mantida por compatibilidade com chamadas existentes; o ZIP não é criptografado.
-SENHA_BACKUP_PADRAO = "SISTBMCM2024"
+import pyzipper
+from flask import current_app
 
 # Nome da subpasta de backups na pasta do usuário
 PASTA_BACKUP = "BKPSISTBMCM"
+
+
+def obter_senha_backup(criar=True):
+    """Obtém a senha configurada ou cria uma chave local persistente."""
+    try:
+        senha = current_app.config.get("BACKUP_PASSWORD")
+        base_dir = current_app.config.get("BASE_DIR")
+    except RuntimeError:
+        senha = os.environ.get("BACKUP_PASSWORD")
+        base_dir = os.getcwd()
+
+    if senha:
+        if len(senha) < 16:
+            raise ValueError("BACKUP_PASSWORD deve ter pelo menos 16 caracteres.")
+        return senha
+
+    senha_path = Path(base_dir or os.getcwd()) / "instance" / ".backup_password"
+    if senha_path.is_file():
+        senha = senha_path.read_text(encoding="utf-8").strip()
+        if len(senha) < 16:
+            raise RuntimeError("A chave local de backup está inválida.")
+        os.chmod(senha_path, 0o600)
+        return senha
+    if not criar:
+        return None
+
+    senha_path.parent.mkdir(parents=True, exist_ok=True)
+    senha = secrets.token_urlsafe(32)
+    try:
+        descriptor = os.open(
+            senha_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600
+        )
+    except FileExistsError:
+        senha = senha_path.read_text(encoding="utf-8").strip()
+        if len(senha) < 16:
+            raise RuntimeError("A chave local de backup está inválida.")
+        os.chmod(senha_path, 0o600)
+        return senha
+    with os.fdopen(descriptor, "w", encoding="utf-8") as password_file:
+        password_file.write(senha)
+    return senha
 
 
 def obter_caminho_backup(nome_backup):
@@ -59,12 +100,18 @@ def listar_backups():
         if arquivo.startswith("backup_") and arquivo.endswith(".zip"):
             caminho = os.path.join(pasta, arquivo)
             stat = os.stat(caminho)
+            try:
+                with pyzipper.AESZipFile(caminho, "r") as archive:
+                    encrypted = bool(archive.getinfo("database.db").flag_bits & 0x1)
+            except (KeyError, OSError, zipfile.BadZipFile, pyzipper.BadZipFile):
+                encrypted = False
             backups.append({
                 "nome": arquivo,
                 "caminho": caminho,
                 "data": datetime.fromtimestamp(stat.st_mtime),
                 "tamanho_bytes": stat.st_size,
                 "tamanho_formatado": formatar_tamanho(stat.st_size),
+                "criptografado": encrypted,
             })
     backups.sort(key=lambda x: x["data"], reverse=True)
     return backups
@@ -79,34 +126,53 @@ def formatar_tamanho(bytes_tamanho):
     return f"{bytes_tamanho:.1f} TB"
 
 
-def criar_backup(caminho_db):
+def criar_backup(caminho_db, senha=None):
     """
     Cria um backup compactado do banco de dados.
     Retorna o caminho do arquivo de backup criado.
     """
     if not os.path.exists(caminho_db):
         raise FileNotFoundError(f"Banco de dados não encontrado: {caminho_db}")
+    senha = senha or obter_senha_backup()
 
     pasta_backup = obter_pasta_backup_usuario()
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     nome_backup = f"backup_{timestamp}.zip"
     caminho_backup = os.path.join(pasta_backup, nome_backup)
 
-    # O módulo zipfile padrão não oferece criptografia AES.
-    with zipfile.ZipFile(caminho_backup, "w", zipfile.ZIP_DEFLATED) as zf:
+    with pyzipper.AESZipFile(
+        caminho_backup,
+        "w",
+        compression=pyzipper.ZIP_DEFLATED,
+        encryption=pyzipper.WZ_AES,
+    ) as zf:
+        zf.setpassword(senha.encode("utf-8"))
+        zf.setencryption(pyzipper.WZ_AES, nbits=256)
         zf.write(caminho_db, arcname="database.db")
+    os.chmod(caminho_backup, 0o600)
 
     return caminho_backup
 
 
-def validar_backup(caminho_backup):
+def validar_backup(caminho_backup, senha=None):
     """Valida se o arquivo de backup é um ZIP válido."""
     try:
-        with zipfile.ZipFile(caminho_backup, "r") as zf:
+        with pyzipper.AESZipFile(caminho_backup, "r") as zf:
             if "database.db" not in zf.namelist():
                 return False, "Arquivo de backup inválido: database.db não encontrado."
+            info = zf.getinfo("database.db")
+            if info.flag_bits & 0x1:
+                senha = senha or obter_senha_backup(criar=False)
+                if not senha:
+                    return False, "A senha de proteção deste backup não está configurada."
+                zf.setpassword(senha.encode("utf-8"))
+            arquivo_corrompido = zf.testzip()
+            if arquivo_corrompido:
+                return False, "Arquivo de backup inválido ou corrompido."
             return True, "Backup válido."
-    except zipfile.BadZipFile:
+    except RuntimeError:
+        return False, "Senha incorreta ou arquivo de backup corrompido."
+    except (zipfile.BadZipFile, OSError):
         return False, "Arquivo de backup inválido ou corrompido."
 
 
@@ -117,24 +183,23 @@ def restaurar_backup(caminho_backup, caminho_db, senha=None):
     Retorna (sucesso, mensagem).
     """
     if senha is None:
-        senha = SENHA_BACKUP_PADRAO
+        senha = obter_senha_backup(criar=False)
 
     # Validar backup
-    valido, msg = validar_backup(caminho_backup)
+    valido, msg = validar_backup(caminho_backup, senha)
     if not valido:
         return False, msg
 
-    # Criar cópia de segurança do DB atual
+    # Preserve o banco atual em um ZIP criptografado antes da restauração.
     if os.path.exists(caminho_db):
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        pasta_backup = obter_pasta_backup_usuario()
-        nome_seguranca = f"database_pre_restore_{timestamp}.db"
-        caminho_seguranca = os.path.join(pasta_backup, nome_seguranca)
-        shutil.copy2(caminho_db, caminho_seguranca)
+        criar_backup(caminho_db, senha=senha or obter_senha_backup())
 
     # Extrair backup
     try:
-        with zipfile.ZipFile(caminho_backup, "r") as zf:
+        with pyzipper.AESZipFile(caminho_backup, "r") as zf:
+            info = zf.getinfo("database.db")
+            if info.flag_bits & 0x1:
+                zf.setpassword(senha.encode("utf-8"))
             # Extrair para pasta temporária primeiro
             pasta_temp = os.path.join(os.path.dirname(caminho_db), "temp_restore")
             os.makedirs(pasta_temp, exist_ok=True)

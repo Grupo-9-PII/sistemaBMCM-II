@@ -493,6 +493,38 @@ def migrar_banco_novos_campos():
                 "ALTER TABLE ensaio ADD COLUMN status VARCHAR(20) NOT NULL DEFAULT 'AGENDADO'"
             ))
 
+        comunicacao_result = db.session.execute(text("PRAGMA table_info(comunicacao)"))
+        comunicacao_columns = [row[1] for row in comunicacao_result.fetchall()]
+        if comunicacao_columns:
+            if 'contato_externo_id' not in comunicacao_columns:
+                db.session.execute(text(
+                    "ALTER TABLE comunicacao ADD COLUMN contato_externo_id INTEGER"
+                ))
+            if 'destinatario_nome' not in comunicacao_columns:
+                db.session.execute(text(
+                    "ALTER TABLE comunicacao ADD COLUMN destinatario_nome VARCHAR(200)"
+                ))
+            if 'destinatario_email' not in comunicacao_columns:
+                db.session.execute(text(
+                    "ALTER TABLE comunicacao ADD COLUMN destinatario_email VARCHAR(200)"
+                ))
+
+        comunicacao_destinatario_result = db.session.execute(
+            text("PRAGMA table_info(comunicacao_destinatario)")
+        )
+        comunicacao_destinatario_columns = [
+            row[1] for row in comunicacao_destinatario_result.fetchall()
+        ]
+        if comunicacao_destinatario_columns:
+            if 'destinatario_nome' not in comunicacao_destinatario_columns:
+                db.session.execute(text(
+                    "ALTER TABLE comunicacao_destinatario ADD COLUMN destinatario_nome VARCHAR(200)"
+                ))
+            if 'destinatario_email' not in comunicacao_destinatario_columns:
+                db.session.execute(text(
+                    "ALTER TABLE comunicacao_destinatario ADD COLUMN destinatario_email VARCHAR(200)"
+                ))
+
         # Impede mais de uma chamada para o mesmo integrante e atividade,
         # inclusive quando duas requisições chegam simultaneamente.
         db.session.execute(text(

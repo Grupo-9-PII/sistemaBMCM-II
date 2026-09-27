@@ -31,11 +31,11 @@
     - [Gestão de instrumentos](#gestão-de-instrumentos)
     - [Relatórios](#relatórios)
     - [Endereço por CEP](#endereço-por-cep)
-- [Funcionalidades em Desenvolvimento](#funcionalidades-em-desenvolvimento)
+- [Funcionalidades em Evolução](#funcionalidades-em-evolução)
   - [Controle de presença](#controle-de-presença)
   - [Ensaios](#ensaios)
   - [Eventos e apresentações](#eventos-e-apresentações)
-- [Integrações Planejadas](#integrações-planejadas)
+- [Integrações Google: Situação e Próximas Etapas](#integrações-google-situação-e-próximas-etapas)
   - [Google Drive](#google-drive)
   - [Google Calendar](#google-calendar)
   - [Gmail](#gmail)
@@ -138,19 +138,14 @@ O **PI II** não tem como objetivo reconstruir o sistema.
 
 A proposta é **evoluir a aplicação existente**, acrescentando funcionalidades que atendam às necessidades atuais da banda e aos requisitos acadêmicos do novo projeto.
 
-Entre os principais eixos de evolução estão:
+Entre os principais eixos da evolução estão:
 
-* controle manual de presença;
-* gestão de ensaios;
-* gestão de eventos e apresentações;
-* integração com Google Calendar;
-* utilização do Google Drive para backup e armazenamento em nuvem;
-* integração com Gmail para comunicação;
+* conclusão e validação da Central de Comunicações, cuja base funcional já existe;
+* validação da sincronização inicial com Google Calendar após a conclusão da Central de Comunicações;
+* implementação e validação real do backup remoto no Google Drive;
+* ampliação dos testes automatizados e dos recursos de acessibilidade;
 * utilização de APIs externas;
 * aplicação prática do conceito de computação em nuvem;
-* melhoria da acessibilidade;
-* aprimoramento da experiência do usuário;
-* ampliação dos testes automatizados;
 * manutenção da segurança e da privacidade dos dados.
 
 A evolução será realizada de forma incremental, preservando funcionalidades existentes sempre que possível.
@@ -175,9 +170,13 @@ As seguintes melhorias já foram incorporadas ao sistema existente:
 * impressão da folha de chamada e do histórico;
 * preservação do histórico ao editar ou cancelar ensaios e eventos;
 * migrações incrementais para adequar bancos existentes às novas tabelas e colunas;
-* correção dos relacionamentos duplicados entre eventos e autorizações de viagem.
+* correção dos relacionamentos duplicados entre eventos e autorizações de viagem;
+* central de comunicações com públicos específicos, anexos, histórico e status por destinatário;
+* fluxo OAuth 2.0 do Google e envio de mensagens pelo Gmail;
+* configuração do OAuth por variáveis de ambiente e arquivo local `.env`, ignorado pelo Git;
+* persistência do token OAuth em `instance/google_oauth_token.json` e envio de e-mails autorizados com suporte a anexos.
 
-As integrações com Google Drive, Google Calendar, Gmail e o módulo externo de WhatsApp ainda fazem parte das próximas etapas do PI II.
+O OAuth solicita os escopos necessários para Gmail, Calendar e Drive. Gmail e a sincronização inicial do Calendar estão conectados a operações do sistema. O Drive permite enviar backups ZIP existentes e consultar arquivos na pasta `BMCM Backups`; essa operação ainda precisa de validação com uma conta Google real. O WhatsApp não está integrado ao BMCM.
 
 ## Controle de versão da aplicação
 
@@ -186,14 +185,14 @@ O sistema utiliza uma versão de três partes no formato `principal.atualizaçã
 Exemplo:
 
 ```text
-1.4.8
+1.4.5
 ```
 
 Nesse formato:
 
 * `1`: versão principal da aplicação;
 * `4`: etapa ou atualização funcional;
-* `8`: contagem incremental de alterações.
+* `5`: contagem incremental de alterações.
 
 A versão oficial fica centralizada em `config.py`, nas constantes `APP_VERSION_MAJOR`, `APP_VERSION_UPDATE` e `APP_VERSION_COUNT`. Cada correção, rotina ou formulário concluído incrementa o terceiro componente a partir da versão atual. Ao passar de `99`, a contagem volta a `0` e o segundo componente é incrementado; se ele também passar de `99`, volta a `0` e o primeiro componente é incrementado. A função `proxima_versao()` formaliza essa regra. Mudanças estruturais maiores podem incrementar o primeiro componente.
 
@@ -291,30 +290,23 @@ Desenvolver e evoluir uma aplicação web para apoio à gestão administrativa e
 
 ---
 
-# Funcionalidades em Desenvolvimento
+# Funcionalidades em Evolução
 
-As seguintes funcionalidades fazem parte da evolução prevista para o PI II.
+Os fluxos básicos de presença, ensaios, eventos e apresentações já estão implementados. A Central de Comunicações também possui uma base funcional, que continua em desenvolvimento e validação.
 
 ## Controle de presença
 
-Será desenvolvido um sistema de controle **manual** de presença dos integrantes.
+O sistema possui controle **manual** de presença dos integrantes, relacionado a ensaios e eventos. Os fluxos permitem:
 
-O sistema deverá permitir:
+* registrar presença, ausência e justificativa;
+* consultar histórico e frequência;
+* realizar consultas administrativas e imprimir folhas de chamada e históricos.
 
-* registrar presença;
-* registrar ausência;
-* relacionar a presença a um ensaio ou evento;
-* consultar histórico;
-* visualizar frequência individual;
-* visualizar informações gerais de frequência;
-* realizar consultas administrativas;
-* gerar futuramente relatórios relacionados à frequência.
-
-O controle manual foi escolhido para manter o sistema simples, acessível e alinhado às necessidades atuais da banda.
+O controle manual foi escolhido para manter o sistema simples, acessível e alinhado às necessidades atuais da banda. A ampliação dos testes e relatórios permanece como evolução.
 
 ## Ensaios
 
-O sistema deverá permitir o gerenciamento dos ensaios da banda, incluindo informações como:
+O sistema permite gerenciar ensaios, incluindo informações como:
 
 * data;
 * horário;
@@ -326,7 +318,7 @@ O sistema deverá permitir o gerenciamento dos ensaios da banda, incluindo infor
 
 ## Eventos e apresentações
 
-O sistema deverá permitir registrar eventos e apresentações, incluindo informações como:
+O sistema permite registrar eventos e apresentações, incluindo informações como:
 
 * data;
 * horário;
@@ -337,39 +329,41 @@ O sistema deverá permitir registrar eventos e apresentações, incluindo inform
 * participantes;
 * informações de contato quando necessário.
 
-Esses registros poderão posteriormente ser integrados ao Google Calendar.
+Esses registros podem ser sincronizados manualmente com o Google Calendar, após a autorização do escopo correspondente.
 
 ---
 
-# Integrações Planejadas
+# Integrações Google: Situação e Próximas Etapas
 
-O PI II prevê a integração com três serviços principais do ecossistema Google.
+O código possui fluxo OAuth com escopos para Gmail, Google Calendar e Google Drive. A autorização de um escopo não significa que toda a API correspondente esteja implementada. Gmail envia mensagens pela Central de Comunicações; Calendar sincroniza ensaios e eventos; Drive envia backups ZIP e lista os arquivos da pasta da aplicação. Calendar e Drive ainda precisam de validação com uma conta Google real.
 
 ## Google Drive
 
-O Google Drive será utilizado como serviço de armazenamento em nuvem para:
+**Status: MVP implementado no código; validação com conta Google real pendente.** O painel de backup permite enviar um ZIP local existente e consultar os arquivos da pasta `BMCM Backups` no Drive. O backup local permanece disponível mesmo se o envio remoto falhar.
+
+O Drive poderá ser utilizado como serviço de armazenamento em nuvem para:
 
 * backup do banco de dados;
 * armazenamento de arquivos relevantes;
 * armazenamento de relatórios quando aplicável;
 * apoio à recuperação de informações.
 
-A implementação deverá utilizar autenticação adequada e manter tokens e credenciais fora do código-fonte.
+O MVP usa OAuth com escopo `drive.file`, limitado aos arquivos e pastas criados pela aplicação. A restauração diretamente do Drive ainda não está disponível.
 
 ## Google Calendar
 
-O Google Calendar será utilizado para apoiar o gerenciamento de:
+**Status: MVP implementado no código; validação com conta Google real pendente.** A sincronização unidirecional do BMCM para o Google Calendar apoia o gerenciamento de:
 
 * ensaios;
 * eventos;
 * apresentações;
 * compromissos da banda.
 
-A integração deverá permitir que informações relevantes do sistema sejam utilizadas no calendário externo, evitando a necessidade de manter manualmente os mesmos compromissos em diferentes locais.
+Nas listas de ensaios e eventos, a ação **Sincronizar** publica a atividade; depois da primeira sincronização, edições e cancelamentos no BMCM tentam atualizar o evento vinculado. Se a API estiver indisponível ou a autorização tiver expirado, o registro local continua salvo e o sistema informa que a sincronização falhou. Ensaios com horário são enviados com duração padrão de uma hora no fuso `America/Sao_Paulo`; ensaios sem horário e eventos são enviados como eventos de dia inteiro. Alterações no Google Calendar não são sincronizadas de volta para o BMCM.
 
 ## Gmail
 
-O Gmail será utilizado como recurso de apoio à comunicação da banda.
+**Status: fluxo OAuth e envio de mensagens implementados.** O Gmail é utilizado como recurso de apoio à comunicação da banda, por meio da Central de Comunicações em desenvolvimento e validação.
 
 Entre as possibilidades estão:
 
@@ -382,7 +376,7 @@ Entre as possibilidades estão:
 * comunicação institucional com organizadores de eventos;
 * contato com outras prefeituras e instituições para apresentações.
 
-A integração não tem como objetivo criar um novo sistema de e-mail, mas utilizar o Gmail como serviço externo integrado ao BMCM.
+A integração não tem como objetivo criar um novo sistema de e-mail, mas utilizar o Gmail como serviço externo integrado ao BMCM. A conclusão e validação da Central de Comunicações continuam prioritárias.
 
 ---
 
@@ -441,7 +435,8 @@ Principais componentes:
 
 * `app/__init__.py`: factory da aplicação, inicialização do banco, login manager e seed inicial.
 * `app/auth.py`: rotas de autenticação.
-* `app/routes.py`: rotas de domínio.
+* `app/routes.py`: rotas de domínio e ações de sincronização Calendar.
+* `app/google_calendar.py`: cliente REST para sincronização unidirecional de ensaios e eventos.
 * `app/models.py`: modelos SQLAlchemy.
 * `app/utils.py`: funções auxiliares, normalização, seed e regras relacionadas a consentimentos.
 * `templates/`: páginas HTML utilizando Jinja2 e Bootstrap.
@@ -463,7 +458,7 @@ Estrutura resumida:
 ├── templates/
 ├── static/
 ├── tests/
-│   └── test_aluno_fluxo.py
+│   └── test_seguranca_e_inicializacao.py
 ├── assets/
 │   └── imgs/
 ├── config.py
@@ -578,13 +573,31 @@ Entre os recursos e melhorias considerados estão:
 * elementos de formulário identificados adequadamente;
 * mensagens de erro compreensíveis;
 * organização consistente dos menus;
-* atalhos de teclado quando aplicáveis.
+* atalhos de teclado quando aplicáveis;
+* controle de contraste e paleta visual em configurações administrativas;
+* melhor legibilidade em telas de login, cadastros e presenças;
+* foco em elementos de formulário, abas e botões críticos;
+* suporte a leitores de tela e labels sem ambiguidade;
+* redução de elementos que dependam apenas de cor para indicar estado ou ação.
 
-A personalização visual deverá respeitar critérios de legibilidade e contraste.
-
-A possibilidade de personalizar cores não deve resultar em combinações que dificultem a utilização do sistema.
+A personalização visual deverá respeitar critérios de legibilidade e contraste. A possibilidade de personalizar cores não deve resultar em combinações que dificultem a utilização do sistema. A tela deve continuar utilizável mesmo em condições de baixa visão, contraste reduzido ou navegação assistida.
 
 O objetivo é permitir que o sistema seja utilizado por pessoas com diferentes níveis de familiaridade com tecnologia.
+
+## Análise opcional de presença e indicadores de dados
+
+A análise de frequência dos alunos pode ser tratada como evolução opcional do sistema, sem bloquear a operação principal do BMCM.
+
+Entre os indicadores possíveis destacam-se:
+
+* percentual de presença por aluno;
+* frequência por mês e por período;
+* comparação entre presença e ausência;
+* acompanhamento por grupo ou naipe;
+* indicadores de risco de baixa assiduidade;
+* relatórios simples de participação em ensaios e eventos.
+
+Essa funcionalidade deve ser implementada de forma gradual e com foco na utilidade administrativa, sem transformar o sistema em uma ferramenta de BI complexa.
 
 ---
 
@@ -624,14 +637,14 @@ A utilização de APIs constitui uma das etapas importantes da evolução do pro
 
 O sistema deverá demonstrar a capacidade de integração com serviços externos por meio de interfaces de programação de aplicações.
 
-As principais integrações previstas são:
+O status das integrações externas é:
 
-| Serviço             | Finalidade                       |
-| ------------------- | -------------------------------- |
-| Google Drive API    | Backup e armazenamento em nuvem  |
-| Google Calendar API | Ensaios, eventos e apresentações |
-| Gmail API           | Comunicação e notificações       |
-| ViaCEP              | Consulta de endereços            |
+| Serviço             | Situação no código                                                          |
+| ------------------- | ---------------------------------------------------------------------------- |
+| Gmail API           | OAuth e envio implementados; usado pela Central de Comunicações              |
+| Google Calendar API | Sincronização unidirecional implementada no código; validação com conta real pendente |
+| Google Drive API    | Upload/listagem de backups implementados; validação com conta real pendente   |
+| ViaCEP              | Consulta de endereços como alternativa à base local                          |
 
 Cada integração deverá possuir:
 
@@ -646,7 +659,7 @@ Cada integração deverá possuir:
 
 # Computação em Nuvem
 
-A utilização de serviços externos do Google permitirá demonstrar, na prática, conceitos relacionados à computação em nuvem.
+A utilização atual do Gmail e as operações iniciais de Calendar e Drive demonstram integração com serviços em nuvem. Calendar e Drive ainda precisam de validação com uma conta Google real.
 
 O sistema poderá utilizar recursos remotos para:
 
@@ -656,9 +669,9 @@ O sistema poderá utilizar recursos remotos para:
 * comunicação;
 * integração entre diferentes serviços.
 
-O conceito adotado é de uma aplicação web que combina recursos locais, banco de dados e serviços disponibilizados por provedores externos.
+O conceito previsto é o de uma aplicação web que combina recursos locais, banco de dados e serviços disponibilizados por provedores externos.
 
-O Google Drive, Google Calendar e Gmail não são considerados apenas funcionalidades isoladas, mas componentes de uma arquitetura integrada por APIs.
+Google Calendar possui sincronização unidirecional de atividades; Drive permite upload e listagem dos backups da aplicação. As duas integrações ainda precisam de validação com uma conta Google real.
 
 ---
 
@@ -716,36 +729,36 @@ O projeto utiliza **Waitress** como servidor WSGI.
 
 As seguintes variáveis podem ser utilizadas:
 
-* `SECRET_KEY`: recomendada em produção; chave forte e estável utilizada para proteção das sessões Flask. Em instalações locais sem essa variável, o sistema cria uma chave persistente em `instance/.secret_key`, que não é versionada.
+* `SECRET_KEY`: recomendada em produção; chave forte e estável utilizada para proteção das sessões Flask.
 * `DATABASE_URL`: URL de conexão com o banco de dados.
 * `IMPORTAR_LOGRADOUROS_INICIAIS=1`: opcional; importa a base local completa de logradouros na primeira execução. Por padrão, os endereços são obtidos sob demanda pelo ViaCEP e armazenados localmente.
+* `GOOGLE_OAUTH_CLIENT_ID`: identificador do cliente OAuth 2.0 do Google.
+* `GOOGLE_OAUTH_CLIENT_SECRET`: segredo do cliente OAuth 2.0 do Google.
+* `GOOGLE_OAUTH_REDIRECT_URI`: URI de retorno da autorização Google, normalmente `http://localhost:8080/google/oauth/callback`.
+* `GOOGLE_OAUTH_SCOPES`: escopos autorizados para Gmail, Calendar e Drive (`drive.file`).
+* `BACKUP_PASSWORD`: opcional; senha com pelo menos 16 caracteres para criptografar backups. Pode ser registrada pela guia administrativa **Configurações > Sistema/Manutenção**; se não for definida, o sistema gera uma senha aleatória em `instance/.backup_password` com permissões restritas.
 
-Exemplo:
+O projeto usa um arquivo local `.env` para essas configurações. Esse arquivo deve permanecer fora do controle de versão e deve ser criado a partir do arquivo de exemplo `.env.example`.
 
-### Windows - PowerShell
+Exemplo de configuração:
 
-```powershell
-$env:SECRET_KEY="sua_chave_forte"
-$env:DATABASE_URL="sqlite:///instance/database.db"
+```env
+GOOGLE_OAUTH_CLIENT_ID=seu_client_id.apps.googleusercontent.com
+GOOGLE_OAUTH_CLIENT_SECRET=sua_chave_secreta_google
+GOOGLE_OAUTH_REDIRECT_URI=http://localhost:8080/google/oauth/callback
+GOOGLE_OAUTH_SCOPES="https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file"
+# Opcional; sem esta variável, o sistema cria instance/.backup_password.
+# BACKUP_PASSWORD=configure-uma-senha-forte-com-pelo-menos-16-caracteres
+SECRET_KEY=sua_chave_forte
+DATABASE_URL=sqlite:///instance/database.db
+IMPORTAR_LOGRADOUROS_INICIAIS=0
 ```
-
-### Windows - CMD
-
-```cmd
-set SECRET_KEY=sua_chave_forte
-set DATABASE_URL=sqlite:///instance/database.db
-```
-
-### Linux/Mac
-
-```bash
-export SECRET_KEY="sua_chave_forte"
-export DATABASE_URL="sqlite:///instance/database.db"
-```
-
-As futuras integrações com serviços Google deverão utilizar variáveis de ambiente ou mecanismos seguros de armazenamento para suas credenciais.
 
 **Credenciais, tokens e chaves de API não devem ser versionados no GitHub.**
+
+Os arquivos ZIP de backup usam criptografia AES-256. Preserve `BACKUP_PASSWORD` ou `instance/.backup_password` em local seguro e separado dos arquivos de backup. Sem a senha, não será possível restaurar um backup criptografado.
+
+Administradores podem registrar a senha em **Configurações > Sistema/Manutenção** após confirmar a senha atual da conta e preencher e confirmar uma senha de pelo menos 16 caracteres. O valor é gravado no `.env` com permissões `0600`, não no banco. Permanece mascarado e só é revelado após nova reautenticação administrativa. Se já houver uma chave local ou backups protegidos, a interface só aceita registrar a mesma chave; não permite trocá-la e invalidar backups anteriores.
 
 ---
 
@@ -939,7 +952,7 @@ Consulte o arquivo [LICENSE](LICENSE) para obter os termos completos.
 
 **PI I:** Base funcional implementada.
 
-**PI II:** Evolução em desenvolvimento.
+**PI II:** Evolução em andamento. Presença, ensaios e eventos possuem fluxos implementados. A Central de Comunicações tem base funcional e está em desenvolvimento e validação. Gmail está operacional; os MVPs de Calendar e Drive estão implementados no código e aguardam validação com contas Google reais.
 
 ### Principais objetivos da evolução
 
@@ -955,12 +968,17 @@ Consulte o arquivo [LICENSE](LICENSE) para obter os termos completos.
 * [x] Controle manual de presença
 * [x] Gestão de ensaios
 * [x] Gestão de eventos e apresentações
-* [ ] Integração com Google Drive
-* [ ] Integração com Google Calendar
-* [ ] Integração com Gmail
+* [x] Base funcional da Central de Comunicações administrativa
+* [ ] Conclusão e validação da Central de Comunicações
+* [x] Fluxo OAuth 2.0 e envio de mensagens pelo Gmail
+* [x] MVP de sincronização unidirecional com Google Calendar implementado no código
+* [ ] Validar a sincronização Calendar com uma conta Google real
+* [x] MVP de upload e listagem de backups no Google Drive implementado no código
+* [ ] Validar upload e consulta Drive com uma conta Google real
+* [x] Autenticação OAuth 2.0 para Google Workspace
+* [x] Documentação das integrações e serviços em nuvem
 * [ ] Ampliação dos testes automatizados
 * [ ] Ampliação dos recursos de acessibilidade
-* [ ] Documentação das integrações e serviços em nuvem
 * [ ] Atualizador controlado de versões da aplicação
 
 ---
