@@ -1,16 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Lista de chamada — Sistema BMCM{% endblock %}
 {% block content %}
-<div class="container mt-5 fade-in">
-  <div class="d-flex justify-content-between align-items-start mb-4">
+<div class="container mt-4 mb-5 report-page">
+  <div class="d-flex justify-content-between align-items-center mb-3 no-print">
     <div>
       <h1 class="h3 mb-1">Lista de chamada</h1>
-      <p class="mb-1"><strong>{{ atividade_titulo }}</strong></p>
-      <p class="text-muted mb-0">
-        {{ atividade_data.strftime('%d/%m/%Y') }}
-        {% if atividade_horario %} às {{ atividade_horario }}{% endif %}
-        {% if atividade_local %} · {{ atividade_local }}{% endif %}
-      </p>
+      <p class="text-muted mb-0">Registro de presença do evento/ensaio.</p>
     </div>
     <div class="d-flex gap-2">
       <button type="button" class="btn btn-outline-secondary" onclick="window.print()">
@@ -20,65 +15,129 @@
     </div>
   </div>
 
-  <form method="POST">
+  <form method="POST" class="report-sheet">
+    <div class="report-header">
+      <h1>Banda Marcial Cidade de Marília - Marília/SP</h1>
+      <h2>LISTA DE CHAMADA</h2>
+      <div class="report-info">
+        <span><strong>Evento / ensaio:</strong> {{ atividade_titulo }}</span>
+        <span><strong>Data:</strong> {{ atividade_data.strftime('%d/%m/%Y') }}</span>
+        {% if atividade_horario %}<span><strong>Horário:</strong> {{ atividade_horario }}</span>{% endif %}
+        {% if atividade_local %}<span><strong>Local:</strong> {{ atividade_local }}</span>{% endif %}
+      </div>
+    </div>
+
     {% for grupo, alunos in grupos %}
-    <section class="card mb-4" aria-labelledby="grupo-{{ loop.index }}">
-      <div class="card-header">
-        <h2 id="grupo-{{ loop.index }}" class="h5 mb-0">
-          <i class="bi bi-music-note-beamed me-1" aria-hidden="true"></i>{{ grupo }}
-        </h2>
+    <section class="attendance-group" aria-labelledby="grupo-{{ loop.index }}">
+      <div class="group-header">
+        <h3 id="grupo-{{ loop.index }}">{{ grupo }}</h3>
       </div>
-      <div class="table-responsive">
-        <table class="table table-dark table-hover mb-0 align-middle">
-          <caption class="visually-hidden">Integrantes do grupo {{ grupo }}</caption>
-          <thead>
-            <tr>
-              <th scope="col">Integrante</th>
-              <th scope="col" class="text-center">Presença</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for aluno in alunos %}
-            {% set registro = registros.get(aluno.id) %}
-            <tr>
-              <td>{{ aluno.nome }}</td>
-              <td>
-                <fieldset class="d-flex justify-content-center gap-3 border-0 m-0 p-0">
-                  <legend class="visually-hidden">Presença de {{ aluno.nome }}</legend>
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" name="presenca_{{ aluno.id }}" id="presente_{{ aluno.id }}" value="presente" {% if registro and registro.presente %}checked{% endif %}>
-                    <label class="form-check-label" for="presente_{{ aluno.id }}">Presente</label>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" name="presenca_{{ aluno.id }}" id="ausente_{{ aluno.id }}" value="ausente" {% if not registro or (not registro.presente and registro.observacoes != 'JUSTIFICADO') %}checked{% endif %}>
-                    <label class="form-check-label" for="ausente_{{ aluno.id }}">Ausente</label>
-                  </div>
-                  <div class="form-check">
-                    <input class="form-check-input" type="radio" name="presenca_{{ aluno.id }}" id="justificado_{{ aluno.id }}" value="justificado" {% if registro and registro.observacoes == 'JUSTIFICADO' %}checked{% endif %}>
-                    <label class="form-check-label" for="justificado_{{ aluno.id }}">Justificado</label>
-                  </div>
-                </fieldset>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th style="width: 45%;">Integrante</th>
+            <th style="width: 18%;">Presente</th>
+            <th style="width: 18%;">Ausente</th>
+            <th style="width: 19%;">Justificado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for aluno in alunos %}
+          {% set registro = registros.get(aluno.id) %}
+          <tr>
+            <td>{{ aluno.nome }}</td>
+            <td class="text-center">
+              <input class="form-check-input" type="radio" name="presenca_{{ aluno.id }}" id="presente_{{ aluno.id }}" value="presente" {% if registro and registro.presente %}checked{% endif %}>
+            </td>
+            <td class="text-center">
+              <input class="form-check-input" type="radio" name="presenca_{{ aluno.id }}" id="ausente_{{ aluno.id }}" value="ausente" {% if not registro or (not registro.presente and registro.observacoes != 'JUSTIFICADO') %}checked{% endif %}>
+            </td>
+            <td class="text-center">
+              <input class="form-check-input" type="radio" name="presenca_{{ aluno.id }}" id="justificado_{{ aluno.id }}" value="justificado" {% if registro and registro.observacoes == 'JUSTIFICADO' %}checked{% endif %}>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </section>
     {% else %}
     <div class="alert alert-warning" role="alert">Não há integrantes ativos para esta chamada.</div>
     {% endfor %}
 
-    <div class="d-grid d-md-flex justify-content-md-end gap-2 mb-5">
+    <div class="d-grid d-md-flex justify-content-md-end gap-2 mt-4 no-print">
       <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-save me-1" aria-hidden="true"></i>Salvar presença</button>
     </div>
   </form>
 </div>
+
 <style>
+.report-page { max-width: 1200px; margin: 0 auto; }
+.report-sheet {
+  background: white;
+  color: black;
+  border: 2px solid black;
+  padding: 18px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+.report-header {
+  text-align: center;
+  border-bottom: 2px solid black;
+  padding-bottom: 10px;
+  margin-bottom: 18px;
+}
+.report-header h1 { font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
+.report-header h2 { font-size: 14px; margin: 0; letter-spacing: 0.08em; }
+.report-info {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 18px;
+  margin-top: 12px;
+  font-size: 11px;
+}
+.attendance-group { margin-bottom: 20px; }
+.group-header {
+  background: #e7e7e7;
+  border: 1px solid black;
+  border-bottom: none;
+  padding: 8px 12px;
+}
+.group-header h3 {
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.report-table th, .report-table td {
+  border: 1px solid black;
+  padding: 6px 8px;
+  vertical-align: middle;
+  text-align: left;
+}
+.report-table th {
+  background: #f1f1f1;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+.report-table tbody tr:nth-child(even) { background: #fafafa; }
+.form-check-input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: #111827;
+}
 @media print {
-  nav, .btn, .navbar { display: none !important; }
-  body { background: #fff !important; color: #000 !important; }
-  .card, .table { color: #000 !important; background: #fff !important; }
+  @page { size: A4 portrait; margin: 12mm; }
+  body { background: white !important; }
+  nav, .navbar, .no-print { display: none !important; }
+  .container { max-width: none !important; }
+  .report-sheet { border: 1px solid black; box-shadow: none; }
 }
 </style>
 {% endblock %}

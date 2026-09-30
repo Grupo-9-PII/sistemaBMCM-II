@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from sqlalchemy import CheckConstraint, Index
+from sqlalchemy import CheckConstraint, Index, UniqueConstraint
 from . import db
 
 
@@ -111,6 +111,88 @@ class Aluno(db.Model):
         lazy='dynamic',
         cascade='all, delete-orphan',
     )
+    cartao_passe = db.relationship(
+        'CartaoPasse',
+        back_populates='aluno',
+        uselist=False,
+        cascade='all, delete-orphan',
+    )
+    cotas_mensais_passe = db.relationship(
+        'CotaMensalPasse',
+        back_populates='aluno',
+        lazy=True,
+        cascade='all, delete-orphan',
+    )
+
+
+class CartaoPasse(db.Model):
+    __tablename__ = 'cartao_passe'
+
+    id = db.Column(db.Integer, primary_key=True)
+    aluno_id = db.Column(
+        db.Integer,
+        db.ForeignKey('aluno.id'),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    numero_controle = db.Column(db.String(80), nullable=False, unique=True)
+    ativo = db.Column(db.Boolean, nullable=False, default=True)
+    criado_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    aluno = db.relationship('Aluno', back_populates='cartao_passe')
+
+
+class CotaMensalPasse(db.Model):
+    __tablename__ = 'cota_mensal_passe'
+    __table_args__ = (
+        UniqueConstraint(
+            'aluno_id',
+            'mes_referencia',
+            name='uq_cota_mensal_passe_aluno_mes',
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    aluno_id = db.Column(
+        db.Integer,
+        db.ForeignKey('aluno.id'),
+        nullable=False,
+        index=True,
+    )
+    mes_referencia = db.Column(db.Date, nullable=False, index=True)
+    quantidade_disponibilizada = db.Column(db.Integer, nullable=False, default=0)
+    criado_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    atualizado_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+    aluno = db.relationship('Aluno', back_populates='cotas_mensais_passe')
+    movimentos = db.relationship(
+        'MovimentoPasse',
+        back_populates='cota',
+        lazy=True,
+        cascade='all, delete-orphan',
+    )
+
+
+class MovimentoPasse(db.Model):
+    __tablename__ = 'movimento_passe'
+
+    id = db.Column(db.Integer, primary_key=True)
+    cota_id = db.Column(db.Integer, db.ForeignKey('cota_mensal_passe.id'), nullable=False, index=True)
+    presenca_id = db.Column(db.Integer, db.ForeignKey('presenca.id'), nullable=True, index=True)
+    data_hora = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    quantidade = db.Column(db.Integer, nullable=False)
+    tipo = db.Column(db.String(20), nullable=False, default='CONSUMO')
+    motivo = db.Column(db.Text)
+    registrado_por_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    cota = db.relationship('CotaMensalPasse', back_populates='movimentos')
+    presenca = db.relationship('Presenca', back_populates='movimentos_passe')
+    registrado_por = db.relationship('User', foreign_keys=[registrado_por_id])
 
 
 class HardDeleteAlunoLog(db.Model):
@@ -197,6 +279,30 @@ class Uniforme(db.Model):
     observacoes = db.Column(db.Text)
 
 
+# Tabela: Atividades avulsas e treinamentos
+class Atividade(db.Model):
+    __tablename__ = 'atividade'
+
+    id = db.Column(db.Integer, primary_key=True)
+    tipo = db.Column(db.String(30), nullable=False, default='TREINAMENTO')
+    titulo = db.Column(db.String(200), nullable=False)
+    data_atividade = db.Column(db.Date, nullable=False)
+    horario_inicio = db.Column(db.String(5))
+    horario_fim = db.Column(db.String(5))
+    local = db.Column(db.String(200))
+    area = db.Column(db.String(120))
+    responsavel = db.Column(db.String(150))
+    observacoes = db.Column(db.Text)
+    status = db.Column(db.String(20), nullable=False, default='REALIZADA')
+    criado_por_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    criado_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    criado_por = db.relationship('User', foreign_keys=[criado_por_id])
+    presencas = db.relationship(
+        'Presenca', back_populates='atividade', lazy=True, cascade='all, delete-orphan'
+    )
+
+
 # Tabela: Ensaios
 class Ensaio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -219,8 +325,9 @@ class Ensaio(db.Model):
 class Presenca(db.Model):
     __table_args__ = (
         CheckConstraint(
-            "(ensaio_id IS NOT NULL AND evento_id IS NULL) OR "
-            "(ensaio_id IS NULL AND evento_id IS NOT NULL)",
+            "(ensaio_id IS NOT NULL AND evento_id IS NULL AND atividade_id IS NULL) OR "
+            "(ensaio_id IS NULL AND evento_id IS NOT NULL AND atividade_id IS NULL) OR "
+            "(ensaio_id IS NULL AND evento_id IS NULL AND atividade_id IS NOT NULL)",
             name="ck_presenca_uma_atividade",
         ),
         Index(
@@ -231,11 +338,16 @@ class Presenca(db.Model):
             "uq_presenca_aluno_evento", "aluno_id", "evento_id", unique=True,
             sqlite_where=db.text("evento_id IS NOT NULL"),
         ),
+        Index(
+            "uq_presenca_aluno_atividade", "aluno_id", "atividade_id", unique=True,
+            sqlite_where=db.text("atividade_id IS NOT NULL"),
+        ),
     )
     id = db.Column(db.Integer, primary_key=True)
     aluno_id = db.Column(db.Integer, db.ForeignKey('aluno.id'), nullable=False)
     ensaio_id = db.Column(db.Integer, db.ForeignKey('ensaio.id'), nullable=True, index=True)
     evento_id = db.Column(db.Integer, db.ForeignKey('evento.id'), nullable=True, index=True)
+    atividade_id = db.Column(db.Integer, db.ForeignKey('atividade.id'), nullable=True, index=True)
     data_presenca = db.Column(db.Date, default=lambda: datetime.now(timezone.utc).date())
     presente = db.Column(db.Boolean, default=True)
     observacoes = db.Column(db.Text)
@@ -244,6 +356,13 @@ class Presenca(db.Model):
 
     registrado_por = db.relationship('User', foreign_keys=[registrado_por_id])
     evento = db.relationship('Evento', foreign_keys=[evento_id], back_populates='presencas')
+    atividade = db.relationship('Atividade', back_populates='presencas')
+    movimentos_passe = db.relationship(
+        'MovimentoPasse',
+        back_populates='presenca',
+        lazy=True,
+        cascade='all, delete-orphan',
+    )
 
 
 
@@ -328,8 +447,9 @@ class GoogleCalendarSync(db.Model):
     __tablename__ = 'google_calendar_sync'
     __table_args__ = (
         CheckConstraint(
-            "(ensaio_id IS NOT NULL AND evento_id IS NULL) OR "
-            "(ensaio_id IS NULL AND evento_id IS NOT NULL)",
+            "(ensaio_id IS NOT NULL AND evento_id IS NULL AND atividade_id IS NULL) OR "
+            "(ensaio_id IS NULL AND evento_id IS NOT NULL AND atividade_id IS NULL) OR "
+            "(ensaio_id IS NULL AND evento_id IS NULL AND atividade_id IS NOT NULL)",
             name="ck_google_calendar_sync_uma_atividade",
         ),
     )
@@ -337,6 +457,7 @@ class GoogleCalendarSync(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ensaio_id = db.Column(db.Integer, db.ForeignKey('ensaio.id'), unique=True)
     evento_id = db.Column(db.Integer, db.ForeignKey('evento.id'), unique=True)
+    atividade_id = db.Column(db.Integer, db.ForeignKey('atividade.id'), unique=True)
     google_event_id = db.Column(db.String(255), nullable=False, unique=True)
     sincronizado_em = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -430,6 +551,12 @@ class ContatoComunicacao(db.Model):
     telefone = db.Column(db.String(30), nullable=True)
     autorizacao_email = db.Column(db.Boolean, default=False)
     autorizacao_whatsapp = db.Column(db.Boolean, default=False)
+    autorizacao_email_em = db.Column(db.DateTime, nullable=True)
+    origem_autorizacao_email = db.Column(db.String(200), nullable=True)
+    email_revogado_em = db.Column(db.DateTime, nullable=True)
+    autorizacao_whatsapp_em = db.Column(db.DateTime, nullable=True)
+    origem_autorizacao_whatsapp = db.Column(db.String(200), nullable=True)
+    whatsapp_revogado_em = db.Column(db.DateTime, nullable=True)
     observacoes = db.Column(db.Text, nullable=True)
     ativo = db.Column(db.Boolean, default=True)
     criado_em = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))

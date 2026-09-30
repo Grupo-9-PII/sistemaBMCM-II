@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Histórico de Passes — Sistema BMCM{% endblock %}
+{% block content %}
+<div class="container mt-5 fade-in">
+  <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1"><i class="bi bi-clock-history me-2"></i>Histórico de Passes</h1>
+      <p class="text-muted mb-0">Auditoria das cotas, recargas, consumos e estornos.</p>
+    </div>
+    <a href="{{ url_for('main.gerenciar_passes', mes_referencia=mes_referencia.strftime('%Y-%m')) }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1" aria-hidden="true"></i>Voltar
+    </a>
+  </div>
+
+  <form method="GET" class="card card-body mb-4">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label for="mes_referencia" class="form-label">Mês de referência</label>
+        <input type="month" name="mes_referencia" id="mes_referencia" class="form-control"
+               value="{{ mes_referencia.strftime('%Y-%m') }}" required>
+      </div>
+      <div class="col-md-5">
+        <label for="aluno_id" class="form-label">Integrante</label>
+        <select name="aluno_id" id="aluno_id" class="form-select">
+          <option value="">Todos os integrantes</option>
+          {% for aluno in alunos %}
+          <option value="{{ aluno.id }}" {% if aluno_id == aluno.id %}selected{% endif %}>{{ aluno.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-search me-1" aria-hidden="true"></i>Consultar
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <section class="card mb-4" aria-labelledby="resumo-passes">
+    <div class="card-header"><h2 id="resumo-passes" class="h5 mb-0">Resumo do período</h2></div>
+    <div class="table-responsive">
+      <table class="table table-dark table-hover mb-0">
+        <caption class="visually-hidden">Resumo das cotas de passes</caption>
+        <thead><tr><th>Integrante</th><th>Cartão</th><th>Cota inicial</th><th>Saldo</th></tr></thead>
+        <tbody>
+          {% for cota in cotas %}
+          <tr>
+            <td>{{ cota.aluno.nome }}</td>
+            <td><code>{{ cota.aluno.cartao_passe.numero_controle if cota.aluno.cartao_passe else '-' }}</code></td>
+            <td>{{ cota.quantidade_disponibilizada }}</td>
+            <td><strong>{{ saldos[cota.id] }}</strong></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="text-center py-4">Nenhuma cota cadastrada para o período.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card mb-5" aria-labelledby="movimentos-passes">
+    <div class="card-header"><h2 id="movimentos-passes" class="h5 mb-0">Movimentos</h2></div>
+    <div class="table-responsive">
+      <table class="table table-dark table-hover align-middle mb-0">
+        <caption class="visually-hidden">Movimentos de passes no período</caption>
+        <thead><tr><th>Data</th><th>Integrante</th><th>Tipo</th><th>Quantidade</th><th>Motivo / atividade</th><th>Registrado por</th></tr></thead>
+        <tbody>
+          {% for movimento in movimentos %}
+          <tr>
+            <td>{{ movimento.data_hora.strftime('%d/%m/%Y %H:%M') }}</td>
+            <td>{{ movimento.cota.aluno.nome }}</td>
+            <td>
+              {% if movimento.tipo == 'RECARGA' %}
+              <span class="badge bg-warning text-dark">Recarga</span>
+              {% elif movimento.tipo == 'ESTORNO' %}
+              <span class="badge bg-info text-dark">Estorno</span>
+              {% else %}
+              <span class="badge bg-secondary">Consumo</span>
+              {% endif %}
+            </td>
+            <td class="{% if movimento.quantidade < 0 %}text-danger{% else %}text-success{% endif %}">
+              {{ '%+d'|format(movimento.quantidade) }}
+            </td>
+            <td>
+              {% if movimento.motivo %}{{ movimento.motivo }}{% elif movimento.presenca and movimento.presenca.ensaio %}{{ movimento.presenca.ensaio.titulo }}{% elif movimento.presenca and movimento.presenca.evento %}{{ movimento.presenca.evento.nome_evento }}{% else %}-{% endif %}
+            </td>
+            <td>{{ movimento.registrado_por.username if movimento.registrado_por else '-' }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center py-4">Nenhum movimento registrado para o período.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

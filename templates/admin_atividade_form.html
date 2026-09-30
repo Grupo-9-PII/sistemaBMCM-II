@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Nova Atividade — Sistema BMCM{% endblock %}
+{% block content %}
+<div class="container mt-5 fade-in">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0"><i class="bi bi-person-workspace me-2"></i>Nova atividade</h1>
+    <a href="{{ url_for('main.listar_atividades') }}" class="btn btn-outline-secondary">Voltar</a>
+  </div>
+  <form method="POST" class="card card-body">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label for="tipo" class="form-label">Tipo</label>
+        <select name="tipo" id="tipo" class="form-select" required>
+          {% for item in tipos %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-8">
+        <label for="titulo" class="form-label">Título</label>
+        <input type="text" name="titulo" id="titulo" class="form-control" maxlength="200" required>
+      </div>
+      <div class="col-md-4">
+        <label for="data_atividade" class="form-label">Data</label>
+        <input type="date" name="data_atividade" id="data_atividade" class="form-control" value="{{ data_inicial or '' }}" required>
+      </div>
+      <div class="col-md-4">
+        <label for="horario_inicio" class="form-label">Início</label>
+        <input type="time" name="horario_inicio" id="horario_inicio" class="form-control">
+      </div>
+      <div class="col-md-4">
+        <label for="horario_fim" class="form-label">Fim</label>
+        <input type="time" name="horario_fim" id="horario_fim" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label for="area" class="form-label">Área ou finalidade</label>
+        <input type="text" name="area" id="area" class="form-control" maxlength="120" placeholder="Ex.: Percussão">
+      </div>
+      <div class="col-md-6">
+        <label for="responsavel" class="form-label">Responsável</label>
+        <input type="text" name="responsavel" id="responsavel" class="form-control" maxlength="150">
+      </div>
+      <div class="col-12">
+        <label for="local" class="form-label">Local</label>
+        <input type="text" name="local" id="local" class="form-control" maxlength="200">
+      </div>
+      <div class="col-12">
+        <label for="observacoes" class="form-label">Observações</label>
+        <textarea name="observacoes" id="observacoes" class="form-control" rows="3"></textarea>
+      </div>
+    </div>
+    <div class="d-flex justify-content-end mt-4">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1" aria-hidden="true"></i>Criar atividade</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -475,6 +475,159 @@ def migrar_banco_novos_campos():
         if 'data_desligamento_banda' not in columns:
             db.session.execute(text("ALTER TABLE aluno ADD COLUMN data_desligamento_banda DATE"))
 
+        db.session.execute(text(
+            "CREATE TABLE IF NOT EXISTS atividade ("
+            "id INTEGER PRIMARY KEY, tipo VARCHAR(30) NOT NULL DEFAULT 'TREINAMENTO', "
+            "titulo VARCHAR(200) NOT NULL, data_atividade DATE NOT NULL, "
+            "horario_inicio VARCHAR(5), horario_fim VARCHAR(5), local VARCHAR(200), "
+            "area VARCHAR(120), responsavel VARCHAR(150), observacoes TEXT, "
+            "status VARCHAR(20) NOT NULL DEFAULT 'REALIZADA', criado_por_id INTEGER, "
+            "criado_at DATETIME, FOREIGN KEY(criado_por_id) REFERENCES user(id)"
+            ")"
+        ))
+
+        presenca_result = db.session.execute(text("PRAGMA table_info(presenca)"))
+        presenca_columns = [row[1] for row in presenca_result.fetchall()]
+        if presenca_columns and 'atividade_id' not in presenca_columns:
+            movimento_result = db.session.execute(text("PRAGMA table_info(movimento_passe)"))
+            movimento_columns = movimento_result.fetchall()
+            movimento_names = [row[1] for row in movimento_columns]
+            if movimento_names:
+                db.session.execute(text("ALTER TABLE movimento_passe RENAME TO movimento_passe_legado_atividade"))
+
+            db.session.execute(text("ALTER TABLE presenca RENAME TO presenca_legado_atividade"))
+            db.session.execute(text(
+                "CREATE TABLE presenca ("
+                "id INTEGER PRIMARY KEY, aluno_id INTEGER NOT NULL, ensaio_id INTEGER, "
+                "evento_id INTEGER, atividade_id INTEGER, data_presenca DATE, "
+                "presente BOOLEAN, observacoes TEXT, registrado_por_id INTEGER, "
+                "registrado_at DATETIME, "
+                "CHECK ((ensaio_id IS NOT NULL AND evento_id IS NULL AND atividade_id IS NULL) OR "
+                "(ensaio_id IS NULL AND evento_id IS NOT NULL AND atividade_id IS NULL) OR "
+                "(ensaio_id IS NULL AND evento_id IS NULL AND atividade_id IS NOT NULL)), "
+                "FOREIGN KEY(aluno_id) REFERENCES aluno(id), "
+                "FOREIGN KEY(ensaio_id) REFERENCES ensaio(id), "
+                "FOREIGN KEY(evento_id) REFERENCES evento(id), "
+                "FOREIGN KEY(atividade_id) REFERENCES atividade(id), "
+                "FOREIGN KEY(registrado_por_id) REFERENCES user(id)"
+                ")"
+            ))
+            db.session.execute(text(
+                "INSERT INTO presenca "
+                "(id, aluno_id, ensaio_id, evento_id, atividade_id, data_presenca, presente, "
+                "observacoes, registrado_por_id, registrado_at) "
+                "SELECT id, aluno_id, ensaio_id, evento_id, NULL, data_presenca, presente, "
+                "observacoes, registrado_por_id, registrado_at FROM presenca_legado_atividade"
+            ))
+            db.session.execute(text("DROP TABLE presenca_legado_atividade"))
+            db.session.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_presenca_aluno_ensaio "
+                "ON presenca (aluno_id, ensaio_id) WHERE ensaio_id IS NOT NULL"
+            ))
+            db.session.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_presenca_aluno_evento "
+                "ON presenca (aluno_id, evento_id) WHERE evento_id IS NOT NULL"
+            ))
+            db.session.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_presenca_aluno_atividade "
+                "ON presenca (aluno_id, atividade_id) WHERE atividade_id IS NOT NULL"
+            ))
+
+            if movimento_names:
+                db.session.execute(text(
+                    "CREATE TABLE movimento_passe ("
+                    "id INTEGER PRIMARY KEY, cota_id INTEGER NOT NULL, presenca_id INTEGER, "
+                    "data_hora DATETIME NOT NULL, quantidade INTEGER NOT NULL, "
+                    "tipo VARCHAR(20) NOT NULL DEFAULT 'CONSUMO', motivo TEXT, "
+                    "registrado_por_id INTEGER, "
+                    "FOREIGN KEY(cota_id) REFERENCES cota_mensal_passe(id), "
+                    "FOREIGN KEY(presenca_id) REFERENCES presenca(id), "
+                    "FOREIGN KEY(registrado_por_id) REFERENCES user(id)"
+                    ")"
+                ))
+                campos_movimento = {
+                    "motivo": "motivo" if "motivo" in movimento_names else "NULL",
+                    "registrado_por_id": "registrado_por_id" if "registrado_por_id" in movimento_names else "NULL",
+                }
+                db.session.execute(text(
+                    "INSERT INTO movimento_passe "
+                    "(id, cota_id, presenca_id, data_hora, quantidade, tipo, motivo, registrado_por_id) "
+                    "SELECT id, cota_id, presenca_id, data_hora, quantidade, tipo, "
+                    f"{campos_movimento['motivo']}, {campos_movimento['registrado_por_id']} "
+                    "FROM movimento_passe_legado_atividade"
+                ))
+                db.session.execute(text("DROP TABLE movimento_passe_legado_atividade"))
+
+        db.session.execute(text(
+            "CREATE TABLE IF NOT EXISTS cartao_passe ("
+            "id INTEGER PRIMARY KEY, "
+            "aluno_id INTEGER NOT NULL UNIQUE, "
+            "numero_controle VARCHAR(80) NOT NULL UNIQUE, "
+            "ativo BOOLEAN NOT NULL DEFAULT 1, "
+            "criado_at DATETIME, "
+            "FOREIGN KEY(aluno_id) REFERENCES aluno(id)"
+            ")"
+        ))
+        db.session.execute(text(
+            "CREATE TABLE IF NOT EXISTS cota_mensal_passe ("
+            "id INTEGER PRIMARY KEY, "
+            "aluno_id INTEGER NOT NULL, "
+            "mes_referencia DATE NOT NULL, "
+            "quantidade_disponibilizada INTEGER NOT NULL DEFAULT 0, "
+            "criado_at DATETIME, "
+            "atualizado_at DATETIME, "
+            "UNIQUE(aluno_id, mes_referencia), "
+            "FOREIGN KEY(aluno_id) REFERENCES aluno(id)"
+            ")"
+        ))
+        db.session.execute(text(
+            "CREATE TABLE IF NOT EXISTS movimento_passe ("
+            "id INTEGER PRIMARY KEY, "
+            "cota_id INTEGER NOT NULL, "
+            "presenca_id INTEGER, "
+            "data_hora DATETIME NOT NULL, "
+            "quantidade INTEGER NOT NULL, "
+            "tipo VARCHAR(20) NOT NULL DEFAULT 'CONSUMO', "
+            "motivo TEXT, "
+            "registrado_por_id INTEGER, "
+            "FOREIGN KEY(cota_id) REFERENCES cota_mensal_passe(id), "
+            "FOREIGN KEY(presenca_id) REFERENCES presenca(id), "
+            "FOREIGN KEY(registrado_por_id) REFERENCES user(id)"
+            ")"
+        ))
+
+        movimento_result = db.session.execute(text("PRAGMA table_info(movimento_passe)"))
+        movimento_columns = movimento_result.fetchall()
+        movimento_names = [row[1] for row in movimento_columns]
+        presenca_not_null = any(row[1] == "presenca_id" and row[3] for row in movimento_columns)
+        if presenca_not_null:
+            db.session.execute(text("ALTER TABLE movimento_passe RENAME TO movimento_passe_legado"))
+            db.session.execute(text(
+                "CREATE TABLE movimento_passe ("
+                "id INTEGER PRIMARY KEY, cota_id INTEGER NOT NULL, presenca_id INTEGER, "
+                "data_hora DATETIME NOT NULL, quantidade INTEGER NOT NULL, "
+                "tipo VARCHAR(20) NOT NULL DEFAULT 'CONSUMO', motivo TEXT, "
+                "registrado_por_id INTEGER, "
+                "FOREIGN KEY(cota_id) REFERENCES cota_mensal_passe(id), "
+                "FOREIGN KEY(presenca_id) REFERENCES presenca(id), "
+                "FOREIGN KEY(registrado_por_id) REFERENCES user(id)"
+                ")"
+            ))
+            db.session.execute(text(
+                "INSERT INTO movimento_passe "
+                "(id, cota_id, presenca_id, data_hora, quantidade, tipo) "
+                "SELECT id, cota_id, presenca_id, data_hora, quantidade, tipo "
+                "FROM movimento_passe_legado"
+            ))
+            db.session.execute(text("DROP TABLE movimento_passe_legado"))
+            movimento_names = ["id", "cota_id", "presenca_id", "data_hora", "quantidade", "tipo"]
+        if "motivo" not in movimento_names:
+            db.session.execute(text("ALTER TABLE movimento_passe ADD COLUMN motivo TEXT"))
+        if "registrado_por_id" not in movimento_names:
+            db.session.execute(text(
+                "ALTER TABLE movimento_passe ADD COLUMN registrado_por_id INTEGER"
+            ))
+
         presenca_result = db.session.execute(text("PRAGMA table_info(presenca)"))
         presenca_columns = [row[1] for row in presenca_result.fetchall()]
         if 'ensaio_id' not in presenca_columns:
@@ -524,6 +677,57 @@ def migrar_banco_novos_campos():
                 db.session.execute(text(
                     "ALTER TABLE comunicacao_destinatario ADD COLUMN destinatario_email VARCHAR(200)"
                 ))
+
+        contato_comunicacao_result = db.session.execute(
+            text("PRAGMA table_info(contato_comunicacao)")
+        )
+        contato_comunicacao_columns = [
+            row[1] for row in contato_comunicacao_result.fetchall()
+        ]
+        if contato_comunicacao_columns:
+            novos_campos_contato = {
+                "autorizacao_email_em": "DATETIME",
+                "origem_autorizacao_email": "VARCHAR(200)",
+                "email_revogado_em": "DATETIME",
+                "autorizacao_whatsapp_em": "DATETIME",
+                "origem_autorizacao_whatsapp": "VARCHAR(200)",
+                "whatsapp_revogado_em": "DATETIME",
+            }
+            for campo, tipo in novos_campos_contato.items():
+                if campo not in contato_comunicacao_columns:
+                    db.session.execute(text(
+                        f"ALTER TABLE contato_comunicacao ADD COLUMN {campo} {tipo}"
+                    ))
+
+        calendar_sync_result = db.session.execute(
+            text("PRAGMA table_info(google_calendar_sync)")
+        )
+        calendar_sync_columns = [row[1] for row in calendar_sync_result.fetchall()]
+        if calendar_sync_columns and "atividade_id" not in calendar_sync_columns:
+            db.session.execute(text(
+                "ALTER TABLE google_calendar_sync RENAME TO google_calendar_sync_legado"
+            ))
+            db.session.execute(text(
+                "CREATE TABLE google_calendar_sync ("
+                "id INTEGER PRIMARY KEY, "
+                "ensaio_id INTEGER UNIQUE, evento_id INTEGER UNIQUE, "
+                "atividade_id INTEGER UNIQUE, "
+                "google_event_id VARCHAR(255) NOT NULL UNIQUE, sincronizado_em DATETIME, "
+                "CHECK ((ensaio_id IS NOT NULL AND evento_id IS NULL AND atividade_id IS NULL) OR "
+                "(ensaio_id IS NULL AND evento_id IS NOT NULL AND atividade_id IS NULL) OR "
+                "(ensaio_id IS NULL AND evento_id IS NULL AND atividade_id IS NOT NULL)), "
+                "FOREIGN KEY(ensaio_id) REFERENCES ensaio(id), "
+                "FOREIGN KEY(evento_id) REFERENCES evento(id), "
+                "FOREIGN KEY(atividade_id) REFERENCES atividade(id)"
+                ")"
+            ))
+            db.session.execute(text(
+                "INSERT INTO google_calendar_sync "
+                "(id, ensaio_id, evento_id, atividade_id, google_event_id, sincronizado_em) "
+                "SELECT id, ensaio_id, evento_id, NULL, google_event_id, sincronizado_em "
+                "FROM google_calendar_sync_legado"
+            ))
+            db.session.execute(text("DROP TABLE google_calendar_sync_legado"))
 
         # Impede mais de uma chamada para o mesmo integrante e atividade,
         # inclusive quando duas requisições chegam simultaneamente.

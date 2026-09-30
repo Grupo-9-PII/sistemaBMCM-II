@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Folha diária de presença — Sistema BMCM{% endblock %}
 {% block content %}
-<div class="container-fluid mt-4 mb-5 daily-report">
-  <div class="d-flex justify-content-between align-items-start gap-3 mb-3 no-print">
+<div class="container mt-4 mb-5 report-page">
+  <div class="d-flex justify-content-between align-items-center mb-3 no-print">
     <div>
       <h1 class="h3 mb-1">Folha diária de presença</h1>
       <p class="text-muted mb-0">Visão consolidada das chamadas registradas para o dia.</p>
@@ -26,109 +26,118 @@
     </div>
   </form>
 
-  <section class="daily-sheet" aria-labelledby="sheet-title">
-    <header class="sheet-header">
-      <div>
-        <p class="sheet-kicker mb-1">Banda Marcial Cidade de Marília</p>
-        <h2 id="sheet-title">LISTA DE CHAMADAS</h2>
+  <section class="report-sheet" aria-labelledby="sheet-title">
+    <div class="report-header">
+      <h1>Banda Marcial Cidade de Marília - Marília/SP</h1>
+      <h2 id="sheet-title">FOLHA DIÁRIA DE PRESENÇA</h2>
+      <div class="report-info">
+        <span><strong>Data:</strong> {{ data_relatorio.strftime('%d/%m/%Y') }}</span>
+        <span><strong>Atividades:</strong> {{ atividades|join(' | ') if atividades else 'Não informado' }}</span>
+        <span><strong>Presentes:</strong> {{ total_presentes }} / {{ total_alunos }}</span>
       </div>
-      <dl class="sheet-meta mb-0">
-        <div><dt>Data</dt><dd>{{ data_relatorio.strftime('%d/%m/%Y') }}</dd></div>
-        <div><dt>Local / atividade</dt><dd>{{ atividades|join(' | ') if atividades else 'Não informado' }}</dd></div>
-      </dl>
-    </header>
-
-    <div class="sheet-summary">
-      <span><strong>{{ total_presentes }}</strong> presentes</span>
-      <span><strong>{{ total_alunos }}</strong> integrantes ativos</span>
-      <span>{{ atividades|length }} atividade(s) no dia</span>
     </div>
 
-    <div class="instrument-grid">
-      {% for grupo, integrantes in grupos %}
-      <section class="instrument-group" aria-labelledby="grupo-{{ loop.index }}">
-        <h3 id="grupo-{{ loop.index }}">{{ grupo }}</h3>
-        <ol>
+    <table class="report-table">
+      <thead>
+        <tr>
+          <th style="width: 8%;">ID</th>
+          <th style="width: 30%;">Integrante</th>
+          <th style="width: 22%;">Instrumento / Grupo</th>
+          <th style="width: 18%;">Situação</th>
+          <th style="width: 22%;">Observação</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for grupo, integrantes in grupos %}
           {% for item in integrantes %}
           {% set registro = item.registro %}
-          <li>
-            <span class="member-name">{{ item.aluno.nome }}</span>
-            <span class="status-box {% if registro and registro.observacoes == 'JUSTIFICADO' %}status-justified{% elif registro and registro.presente %}status-present{% elif registro %}status-absent{% endif %}" aria-label="{% if not registro %}Sem registro{% elif registro.observacoes == 'JUSTIFICADO' %}Justificado{% elif registro.presente %}Presente{% else %}Ausente{% endif %}">
-              {% if registro and registro.observacoes == 'JUSTIFICADO' %}J{% elif registro and registro.presente %}✓{% elif registro %}×{% endif %}
-            </span>
-          </li>
+          <tr>
+            <td>{{ item.aluno.id }}</td>
+            <td>{{ item.aluno.nome }}</td>
+            <td>{{ grupo }}</td>
+            <td>
+              {% if registro and registro.observacoes == 'JUSTIFICADO' %}
+                JUSTIFICADO
+              {% elif registro and registro.presente %}
+                PRESENTE
+              {% elif registro %}
+                AUSENTE
+              {% else %}
+                SEM REGISTRO
+              {% endif %}
+            </td>
+            <td>
+              {% if registro and registro.observacoes == 'JUSTIFICADO' %}Justificado{% elif registro and registro.presente %}Chamada confirmada{% elif registro %}Sem justificativa{% else %}-{% endif %}
+            </td>
+          </tr>
           {% endfor %}
-        </ol>
-      </section>
-      {% else %}
-      <p class="empty-sheet">Não há integrantes ativos cadastrados.</p>
-      {% endfor %}
-    </div>
+        {% else %}
+          <tr><td colspan="5" class="text-center">Nenhum integrante ativo cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
 
-    <footer class="sheet-legend">
-      <span><i class="status-box status-present">✓</i> Presente</span>
-      <span><i class="status-box status-absent">×</i> Ausente</span>
-      <span><i class="status-box status-justified">J</i> Justificado</span>
-      <span><i class="status-box"></i> Sem registro</span>
-    </footer>
+    <div class="report-footer">
+      <strong>Sistema BMCM</strong><br>
+      Folha impressa em {{ data_relatorio.strftime('%d/%m/%Y') }}
+    </div>
   </section>
 </div>
 <style>
-.daily-report .card { max-width: 980px; }
-.daily-sheet {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 1.5rem;
-  color: #18212b;
-  background: #fff;
-  border: 2px solid #263442;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, .2);
+.report-page { max-width: 1200px; margin: 0 auto; }
+.report-sheet {
+  background: white;
+  color: black;
+  border: 2px solid black;
+  padding: 18px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
 }
-.sheet-header {
+.report-header {
+  text-align: center;
+  border-bottom: 2px solid black;
+  padding-bottom: 10px;
+  margin-bottom: 18px;
+}
+.report-header h1 { font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 4px; }
+.report-header h2 { font-size: 14px; margin: 0; letter-spacing: 0.08em; }
+.report-info {
   display: flex;
-  justify-content: space-between;
-  gap: 2rem;
-  padding: .25rem .5rem 1rem;
-  border-bottom: 2px solid #263442;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 18px;
+  margin-top: 12px;
+  font-size: 11px;
 }
-.sheet-kicker { font-size: 1.35rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
-.sheet-header h2 { margin: 0; font-size: 1.7rem; letter-spacing: .12em; }
-.sheet-meta { min-width: 38%; }
-.sheet-meta div { display: grid; grid-template-columns: 8rem 1fr; gap: .5rem; border-bottom: 1px solid #7b8791; padding: .25rem 0; }
-.sheet-meta dt { font-weight: 700; text-transform: uppercase; font-size: .72rem; }
-.sheet-meta dd { margin: 0; font-size: .85rem; }
-.sheet-summary { display: flex; gap: 1.5rem; flex-wrap: wrap; padding: .65rem .5rem; font-size: .84rem; border-bottom: 1px solid #7b8791; }
-.instrument-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-left: 1px solid #263442; border-top: 1px solid #263442; margin-top: 1rem; }
-.instrument-group { min-width: 0; min-height: 11rem; border-right: 1px solid #263442; border-bottom: 1px solid #263442; }
-.instrument-group h3 { margin: 0; padding: .65rem .75rem; font-size: .95rem; text-transform: uppercase; letter-spacing: .08em; border-bottom: 1px solid #263442; background: #e8edf0; }
-.instrument-group ol { list-style: none; padding: .35rem .75rem .65rem; margin: 0; }
-.instrument-group li { display: flex; align-items: center; gap: .5rem; min-height: 1.9rem; border-bottom: 1px dotted #82909a; }
-.member-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; flex: 1; }
-.status-box { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 1.45rem; width: 1.45rem; height: 1.45rem; border: 1px solid #263442; font-style: normal; font-weight: 800; font-size: .9rem; }
-.status-present { background: #d7f1df; color: #12652c; }
-.status-absent { background: #f8d8d8; color: #9b2020; }
-.status-justified { background: #fff0bd; color: #725700; }
-.sheet-legend { display: flex; flex-wrap: wrap; gap: 1.2rem; padding: .8rem .5rem 0; font-size: .78rem; }
-.sheet-legend .status-box { display: inline-flex; vertical-align: middle; margin-right: .25rem; }
-.empty-sheet { grid-column: 1 / -1; padding: 2rem; text-align: center; }
-@media (max-width: 800px) {
-  .sheet-header { flex-direction: column; gap: .75rem; }
-  .sheet-meta { min-width: 100%; }
-  .instrument-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 18px;
+  font-size: 11px;
 }
-@media (max-width: 520px) {
-  .daily-sheet { padding: .75rem; }
-  .instrument-grid { grid-template-columns: 1fr; }
-  .sheet-kicker { font-size: 1rem; }
-  .sheet-header h2 { font-size: 1.2rem; }
+.report-table th, .report-table td {
+  border: 1px solid black;
+  padding: 6px 8px;
+  vertical-align: top;
+  text-align: left;
+}
+.report-table th {
+  background: #e7e7e7;
+  text-transform: uppercase;
+  font-weight: bold;
+}
+.report-table tbody tr:nth-child(even) { background: #fafafa; }
+.report-footer {
+  text-align: center;
+  border-top: 1px solid black;
+  padding-top: 8px;
+  font-size: 10px;
 }
 @media print {
-  @page { size: A4 portrait; margin: 8mm; }
-  body { background: #fff !important; color: #000 !important; }
+  @page { size: A4 portrait; margin: 12mm; }
+  body { background: white !important; }
   nav, .navbar, .no-print { display: none !important; }
-  .container-fluid { margin: 0 !important; padding: 0 !important; }
-  .daily-sheet { max-width: none; border: 1px solid #263442; box-shadow: none; }
-  .instrument-group { min-height: 0; }
+  .container { max-width: none !important; }
+  .report-sheet { border: 1px solid black; box-shadow: none; }
 }
 </style>
 {% endblock %}

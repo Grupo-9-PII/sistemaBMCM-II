@@ -59,8 +59,12 @@
           {% for registro in registros %}
           <tr>
             <td>{{ registro.data_presenca.strftime('%d/%m/%Y') if registro.data_presenca else '-' }}</td>
-            <td>{{ registro.ensaio.titulo if registro.ensaio else (registro.evento.nome_evento if registro.evento else '-') }}</td>
-            <td>{{ registro.ensaio.local if registro.ensaio and registro.ensaio.local else (registro.evento.cidade if registro.evento and registro.evento.cidade else '-') }}</td>
+            <td>
+              {{ registro.ensaio.titulo if registro.ensaio else (registro.evento.nome_evento if registro.evento else (registro.atividade.titulo if registro.atividade else '-')) }}
+            </td>
+            <td>
+              {{ registro.ensaio.local if registro.ensaio and registro.ensaio.local else (registro.evento.cidade if registro.evento and registro.evento.cidade else (registro.atividade.local if registro.atividade and registro.atividade.local else '-')) }}
+            </td>
             <td>{{ registro.aluno.nome if registro.aluno else '-' }}</td>
             <td>
               {% if registro.observacoes == 'JUSTIFICADO' %}

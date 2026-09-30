@@ -64,5 +64,35 @@
       </div>
     </div>
   </div>
+
+  <section class="mt-4" aria-labelledby="contatos-externos-titulo">
+    <h2 id="contatos-externos-titulo" class="h5">Autorizações de contatos externos</h2>
+    <div class="table-responsive">
+      <table class="table table-dark table-hover align-middle">
+        <thead>
+          <tr><th>Contato</th><th>E-mail</th><th>Autorização</th><th>Origem</th><th>Ação</th></tr>
+        </thead>
+        <tbody>
+          {% for contato in contatos_externos %}
+          <tr>
+            <td>{{ contato.nome }}</td>
+            <td>{{ contato.email or '-' }}</td>
+            <td>{{ 'Vigente' if contato.autorizacao_email and not contato.email_revogado_em else 'Sem autorização vigente' }}</td>
+            <td>{{ contato.origem_autorizacao_email or '-' }}</td>
+            <td>
+              {% if contato.autorizacao_email and not contato.email_revogado_em %}
+              <form method="POST" action="{{ url_for('main.revogar_email_contato_comunicacao', contato_id=contato.id) }}">
+                <button type="submit" class="btn btn-sm btn-outline-warning">Revogar e-mail</button>
+              </form>
+              {% else %}-{% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted">Nenhum contato externo cadastrado.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
 </div>
 {% endblock %}

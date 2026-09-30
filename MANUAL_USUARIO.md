@@ -79,7 +79,7 @@ A senha do backup também pode ser registrada na guia **Configurações > Sistem
 ### 3.4 OAuth do Google e Google Workspace
 Na área de configurações administrativas, o administrador pode autorizar os escopos Gmail, Google Calendar e Google Drive solicitados pelo sistema. O escopo Drive é `drive.file` e limita o acesso aos arquivos e pastas criados pela aplicação.
 
-Após a autorização, o sistema salva o token localmente em `instance/google_oauth_token.json`. O token é usado para enviar mensagens pelo Gmail, sincronizar ensaios e eventos para o Google Calendar e enviar backups ao Google Drive, conforme os escopos autorizados.
+Após a autorização, o sistema salva o token localmente em `instance/google_oauth_token.json`. O token é usado para enviar mensagens pelo Gmail, sincronizar ensaios, eventos e atividades avulsas para o Google Calendar e enviar backups ao Google Drive, conforme os escopos autorizados.
 
 ### 3.5 Recuperação de Senha
 Em caso de esquecimento de senha, entre em contato com o administrador do sistema.
@@ -368,6 +368,14 @@ Gerencie as seções da banda (ex: metais, madeiras, percussão).
 
 ## 9. Presença, Ensaios e Eventos
 
+### Calendário BMCM
+
+No menu **Atividades**, acesse **Calendário BMCM** para visualizar os ensaios, eventos e atividades avulsas cadastrados por mês. Use as setas, o seletor de mês ou **Hoje** para navegar; selecione um dia para consultar seus registros.
+
+Para cada registro, use **Chamada** para lançar ou consultar presença e, quando disponível, **Relatório**. **Relatório diário** abre a folha consolidada da data. Os botões de criação do dia abrem o formulário correspondente com a data selecionada já preenchida.
+
+O calendário BMCM é independente do Google Calendar. A grade não representa horário de funcionamento da Banda e não presume horário para atividades sem essa informação. A sincronização Google é manual e opcional em cada registro.
+
 ### 9.1 Criar um Ensaio
 
 1. No menu superior, clique em **Presença**
@@ -433,7 +441,15 @@ O cancelamento é lógico: os dados do evento e os registros de presença perman
 
 Na listagem de eventos, use **Sincronizar** para publicar o evento no Google Calendar como evento de dia inteiro. Depois da primeira sincronização, edições e cancelamentos feitos no BMCM tentam atualizar o evento vinculado. Se a API estiver indisponível ou a autorização tiver expirado, o evento permanece salvo no BMCM e uma mensagem informa a falha. Alterações feitas diretamente no Google Calendar não são importadas para o BMCM.
 
-### 9.7 Consultar Histórico e Frequência
+### 9.7 Publicar uma Atividade no Google Calendar
+
+1. Acesse **Atividades** e crie o treinamento, apresentação ou outra atividade.
+2. Na listagem, clique em **Sincronizar Calendar**. A sincronização é manual e exige que o escopo Google Calendar esteja autorizado.
+3. Se a atividade já tiver sido sincronizada, use **Atualizar calendário** para atualizar o mesmo evento remoto.
+
+Quando houver início e fim, ambos são usados no evento. Com apenas horário inicial, o sistema considera uma hora de duração. Sem horário, a atividade é publicada como evento de dia inteiro. Área, responsável, tipo e observações são incluídos na descrição. O BMCM continua sendo o registro oficial; alterações feitas diretamente no Google Calendar não são importadas.
+
+### 9.8 Consultar Histórico e Frequência
 
 1. Acesse **Presença**
 2. Clique em **Histórico**
@@ -512,10 +528,13 @@ A Central de Comunicações fica disponível para usuários com permissão admin
    - responsáveis;
    - alunos ativos;
    - naipe;
+  - participantes ativos com autorização aprovada no evento selecionado;
    - contato externo;
    - outros públicos configurados.
 4. Anexe arquivos, quando necessário.
 5. Revise a mensagem e confirme o envio.
+
+Para um contato externo novo ou sem autorização vigente, confirme a autorização de e-mail e informe sua origem. A data e a origem ficam registradas no contato. A autorização pode ser revogada na lista da Central; após a revogação, novos envios são bloqueados. A autorização de e-mail não habilita WhatsApp.
 
 ### 12.3 Status do envio
 A comunicação pode aparecer com os seguintes status:

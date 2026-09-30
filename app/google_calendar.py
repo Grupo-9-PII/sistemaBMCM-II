@@ -49,6 +49,50 @@ def _activity_payload(activity_type, activity):
         start_date = activity.data_evento
         start = {"date": start_date.isoformat()}
         end = {"date": (start_date + timedelta(days=1)).isoformat()}
+    elif activity_type == "atividade":
+        summary = activity.titulo
+        location = activity.local
+        start_date = activity.data_atividade
+        details = [f"Tipo: {activity.tipo}"]
+        if activity.area:
+            details.append(f"Área: {activity.area}")
+        if activity.responsavel:
+            details.append(f"Responsável: {activity.responsavel}")
+        if activity.observacoes:
+            details.append(f"Observações: {activity.observacoes}")
+        description = "\n".join(details)
+
+        if activity.horario_inicio:
+            start_time = time.fromisoformat(activity.horario_inicio)
+            start_datetime = datetime.combine(
+                start_date, start_time, tzinfo=ZoneInfo(CALENDAR_TIME_ZONE)
+            )
+            if activity.horario_fim:
+                end_time = time.fromisoformat(activity.horario_fim)
+                end_datetime = datetime.combine(
+                    start_date, end_time, tzinfo=ZoneInfo(CALENDAR_TIME_ZONE)
+                )
+                if end_datetime <= start_datetime:
+                    raise ValueError(
+                        "O horário final da atividade deve ser posterior ao inicial."
+                    )
+            else:
+                end_datetime = start_datetime + timedelta(hours=1)
+            start = {
+                "dateTime": start_datetime.isoformat(),
+                "timeZone": CALENDAR_TIME_ZONE,
+            }
+            end = {
+                "dateTime": end_datetime.isoformat(),
+                "timeZone": CALENDAR_TIME_ZONE,
+            }
+        else:
+            if activity.horario_fim:
+                raise ValueError(
+                    "Informe o horário inicial para usar o horário final da atividade."
+                )
+            start = {"date": start_date.isoformat()}
+            end = {"date": (start_date + timedelta(days=1)).isoformat()}
     else:
         raise ValueError("Tipo de atividade não suportado pelo Google Calendar.")
 
@@ -76,6 +120,8 @@ def sincronizar_atividade(activity_type, activity):
         sync = GoogleCalendarSync.query.filter_by(ensaio_id=activity.id).first()
     elif activity_type == "evento":
         sync = GoogleCalendarSync.query.filter_by(evento_id=activity.id).first()
+    elif activity_type == "atividade":
+        sync = GoogleCalendarSync.query.filter_by(atividade_id=activity.id).first()
     else:
         raise ValueError("Tipo de atividade não suportado pelo Google Calendar.")
 
@@ -117,6 +163,7 @@ def sincronizar_atividade(activity_type, activity):
         sync = GoogleCalendarSync(
             ensaio_id=activity.id if activity_type == "ensaio" else None,
             evento_id=activity.id if activity_type == "evento" else None,
+            atividade_id=activity.id if activity_type == "atividade" else None,
             google_event_id=google_event_id,
         )
         db.session.add(sync)
@@ -130,6 +177,8 @@ def sincronizar_se_vinculada(activity_type, activity):
         sync = GoogleCalendarSync.query.filter_by(ensaio_id=activity.id).first()
     elif activity_type == "evento":
         sync = GoogleCalendarSync.query.filter_by(evento_id=activity.id).first()
+    elif activity_type == "atividade":
+        sync = GoogleCalendarSync.query.filter_by(atividade_id=activity.id).first()
     else:
         raise ValueError("Tipo de atividade não suportado pelo Google Calendar.")
     if sync is None:

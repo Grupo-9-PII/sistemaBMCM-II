@@ -43,13 +43,14 @@ O BMCM já possui ou possui em desenvolvimento os seguintes recursos:
 * Controle de versão utilizando Git/GitHub;
 * Estrutura de API;
 * Sistema de gerenciamento relacionado à banda;
-* Central de comunicações administrativa com base funcional para públicos, pré-visualização, anexos e histórico, ainda em desenvolvimento e validação;
+* Central de comunicações administrativa com públicos, anexos, histórico e consentimento externo auditável, validada por testes automatizados;
 * Fluxo OAuth 2.0 do Google e envio de mensagens pelo Gmail;
 * Persistência local do token OAuth;
-* Controle manual de presença relacionado a ensaios e eventos;
+* Controle manual de presença atualmente relacionado a ensaios e eventos;
+* Calendário interno mensal do BMCM, agregando ensaios, eventos e atividades avulsas;
 * Base para indicadores de presença e análise de frequência.
 
-O OAuth solicita escopos para Gmail, Calendar e Drive. Gmail, sincronização unidirecional inicial do Calendar e upload/listagem de backups no Drive estão conectados a operações do sistema. Calendar e Drive ainda precisam ser validados com contas Google reais.
+O OAuth solicita escopos para Gmail, Calendar e Drive. Gmail, sincronização unidirecional inicial do Calendar e upload/listagem de backups no Drive estão conectados a operações do sistema. Calendar e Drive foram validados com a conta Google configurada no ambiente.
 
 Esses recursos devem ser considerados parte da evolução do projeto e não devem ser descartados ou reimplementados desnecessariamente.
 
@@ -88,7 +89,7 @@ O sistema deverá permitir, conforme as regras definidas pelo projeto:
 * registrar presença;
 * registrar ausência;
 * identificar o integrante;
-* relacionar presença com ensaio ou evento;
+* relacionar presença com a atividade correspondente, incluindo ensaio, evento, apresentação, treinamento ou outra atividade válida;
 * consultar histórico;
 * visualizar frequência;
 * permitir consultas administrativas;
@@ -96,10 +97,77 @@ O sistema deverá permitir, conforme as regras definidas pelo projeto:
 
 O controle de presença manual é o escopo atual.
 
+## 4.2 Modelo operacional de atividades, presença e passes
+
+Esta seção registra regras de negócio da rotina da Banda Marcial Cidade de Marília. Ela deve ser considerada a referência principal para interpretar os conceitos de atividade, ensaio, presença e passe. Descrições mais antigas que limitem a presença somente a ensaios e eventos devem ser lidas em conjunto com estas regras.
+
+### Atividades
+
+O conceito de atividade é mais amplo que o de ensaio previamente agendado. Durante o período em que a Banda estiver efetivamente funcionando em determinado dia, um integrante pode comparecer e iniciar uma atividade de treinamento ou aperfeiçoamento sem que exista um compromisso previamente cadastrado.
+
+Os horários de funcionamento mencionados em conversas são apenas referências contextuais, não requisitos do modelo. O sistema não deve criar horário semanal, expediente padrão ou validar atividades com base em horas de abertura. Horários de início e fim pertencem somente ao registro individual de uma atividade quando forem informados.
+
+As atividades podem incluir:
+
+* ensaio oficial;
+* evento ou apresentação;
+* treinamento ou atividade individual;
+* atividade orientada por responsável;
+* outra atividade válida da Banda.
+
+Sempre que uma atividade gerar controle de frequência, o registro deverá permitir identificar, quando disponível, o integrante, a data, o horário, o tipo de atividade, a área ou finalidade, o responsável e a relação com ensaio ou evento previamente cadastrado.
+
+A implementação atual utiliza a entidade `Atividade`, com um campo de tipo, para atividades avulsas. Os tipos disponíveis nesse fluxo são `TREINAMENTO`, `APRESENTACAO` e `OUTRA`. Ensaios e eventos existentes permanecem compatíveis em suas entidades próprias enquanto a evolução do modelo não for concluída.
+
+### Presença
+
+Presença representa o comparecimento efetivo do integrante a uma atividade da Banda. Ela deve permanecer conceitualmente independente do calendário externo e pode estar relacionada a ensaio, evento, apresentação, treinamento ou outra atividade válida.
+
+O Google Calendar é uma integração de organização e comunicação. O registro oficial da atividade e da presença pertence ao BMCM. O sistema não deve exigir que toda atividade tenha sido previamente criada no Google Calendar para permitir o registro de uma presença.
+
+### Passes de transporte
+
+A Banda disponibiliza mensalmente uma cota de passes por integrante. A cota deve ser controlada por integrante e por mês de referência.
+
+O administrador do sistema deverá possuir uma rotina para cadastrar ou atualizar a cota mensal de cada integrante que possua cartão de passe cadastrado. O número de controle do cartão será associado ao integrante e deverá ser único. Integrantes que não recebem cartão podem permanecer sem esse cadastro; o cartão não é um campo obrigatório do integrante.
+
+A cota inicial poderá receber **uma única recarga extra no mesmo mês** quando a quantidade de ensaios ou atividades superar os passes disponíveis. A recarga deverá possuir quantidade maior que zero e motivo obrigatório informado pelo administrador. O sistema deverá registrar essa recarga como movimento separado, com data e administrador responsável, e impedir uma segunda recarga extra para o mesmo integrante no mesmo mês.
+
+Toda presença diária registrada para um integrante consome exatamente **2 passes**, independentemente de a atividade ser ensaio, evento, apresentação, treinamento ou outra atividade válida:
+
+* 1 passe para a ida;
+* 1 passe para a volta.
+
+Quando o integrante não possuir cartão de passe cadastrado, a presença deverá ser registrada normalmente e não haverá desconto de passes. Essa situação representa uma decisão administrativa ou operacional externa ao sistema; o motivo da ausência do cartão não será documentado no BMCM.
+
+O controle deve permitir consultar passes disponibilizados, recarregados, consumidos e restantes. O saldo não deve depender somente de um número manual: cada disponibilização, recarga e consumo deve possuir histórico, relacionado à presença ou atividade que originou o movimento quando aplicável.
+
+Conceitualmente, o modelo poderá utilizar uma cota mensal e movimentos de passe, por exemplo:
+
+```text
+COTA_MENSAL_PASSES
+integrante_id, mes_referencia, quantidade_disponibilizada
+
+MOVIMENTO_PASSE
+cota_id, atividade_id, presenca_id, data_hora, quantidade, tipo
+```
+
+O consumo de cada presença será registrado como movimento de quantidade `-2`, ou em representação equivalente que preserve o histórico e permita calcular o saldo.
+
+Antes de registrar uma presença de integrante com cartão, o sistema deverá verificar se existem pelo menos 2 passes disponíveis. Com apenas 0 ou 1 passe, o registro da presença deverá ser impedido e a situação informada claramente. Integrantes sem cartão não entram nessa validação e não geram movimento de passe. O sistema não deve criar saldo negativo silenciosamente.
+
+O controle de passes ainda não faz parte do fluxo implementado no sistema. Esta regra deve orientar a análise e a implementação futura, inclusive testes de saldo, histórico e integridade transacional.
+
+### Calendário e futuras integrações
+
+O calendário interno mensal do BMCM agrega ensaios, eventos e atividades avulsas já cadastrados. A seleção de um dia oferece acesso à chamada de cada registro, ao relatório diário e à criação de um registro naquela data, com o formulário pré-preenchido. O calendário não cria expediente ou horário de funcionamento e não presume horários ausentes. A integração com o Google Calendar é separada, unidirecional e manual: publica registros do BMCM, não substitui o banco de dados e não importa alterações feitas diretamente no Google Calendar. A publicação de atividades avulsas foi implementada e validada por testes automatizados; ainda requer validação com uma conta Google real.
+
+Uma futura integração RFID/NFC ou outra solução IoT poderá identificar o integrante e chamar uma API do BMCM. A API deverá continuar responsável por validar a atividade, verificar a cota, registrar a presença e consumir os 2 passes. RFID, NFC e IoT não fazem parte do escopo atual do PI II.
+
 
 # 5. Integração com serviços Google
 
-O sistema deverá explorar APIs do Google como parte da integração com serviços externos e do conceito de computação em nuvem. A Central de Comunicações continua sendo prioridade para conclusão e validação. Os MVPs de Calendar e Drive estão disponíveis no código; a validação com contas Google do ambiente é uma etapa pendente.
+O sistema deverá explorar APIs do Google como parte da integração com serviços externos e do conceito de computação em nuvem. A Central de Comunicações foi concluída funcionalmente e validada por testes automatizados. A sincronização Calendar de atividades avulsas está implementada e testada automaticamente; sua validação com conta real permanece pendente. Os MVPs de Calendar para ensaios/eventos e Drive foram validados com a conta Google configurada no ambiente.
 
 As três integrações principais previstas são:
 
@@ -118,9 +186,9 @@ As credenciais do Google devem ser armazenadas em variáveis de ambiente e nunca
 
 ---
 
-## 5.2 Google Calendar — eventos e ensaios
+## 5.2 Google Calendar — ensaios, eventos e atividades
 
-O MVP de sincronização unidirecional do BMCM para o Google Calendar está implementado para ensaios e eventos. A sincronização é acionada manualmente na listagem de cada atividade. Depois de vinculada, uma edição ou cancelamento no BMCM atualiza o evento remoto. A integração exige autorização do escopo `calendar.events` e ainda precisa ser validada com uma conta Google real.
+O MVP de sincronização unidirecional do BMCM para o Google Calendar está implementado para ensaios, eventos e atividades avulsas. A sincronização é acionada manualmente nas listagens, exige autorização do escopo `calendar.events` e atualiza o vínculo existente quando repetida. Ensaios e eventos foram validados com conta Google real. A nova publicação de atividades avulsas passou nos testes automatizados e ainda precisa ser validada com uma conta real.
 
 O comportamento inicial é:
 
@@ -461,7 +529,11 @@ Novas entidades podem ser criadas quando necessárias, por exemplo:
 
 * eventos;
 * ensaios;
+* atividades e seus tipos;
 * presenças;
+* cartões de passe opcionais por integrante;
+* cotas mensais de passes;
+* movimentos/consumos de passes vinculados às presenças;
 * registros de comunicação;
 * configurações de integração;
 * logs.
@@ -484,9 +556,9 @@ O projeto deve demonstrar:
 
 O estado e a ordem de prioridade das integrações são:
 
-1. Gmail API: fluxo OAuth e envio de comunicações implementados; a Central de Comunicações está em desenvolvimento e validação;
-2. Google Calendar API: MVP de sincronização unidirecional implementado no código; falta validar com uma conta Google real após a conclusão prioritária da Central de Comunicações;
-3. Google Drive API: MVP de upload e listagem de backups implementado no código; falta validar com uma conta Google real;
+1. Gmail API: fluxo OAuth e envio implementados; Central de Comunicações validada por testes automatizados, com envio real dependente da conta Google configurada no ambiente;
+2. Google Calendar API: sincronização unidirecional de ensaios/eventos validada com conta real; publicação de atividades avulsas implementada e testada automaticamente, com validação real pendente;
+3. Google Drive API: MVP de upload e listagem de backups validado com conta Google real;
 4. API HTTP do módulo externo de WhatsApp: possibilidade futura, condicionada à autorização e aos requisitos de segurança.
 
 O módulo externo de WhatsApp deverá permanecer desacoplado do Flask. O BMCM deverá consumi-lo por um cliente de serviço com timeout, tratamento de erros, autenticação e registro de auditoria.
@@ -516,6 +588,7 @@ Priorizar inicialmente:
 * controle de presença;
 * eventos;
 * integrações;
+* regras de consumo de passes, quando implementadas;
 * validações;
 * operações críticas do banco de dados;
 * acessibilidade básica em telas críticas;
@@ -628,9 +701,9 @@ O objetivo final é entregar uma aplicação funcional que possa continuar sendo
 
 ### Integrações externas e comunicação
 
-* Gmail e base funcional da Central de Comunicações: implementados; conclusão e validação da Central são a prioridade atual;
-* Google Calendar: MVP unidirecional implementado no código; validação com conta real pendente;
-* Google Drive: MVP de upload e listagem implementado; validação real pendente;
+* Gmail e Central de Comunicações: fluxo implementado e validado por testes automatizados, incluindo consentimento externo e revogação;
+* Google Calendar: MVP unidirecional para ensaios/eventos validado com conta real; atividades avulsas também são publicadas manualmente e passaram nos testes automatizados, aguardando validação real;
+* Google Drive: MVP de upload e listagem implementado e validado com conta real;
 * WhatsApp: possibilidade futura como módulo externo independente e canal alternativo autorizado.
 
 ### Requisitos técnicos

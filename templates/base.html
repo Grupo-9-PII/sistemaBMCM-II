@@ -125,8 +125,15 @@
               <i class="bi bi-calendar2-x-fill"></i> Atividades
             </a>
             <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="{{ url_for('main.calendario_bmcm') }}">
+                  <i class="bi bi-calendar3 me-2"></i>Calendário BMCM
+                </a></li>
+              <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item" href="{{ url_for('main.listar_ensaios') }}">
                   <i class="bi bi-clipboard-check me-2"></i>Ensaios
+                </a></li>
+              <li><a class="dropdown-item" href="{{ url_for('main.listar_atividades') }}">
+                  <i class="bi bi-person-workspace me-2"></i>Atividades avulsas
                 </a></li>
               <li><a class="dropdown-item" href="{{ url_for('main.relatorio_presenca_diaria') }}">
                   <i class="bi bi-file-earmark-spreadsheet me-2"></i>Relatório de presença
@@ -160,6 +167,9 @@
                 </a></li>
               <li><a class="dropdown-item" href="{{ url_for('main.configuracoes') }}">
                   <i class="bi bi-gear me-2"></i>Configurações
+                </a></li>
+              <li><a class="dropdown-item" href="{{ url_for('main.gerenciar_passes') }}">
+                  <i class="bi bi-ticket-perforated me-2"></i>Passes de Transporte
                 </a></li>
               <li>
                 <hr class="dropdown-divider">

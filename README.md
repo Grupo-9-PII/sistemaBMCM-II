@@ -140,8 +140,7 @@ A proposta é **evoluir a aplicação existente**, acrescentando funcionalidades
 
 Entre os principais eixos da evolução estão:
 
-* conclusão e validação da Central de Comunicações, cuja base funcional já existe;
-* validação da sincronização inicial com Google Calendar após a conclusão da Central de Comunicações;
+* validação com conta Google real da publicação de atividades avulsas no Calendar;
 * implementação e validação real do backup remoto no Google Drive;
 * ampliação dos testes automatizados e dos recursos de acessibilidade;
 * utilização de APIs externas;
@@ -172,11 +171,14 @@ As seguintes melhorias já foram incorporadas ao sistema existente:
 * migrações incrementais para adequar bancos existentes às novas tabelas e colunas;
 * correção dos relacionamentos duplicados entre eventos e autorizações de viagem;
 * central de comunicações com públicos específicos, anexos, histórico e status por destinatário;
+* envio para participantes ativos com autorização aprovada no evento;
+* registro da data e origem do consentimento de e-mail de contatos externos, com bloqueio após revogação;
+* calendário interno mensal reunindo ensaios, eventos e atividades, com acesso às chamadas e relatórios por data;
 * fluxo OAuth 2.0 do Google e envio de mensagens pelo Gmail;
 * configuração do OAuth por variáveis de ambiente e arquivo local `.env`, ignorado pelo Git;
 * persistência do token OAuth em `instance/google_oauth_token.json` e envio de e-mails autorizados com suporte a anexos.
 
-O OAuth solicita os escopos necessários para Gmail, Calendar e Drive. Gmail e a sincronização inicial do Calendar estão conectados a operações do sistema. O Drive permite enviar backups ZIP existentes e consultar arquivos na pasta `BMCM Backups`; essa operação ainda precisa de validação com uma conta Google real. O WhatsApp não está integrado ao BMCM.
+O OAuth solicita os escopos necessários para Gmail, Calendar e Drive. Gmail e a sincronização inicial do Calendar estão conectados a operações do sistema. O Drive permite enviar backups ZIP existentes e consultar arquivos na pasta `BMCM Backups`; Calendar e Drive foram validados com a conta Google configurada no ambiente. O WhatsApp não está integrado ao BMCM.
 
 ## Controle de versão da aplicação
 
@@ -292,17 +294,35 @@ Desenvolver e evoluir uma aplicação web para apoio à gestão administrativa e
 
 # Funcionalidades em Evolução
 
-Os fluxos básicos de presença, ensaios, eventos e apresentações já estão implementados. A Central de Comunicações também possui uma base funcional, que continua em desenvolvimento e validação.
+Os fluxos básicos de presença, ensaios, eventos e apresentações já estão implementados. A Central de Comunicações foi validada por testes automatizados para os públicos disponíveis, consentimento de contatos externos, revogação e histórico. O envio real depende da autorização e configuração da conta Google no ambiente.
 
 ## Controle de presença
 
-O sistema possui controle **manual** de presença dos integrantes, relacionado a ensaios e eventos. Os fluxos permitem:
+O sistema possui controle **manual** de presença dos integrantes, atualmente relacionado a ensaios e eventos. A direção de evolução é relacionar a presença à atividade correspondente, que também poderá ser uma apresentação, treinamento ou outra atividade válida da Banda.
+
+Uma atividade de treinamento pode ser registrada sem ter sido previamente cadastrada como ensaio ou compromisso. O calendário interno mensal reúne ensaios, eventos e atividades avulsas, permitindo selecionar uma data, abrir chamadas e relatórios e iniciar novos cadastros com a data escolhida. Horários de funcionamento citados como contexto são apenas referência e não são modelados nem usados como validação. O cadastro, a chamada e a publicação manual opcional de atividades avulsas no Google Calendar estão disponíveis; essa publicação ainda precisa de validação com conta Google real.
+
+Os fluxos atuais permitem:
 
 * registrar presença, ausência e justificativa;
 * consultar histórico e frequência;
 * realizar consultas administrativas e imprimir folhas de chamada e históricos.
 
 O controle manual foi escolhido para manter o sistema simples, acessível e alinhado às necessidades atuais da banda. A ampliação dos testes e relatórios permanece como evolução.
+
+### Diretriz futura para passes
+
+Cada integrante poderá possuir uma cota mensal de passes de transporte. Toda presença diária registrada consome exatamente **2 passes**, sendo um para a ida e outro para a volta, independentemente de a atividade ser ensaio, evento, apresentação, treinamento ou outra atividade válida.
+
+O cartão de passe é opcional no cadastro do integrante. Quando existir, o administrador poderá informar seu número de controle, que será associado de forma única ao integrante. A rotina administrativa de passes permite cadastrar ou atualizar a quantidade disponibilizada para cada integrante com cartão ativo, por mês de referência.
+
+O controle deverá manter histórico das disponibilizações e dos consumos relacionados à atividade ou presença, permitindo calcular o saldo e explicar cada utilização. O sistema deverá impedir o registro da presença quando houver menos de 2 passes disponíveis.
+
+Integrantes sem cartão cadastrado continuam podendo ter a presença registrada, mas não geram desconto de passes. O motivo administrativo ou operacional para não possuírem cartão não será registrado no sistema.
+
+O cadastro do cartão, da cota mensal, o consumo automático de 2 passes na presença, uma recarga extra mensal justificada e a consulta administrativa do histórico já estão implementados. O sistema mantém movimentos de recarga, consumo e estorno.
+
+A recarga extra não substitui a cota inicial, deve ser maior que zero, exige motivo informado pelo administrador e só pode ocorrer uma vez por integrante em cada mês.
 
 ## Ensaios
 
@@ -335,11 +355,11 @@ Esses registros podem ser sincronizados manualmente com o Google Calendar, após
 
 # Integrações Google: Situação e Próximas Etapas
 
-O código possui fluxo OAuth com escopos para Gmail, Google Calendar e Google Drive. A autorização de um escopo não significa que toda a API correspondente esteja implementada. Gmail envia mensagens pela Central de Comunicações; Calendar sincroniza ensaios e eventos; Drive envia backups ZIP e lista os arquivos da pasta da aplicação. Calendar e Drive ainda precisam de validação com uma conta Google real.
+O código possui fluxo OAuth com escopos para Gmail, Google Calendar e Google Drive. A autorização de um escopo não significa que toda a API correspondente esteja implementada. Gmail envia mensagens pela Central de Comunicações; Calendar sincroniza ensaios e eventos; Drive envia backups ZIP e lista os arquivos da pasta da aplicação. Calendar e Drive foram validados com a conta Google configurada no ambiente.
 
 ## Google Drive
 
-**Status: MVP implementado no código; validação com conta Google real pendente.** O painel de backup permite enviar um ZIP local existente e consultar os arquivos da pasta `BMCM Backups` no Drive. O backup local permanece disponível mesmo se o envio remoto falhar.
+**Status: MVP implementado e validado com conta Google real.** O painel de backup permite enviar um ZIP local existente e consultar os arquivos da pasta `BMCM Backups` no Drive. O backup local permanece disponível mesmo se o envio remoto falhar.
 
 O Drive poderá ser utilizado como serviço de armazenamento em nuvem para:
 
@@ -352,18 +372,20 @@ O MVP usa OAuth com escopo `drive.file`, limitado aos arquivos e pastas criados 
 
 ## Google Calendar
 
-**Status: MVP implementado no código; validação com conta Google real pendente.** A sincronização unidirecional do BMCM para o Google Calendar apoia o gerenciamento de:
+**Status: MVP implementado e validado com conta Google real.** A sincronização unidirecional do BMCM para o Google Calendar apoia o gerenciamento de:
 
 * ensaios;
 * eventos;
 * apresentações;
 * compromissos da banda.
 
-Nas listas de ensaios e eventos, a ação **Sincronizar** publica a atividade; depois da primeira sincronização, edições e cancelamentos no BMCM tentam atualizar o evento vinculado. Se a API estiver indisponível ou a autorização tiver expirado, o registro local continua salvo e o sistema informa que a sincronização falhou. Ensaios com horário são enviados com duração padrão de uma hora no fuso `America/Sao_Paulo`; ensaios sem horário e eventos são enviados como eventos de dia inteiro. Alterações no Google Calendar não são sincronizadas de volta para o BMCM.
+Nas listas de ensaios, eventos e atividades avulsas, a ação **Sincronizar** publica o registro no Google Calendar. Repetir a sincronização atualiza o evento vinculado, sem criar duplicidade. Ensaios com horário usam duração padrão de uma hora; atividades usam o início e o fim informados, ou duração padrão de uma hora quando houver somente início. Registros sem horário são publicados como eventos de dia inteiro. Horários usam o fuso `America/Sao_Paulo`. Se a API estiver indisponível ou a autorização tiver expirado, o registro local continua salvo e o sistema informa que a sincronização falhou. Alterações feitas diretamente no Google Calendar não são sincronizadas de volta para o BMCM.
+
+O Google Calendar é um recurso externo de organização e comunicação. O BMCM permanece como fonte oficial das atividades, presenças e, futuramente, dos movimentos de passes. A integração atual não cria automaticamente uma presença quando alguém comparece à Banda e não exige que uma atividade espontânea tenha sido previamente cadastrada no Google Calendar.
 
 ## Gmail
 
-**Status: fluxo OAuth e envio de mensagens implementados.** O Gmail é utilizado como recurso de apoio à comunicação da banda, por meio da Central de Comunicações em desenvolvimento e validação.
+**Status: fluxo OAuth e envio de mensagens implementados.** A Central de Comunicações possui fluxo funcional validado por testes automatizados, com consentimento rastreável para contatos externos e envio direcionado a participantes autorizados de eventos. O uso real depende das credenciais e da autorização Google configuradas no ambiente.
 
 Entre as possibilidades estão:
 
@@ -376,7 +398,7 @@ Entre as possibilidades estão:
 * comunicação institucional com organizadores de eventos;
 * contato com outras prefeituras e instituições para apresentações.
 
-A integração não tem como objetivo criar um novo sistema de e-mail, mas utilizar o Gmail como serviço externo integrado ao BMCM. A conclusão e validação da Central de Comunicações continuam prioritárias.
+A integração não tem como objetivo criar um novo sistema de e-mail, mas utilizar o Gmail como serviço externo integrado ao BMCM. Não foi realizado envio real de teste para evitar uma operação externa sem destinatário confirmado.
 
 ---
 
@@ -510,7 +532,10 @@ A evolução do PI II poderá acrescentar ou ajustar entidades relacionadas a:
 
 * ensaios;
 * eventos;
+* atividades e seus tipos;
 * presença;
+* cotas mensais de passes;
+* movimentos/consumos de passes;
 * integração com serviços externos;
 * configurações;
 * registros de comunicação;
@@ -642,8 +667,8 @@ O status das integrações externas é:
 | Serviço             | Situação no código                                                          |
 | ------------------- | ---------------------------------------------------------------------------- |
 | Gmail API           | OAuth e envio implementados; usado pela Central de Comunicações              |
-| Google Calendar API | Sincronização unidirecional implementada no código; validação com conta real pendente |
-| Google Drive API    | Upload/listagem de backups implementados; validação com conta real pendente   |
+| Google Calendar API | Sincronização unidirecional implementada e validada com conta real |
+| Google Drive API    | Upload/listagem de backups implementados e validados com conta real |
 | ViaCEP              | Consulta de endereços como alternativa à base local                          |
 
 Cada integração deverá possuir:
@@ -659,7 +684,7 @@ Cada integração deverá possuir:
 
 # Computação em Nuvem
 
-A utilização atual do Gmail e as operações iniciais de Calendar e Drive demonstram integração com serviços em nuvem. Calendar e Drive ainda precisam de validação com uma conta Google real.
+A utilização atual do Gmail e as operações de Calendar e Drive demonstram integração com serviços em nuvem. Calendar e Drive foram validados com a conta Google configurada no ambiente.
 
 O sistema poderá utilizar recursos remotos para:
 
@@ -671,7 +696,7 @@ O sistema poderá utilizar recursos remotos para:
 
 O conceito previsto é o de uma aplicação web que combina recursos locais, banco de dados e serviços disponibilizados por provedores externos.
 
-Google Calendar possui sincronização unidirecional de atividades; Drive permite upload e listagem dos backups da aplicação. As duas integrações ainda precisam de validação com uma conta Google real.
+Google Calendar possui sincronização unidirecional de atividades; Drive permite upload e listagem dos backups da aplicação. As duas integrações foram validadas com a conta Google configurada no ambiente.
 
 ---
 
@@ -952,7 +977,7 @@ Consulte o arquivo [LICENSE](LICENSE) para obter os termos completos.
 
 **PI I:** Base funcional implementada.
 
-**PI II:** Evolução em andamento. Presença, ensaios e eventos possuem fluxos implementados. A Central de Comunicações tem base funcional e está em desenvolvimento e validação. Gmail está operacional; os MVPs de Calendar e Drive estão implementados no código e aguardam validação com contas Google reais.
+**PI II:** Evolução em andamento. Presença, ensaios, eventos, atividades avulsas e calendário interno mensal possuem fluxos implementados. A Central de Comunicações foi validada por testes automatizados; Calendar publica manualmente registros do BMCM; Drive mantém o MVP de backup remoto. A sincronização Calendar de atividades avulsas ainda precisa de validação com conta real.
 
 ### Principais objetivos da evolução
 
@@ -968,13 +993,17 @@ Consulte o arquivo [LICENSE](LICENSE) para obter os termos completos.
 * [x] Controle manual de presença
 * [x] Gestão de ensaios
 * [x] Gestão de eventos e apresentações
+* [x] Cadastro e presença em atividades avulsas
+* [x] Calendário interno mensal com seleção de data e atalhos para chamadas/relatórios
 * [x] Base funcional da Central de Comunicações administrativa
-* [ ] Conclusão e validação da Central de Comunicações
+* [x] Conclusão funcional e validação automatizada da Central de Comunicações
 * [x] Fluxo OAuth 2.0 e envio de mensagens pelo Gmail
 * [x] MVP de sincronização unidirecional com Google Calendar implementado no código
-* [ ] Validar a sincronização Calendar com uma conta Google real
+* [x] Validar a sincronização Calendar com uma conta Google real
+* [x] Implementar e testar automaticamente sincronização de atividades avulsas com Google Calendar
+* [ ] Validar sincronização de atividades avulsas com conta Google real
 * [x] MVP de upload e listagem de backups no Google Drive implementado no código
-* [ ] Validar upload e consulta Drive com uma conta Google real
+* [x] Validar upload e consulta Drive com uma conta Google real
 * [x] Autenticação OAuth 2.0 para Google Workspace
 * [x] Documentação das integrações e serviços em nuvem
 * [ ] Ampliação dos testes automatizados

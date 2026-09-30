@@ -1,10 +1,12 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
 from flask_login import login_required, current_user
+import calendar
 from datetime import timedelta
 from dotenv import set_key
 from .models import (
     User,
     Aluno,
+    AutorizacaoViagem,
     Escola,
     Instrumento,
     TipoInstrumento,
@@ -15,6 +17,7 @@ from .models import (
     AlunoInstrumento,
     AlunoEscola,
     Ensaio,
+    Atividade,
     Presenca,
     Evento,
     Logradouro,
@@ -24,6 +27,9 @@ from .models import (
     ComunicacaoAnexo,
     ContatoComunicacao,
     GoogleCalendarSync,
+    CartaoPasse,
+    CotaMensalPasse,
+    MovimentoPasse,
 )
 from . import db
 from .utils import (
@@ -77,6 +83,22 @@ from sqlalchemy import text
 
 main_bp = Blueprint("main", __name__)
 
+MESES_CALENDARIO = (
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+)
+DIAS_SEMANA_CALENDARIO = (
+    "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira",
+    "sexta-feira", "sábado", "domingo",
+)
+
+
+def _data_inicial_formulario():
+    try:
+        return datetime.strptime(request.args.get("data", ""), "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        return ""
+
 
 def _status_google_workspace():
     return google_workspace_status(obter_configuracao("communication_sender_email"))
@@ -119,6 +141,53 @@ def _sincronizar_calendar(activity_type, activity, somente_vinculada=False):
     else:
         flash("Atividade sincronizada com o Google Calendar.", "success")
     return result
+
+
+def _atualizar_movimento_passe(presenca):
+    """Sincroniza o consumo de passes da presença sem criar saldo negativo."""
+    cartao = presenca.aluno.cartao_passe
+    if not cartao or not cartao.ativo:
+        return
+
+    movimentos = MovimentoPasse.query.filter_by(presenca_id=presenca.id).all()
+    movimento_presenca = sum(movimento.quantidade for movimento in movimentos)
+    if not presenca.presente and movimento_presenca >= 0:
+        return
+
+    mes_referencia = presenca.data_presenca.replace(day=1)
+    cota = CotaMensalPasse.query.filter_by(
+        aluno_id=presenca.aluno_id,
+        mes_referencia=mes_referencia,
+    ).first()
+    if cota is None:
+        raise ValueError(
+            f"Não há cota de passes cadastrada para {presenca.aluno.nome} em "
+            f"{mes_referencia.strftime('%m/%Y')}."
+        )
+
+    saldo = cota.quantidade_disponibilizada + sum(
+        movimento.quantidade for movimento in cota.movimentos
+    )
+
+    if presenca.presente and movimento_presenca == 0:
+        if saldo < 2:
+            raise ValueError(
+                f"{presenca.aluno.nome} possui apenas {saldo} passe(s) disponível(is); "
+                "são necessários 2 para registrar a presença."
+            )
+        db.session.add(MovimentoPasse(
+            cota_id=cota.id,
+            presenca_id=presenca.id,
+            quantidade=-2,
+            tipo="CONSUMO",
+        ))
+    elif not presenca.presente and movimento_presenca < 0:
+        db.session.add(MovimentoPasse(
+            cota_id=cota.id,
+            presenca_id=presenca.id,
+            quantidade=2,
+            tipo="ESTORNO",
+        ))
 
 
 def _reautenticar_admin_para_senha_backup(senha_admin):
@@ -190,6 +259,268 @@ def painel_admin():
     return render_template("dashboard.html")
 
 
+@main_bp.route("/admin/atividades")
+@login_required
+@profissional_required
+def listar_atividades():
+    atividades = Atividade.query.order_by(
+        Atividade.data_atividade.desc(), Atividade.id.desc()
+    ).all()
+    calendar_syncs = {
+        sync.atividade_id: sync
+        for sync in GoogleCalendarSync.query.filter(
+            GoogleCalendarSync.atividade_id.isnot(None)
+        ).all()
+    }
+    return render_template(
+        "admin_atividades.html",
+        atividades=atividades,
+        calendar_syncs=calendar_syncs,
+    )
+
+
+@main_bp.route("/admin/calendario")
+@login_required
+@profissional_required
+def calendario_bmcm():
+    hoje = datetime.now().date()
+    data_selecionada = None
+    try:
+        if request.args.get("data"):
+            data_selecionada = datetime.strptime(
+                request.args["data"], "%Y-%m-%d"
+            ).date()
+    except ValueError:
+        data_selecionada = None
+
+    try:
+        mes_inicio = datetime.strptime(
+            request.args.get("mes", ""), "%Y-%m"
+        ).date().replace(day=1)
+    except ValueError:
+        mes_inicio = (data_selecionada or hoje).replace(day=1)
+
+    if data_selecionada and data_selecionada.replace(day=1) != mes_inicio:
+        mes_inicio = data_selecionada.replace(day=1)
+
+    if not data_selecionada or data_selecionada.replace(day=1) != mes_inicio:
+        data_selecionada = hoje if hoje.replace(day=1) == mes_inicio else mes_inicio
+
+    proximo_mes = (mes_inicio.replace(day=28) + timedelta(days=4)).replace(day=1)
+    mes_anterior = mes_inicio - timedelta(days=1)
+    mes_anterior = mes_anterior.replace(day=1)
+    mes_seguinte = proximo_mes
+
+    itens_por_dia = {}
+    sincronizados = set()
+    for vinculo in GoogleCalendarSync.query.all():
+        if vinculo.ensaio_id is not None:
+            sincronizados.add(("ensaio", vinculo.ensaio_id))
+        elif vinculo.evento_id is not None:
+            sincronizados.add(("evento", vinculo.evento_id))
+        elif vinculo.atividade_id is not None:
+            sincronizados.add(("atividade", vinculo.atividade_id))
+
+    def adicionar_item(tipo, dia, titulo, horario, local, status,
+                       url_chamada, url_sincronizar, vinculo_id):
+        itens_por_dia.setdefault(dia, []).append({
+            "id": vinculo_id,
+            "tipo": tipo,
+            "titulo": titulo,
+            "horario": horario or "",
+            "local": local or "",
+            "status": status or "",
+            "url_chamada": url_chamada,
+            "url_sincronizar": url_sincronizar,
+            "sincronizado": (tipo, vinculo_id) in sincronizados,
+        })
+
+    ensaios = Ensaio.query.filter(
+        Ensaio.data_ensaio >= mes_inicio,
+        Ensaio.data_ensaio < proximo_mes,
+    ).all()
+    for ensaio in ensaios:
+        adicionar_item(
+            "Ensaio", ensaio.data_ensaio, ensaio.titulo,
+            ensaio.horario, ensaio.local, ensaio.status,
+            url_for("main.registrar_presenca", ensaio_id=ensaio.id),
+            url_for("main.sincronizar_ensaio_calendar", ensaio_id=ensaio.id),
+            ensaio.id,
+        )
+
+    eventos = Evento.query.filter(
+        Evento.data_evento >= mes_inicio,
+        Evento.data_evento < proximo_mes,
+    ).all()
+    for evento in eventos:
+        adicionar_item(
+            "Evento", evento.data_evento, evento.nome_evento,
+            None, evento.cidade, evento.status,
+            url_for("main.registrar_presenca_evento", evento_id=evento.id),
+            url_for("main.sincronizar_evento_calendar", evento_id=evento.id),
+            evento.id,
+        )
+
+    atividades = Atividade.query.filter(
+        Atividade.data_atividade >= mes_inicio,
+        Atividade.data_atividade < proximo_mes,
+    ).all()
+    for atividade in atividades:
+        horario = atividade.horario_inicio
+        if atividade.horario_fim:
+            horario = f"{horario or ''} - {atividade.horario_fim}".strip(" -")
+        adicionar_item(
+            "Atividade", atividade.data_atividade, atividade.titulo,
+            horario, atividade.local, atividade.status,
+            url_for("main.registrar_presenca_atividade", atividade_id=atividade.id),
+            url_for("main.sincronizar_atividade_calendar", atividade_id=atividade.id),
+            atividade.id,
+        )
+
+    for itens in itens_por_dia.values():
+        itens.sort(key=lambda item: (item["horario"], item["tipo"], item["titulo"].casefold()))
+
+    mes_calendario = calendar.Calendar(firstweekday=0).monthdatescalendar(
+        mes_inicio.year, mes_inicio.month
+    )
+    return render_template(
+        "admin_calendario.html",
+        mes_inicio=mes_inicio,
+        mes_anterior=mes_anterior,
+        mes_seguinte=mes_seguinte,
+        mes_nome=MESES_CALENDARIO[mes_inicio.month - 1],
+        dia_semana=DIAS_SEMANA_CALENDARIO[data_selecionada.weekday()],
+        hoje=hoje,
+        semanas=mes_calendario,
+        itens_por_dia=itens_por_dia,
+        data_selecionada=data_selecionada,
+        itens_selecionados=itens_por_dia.get(data_selecionada, []),
+    )
+
+
+@main_bp.route(
+    "/admin/atividade/<int:atividade_id>/calendar/sincronizar",
+    methods=["POST"],
+)
+@login_required
+@profissional_required
+def sincronizar_atividade_calendar(atividade_id):
+    atividade = Atividade.query.get_or_404(atividade_id)
+    _sincronizar_calendar("atividade", atividade)
+    return redirect(url_for("main.listar_atividades"))
+
+
+@main_bp.route("/admin/atividade/create", methods=["GET", "POST"])
+@login_required
+@profissional_required
+def criar_atividade():
+    tipos = ("TREINAMENTO", "APRESENTACAO", "OUTRA")
+    if request.method == "POST":
+        titulo = normalizar_campo_texto(request.form.get("titulo"))
+        tipo = request.form.get("tipo") or "TREINAMENTO"
+        try:
+            data_atividade = datetime.strptime(
+                request.form.get("data_atividade"), "%Y-%m-%d"
+            ).date()
+        except (TypeError, ValueError):
+            flash("Informe uma data válida para a atividade.", "danger")
+            return redirect(url_for("main.criar_atividade"))
+        if not titulo:
+            flash("Informe o título da atividade.", "danger")
+            return redirect(url_for("main.criar_atividade"))
+        if tipo not in tipos:
+            flash("Tipo de atividade inválido.", "danger")
+            return redirect(url_for("main.criar_atividade"))
+
+        atividade = Atividade(
+            tipo=tipo,
+            titulo=titulo,
+            data_atividade=data_atividade,
+            horario_inicio=request.form.get("horario_inicio", "").strip() or None,
+            horario_fim=request.form.get("horario_fim", "").strip() or None,
+            local=normalizar_campo_texto(request.form.get("local")),
+            area=normalizar_campo_texto(request.form.get("area")),
+            responsavel=normalizar_campo_texto(request.form.get("responsavel")),
+            observacoes=request.form.get("observacoes", "").strip() or None,
+            criado_por_id=current_user.id,
+        )
+        db.session.add(atividade)
+        db.session.commit()
+        flash("Atividade criada. Registre a lista de presença.", "success")
+        return redirect(url_for("main.registrar_presenca_atividade", atividade_id=atividade.id))
+
+    return render_template(
+        "admin_atividade_form.html",
+        atividade=None,
+        tipos=tipos,
+        data_inicial=_data_inicial_formulario(),
+    )
+
+
+@main_bp.route("/admin/atividade/<int:atividade_id>/presenca", methods=["GET", "POST"])
+@login_required
+@profissional_required
+def registrar_presenca_atividade(atividade_id):
+    atividade = Atividade.query.get_or_404(atividade_id)
+    alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
+
+    if request.method == "POST":
+        registros_salvos = []
+        for aluno in alunos:
+            status = request.form.get(f"presenca_{aluno.id}", "ausente")
+            registro = Presenca.query.filter_by(
+                aluno_id=aluno.id, atividade_id=atividade.id
+            ).first()
+            if registro is None:
+                registro = Presenca(
+                    aluno_id=aluno.id,
+                    atividade_id=atividade.id,
+                    data_presenca=atividade.data_atividade,
+                )
+                db.session.add(registro)
+            registro.presente = status == "presente"
+            registro.observacoes = "JUSTIFICADO" if status == "justificado" else None
+            registro.data_presenca = atividade.data_atividade
+            registro.registrado_por_id = current_user.id
+            registro.registrado_at = datetime.now(timezone.utc)
+            registros_salvos.append(registro)
+
+        try:
+            db.session.flush()
+            for registro in registros_salvos:
+                _atualizar_movimento_passe(registro)
+            db.session.commit()
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "danger")
+            return redirect(url_for("main.registrar_presenca_atividade", atividade_id=atividade.id))
+        flash("Lista de presença da atividade salva com sucesso.", "success")
+        return redirect(url_for("main.registrar_presenca_atividade", atividade_id=atividade.id))
+
+    registros = {
+        registro.aluno_id: registro
+        for registro in Presenca.query.filter_by(atividade_id=atividade.id).all()
+    }
+    grupos = {}
+    for aluno in alunos:
+        associacao = next(
+            (item for item in aluno.instrumentos if item.data_devolucao is None), None
+        )
+        grupo = associacao.instrumento.nome if associacao and associacao.instrumento else "SEM INSTRUMENTO"
+        grupos.setdefault(grupo, []).append(aluno)
+
+    return render_template(
+        "admin_presenca.html",
+        atividade_titulo=atividade.titulo,
+        atividade_data=atividade.data_atividade,
+        atividade_horario=atividade.horario_inicio,
+        atividade_local=atividade.local,
+        atividade_url=url_for("main.listar_atividades"),
+        grupos=sorted(grupos.items()),
+        registros=registros,
+    )
+
+
 @main_bp.route("/admin/eventos")
 @login_required
 @profissional_required
@@ -244,7 +575,11 @@ def criar_evento():
         flash("Evento criado. Registre a lista de chamada.", "success")
         return redirect(url_for("main.registrar_presenca_evento", evento_id=evento.id))
 
-    return render_template("admin_evento_form.html", evento=None)
+    return render_template(
+        "admin_evento_form.html",
+        evento=None,
+        data_inicial=_data_inicial_formulario(),
+    )
 
 
 @main_bp.route("/admin/evento/<int:evento_id>/edit", methods=["GET", "POST"])
@@ -343,7 +678,11 @@ def criar_ensaio():
         flash("Ensaio criado. Registre a chamada para iniciar a presença.", "success")
         return redirect(url_for("main.registrar_presenca", ensaio_id=ensaio.id))
 
-    return render_template("admin_ensaio_form.html", ensaio=None)
+    return render_template(
+        "admin_ensaio_form.html",
+        ensaio=None,
+        data_inicial=_data_inicial_formulario(),
+    )
 
 
 @main_bp.route("/admin/ensaio/<int:ensaio_id>/edit", methods=["GET", "POST"])
@@ -393,6 +732,7 @@ def registrar_presenca(ensaio_id):
     alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
 
     if request.method == "POST":
+        registros_salvos = []
         for aluno in alunos:
             status = request.form.get(f"presenca_{aluno.id}", "ausente")
             presente = status == "presente"
@@ -408,8 +748,17 @@ def registrar_presenca(ensaio_id):
             registro.data_presenca = ensaio.data_ensaio
             registro.registrado_por_id = current_user.id
             registro.registrado_at = datetime.now(timezone.utc)
+            registros_salvos.append(registro)
 
-        db.session.commit()
+        try:
+            db.session.flush()
+            for registro in registros_salvos:
+                _atualizar_movimento_passe(registro)
+            db.session.commit()
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "danger")
+            return redirect(url_for("main.registrar_presenca", ensaio_id=ensaio.id))
         flash("Lista de presença salva com sucesso.", "success")
         return redirect(url_for("main.registrar_presenca", ensaio_id=ensaio.id))
 
@@ -445,6 +794,7 @@ def registrar_presenca_evento(evento_id):
     alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
 
     if request.method == "POST":
+        registros_salvos = []
         for aluno in alunos:
             status = request.form.get(f"presenca_{aluno.id}", "ausente")
             registro = Presenca.query.filter_by(
@@ -458,7 +808,16 @@ def registrar_presenca_evento(evento_id):
             registro.data_presenca = evento.data_evento
             registro.registrado_por_id = current_user.id
             registro.registrado_at = datetime.now(timezone.utc)
-        db.session.commit()
+            registros_salvos.append(registro)
+        try:
+            db.session.flush()
+            for registro in registros_salvos:
+                _atualizar_movimento_passe(registro)
+            db.session.commit()
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "danger")
+            return redirect(url_for("main.registrar_presenca_evento", evento_id=evento.id))
         flash("Lista de presença do evento salva com sucesso.", "success")
         return redirect(url_for("main.registrar_presenca_evento", evento_id=evento.id))
 
@@ -529,7 +888,11 @@ def historico_presencas():
     aluno_id = request.args.get("aluno_id", type=int)
     alunos = Aluno.query.order_by(Aluno.nome).all()
     registros_query = Presenca.query.filter(
-        db.or_(Presenca.ensaio_id.isnot(None), Presenca.evento_id.isnot(None))
+        db.or_(
+            Presenca.ensaio_id.isnot(None),
+            Presenca.evento_id.isnot(None),
+            Presenca.atividade_id.isnot(None),
+        )
     )
     if aluno_id:
         registros_query = registros_query.filter_by(aluno_id=aluno_id)
@@ -598,6 +961,11 @@ def relatorio_presenca_diaria():
         + (f" · {evento.cidade}" if evento.cidade else "")
         for evento in Evento.query.filter_by(data_evento=data_relatorio).all()
     )
+    atividades.extend(
+        f"Atividade: {atividade.titulo}"
+        + (f" · {atividade.local}" if atividade.local else "")
+        for atividade in Atividade.query.filter_by(data_atividade=data_relatorio).all()
+    )
 
     return render_template(
         "admin_relatorio_presenca_diaria.html",
@@ -621,7 +989,27 @@ def listar_comunicacoes():
         return bloqueio
     update_activity()
     comunicacoes = Comunicacao.query.order_by(Comunicacao.criado_em.desc()).all()
-    return render_template("admin_comunicacoes.html", comunicacoes=comunicacoes)
+    contatos_externos = ContatoComunicacao.query.order_by(ContatoComunicacao.nome.asc()).all()
+    return render_template(
+        "admin_comunicacoes.html",
+        comunicacoes=comunicacoes,
+        contatos_externos=contatos_externos,
+    )
+
+
+@main_bp.route(
+    "/admin/comunicacoes/contatos/<int:contato_id>/revogar-email",
+    methods=["POST"],
+)
+@login_required
+@profissional_required
+def revogar_email_contato_comunicacao(contato_id):
+    contato = ContatoComunicacao.query.get_or_404(contato_id)
+    contato.autorizacao_email = False
+    contato.email_revogado_em = datetime.now(timezone.utc)
+    db.session.commit()
+    flash("Autorização de e-mail revogada para este contato.", "success")
+    return redirect(url_for("main.listar_comunicacoes"))
 
 
 @main_bp.route("/admin/comunicacoes/nova", methods=["GET", "POST"])
@@ -649,6 +1037,10 @@ def nova_comunicacao():
         contato_email = (request.form.get("contato_email") or "").strip().lower()
         destinatario_nome = (request.form.get("destinatario_nome") or "").strip()
         destinatario_email = (request.form.get("destinatario_email") or "").strip().lower()
+        consentimento_email = request.form.get("consentimento_email") == "on"
+        origem_consentimento_email = (
+            request.form.get("origem_consentimento_email") or ""
+        ).strip()
 
         contato_externo = None
         if publico == "externo":
@@ -669,6 +1061,44 @@ def nova_comunicacao():
                 return redirect(url_for("main.nova_comunicacao"))
             if not destinatario_nome:
                 destinatario_nome = destinatario_email
+
+            if contato_externo is None:
+                contato_externo = ContatoComunicacao.query.filter_by(
+                    email=destinatario_email
+                ).first()
+            autorizacao_valida = bool(
+                contato_externo
+                and contato_externo.ativo
+                and contato_externo.autorizacao_email
+                and contato_externo.email_revogado_em is None
+            )
+            if not autorizacao_valida:
+                if not consentimento_email or not origem_consentimento_email:
+                    flash(
+                        "Confirme a autorização de e-mail e informe sua origem para este contato.",
+                        "danger",
+                    )
+                    return redirect(url_for("main.nova_comunicacao"))
+                agora = datetime.now(timezone.utc)
+                if contato_externo is None:
+                    contato_externo = ContatoComunicacao(
+                        nome=destinatario_nome,
+                        email=destinatario_email,
+                        ativo=True,
+                    )
+                    db.session.add(contato_externo)
+                contato_externo.nome = destinatario_nome
+                contato_externo.email = destinatario_email
+                contato_externo.ativo = True
+                contato_externo.autorizacao_email = True
+                contato_externo.autorizacao_email_em = agora
+                contato_externo.origem_autorizacao_email = origem_consentimento_email
+                contato_externo.email_revogado_em = None
+                db.session.flush()
+
+        if publico == "evento" and not db.session.get(Evento, evento_id):
+            flash("Selecione um evento válido para enviar aos participantes.", "danger")
+            return redirect(url_for("main.nova_comunicacao"))
 
         if not assunto or not mensagem:
             flash("Informe o assunto e o texto da comunicação.", "danger")
@@ -787,6 +1217,21 @@ def excluir_comunicacao(comunicacao_id):
 @profissional_required
 def enviar_comunicacao(comunicacao_id):
     comunicacao = Comunicacao.query.get_or_404(comunicacao_id)
+    if comunicacao.publico == "externo":
+        contato_externo = db.session.get(
+            ContatoComunicacao, comunicacao.contato_externo_id
+        ) if comunicacao.contato_externo_id else None
+        if not (
+            contato_externo
+            and contato_externo.ativo
+            and contato_externo.autorizacao_email
+            and contato_externo.email_revogado_em is None
+        ):
+            flash(
+                "Envio bloqueado: o contato não possui autorização de e-mail vigente.",
+                "warning",
+            )
+            return redirect(url_for("main.listar_comunicacoes"))
     google_status = google_workspace_status(
         obter_configuracao("communication_sender_email")
     )
@@ -843,6 +1288,46 @@ def enviar_comunicacao(comunicacao_id):
                 destinatario_id=responsavel.id,
                 destinatario_nome=responsavel.nome_pai or responsavel.nome_mae or "Responsável",
                 destinatario_email=responsavel.email,
+                canal="email",
+                status="pendente",
+            )
+            db.session.add(destinatario)
+            novos_destinatarios.append(destinatario)
+            destinatarios_criados += 1
+    elif comunicacao.publico == "evento":
+        if not comunicacao.evento_id:
+            flash("Este rascunho não possui um evento definido.", "warning")
+            return redirect(url_for("main.listar_comunicacoes"))
+        alunos = (
+            Aluno.query.join(
+                AutorizacaoViagem,
+                AutorizacaoViagem.aluno_id == Aluno.id,
+            )
+            .filter(
+                AutorizacaoViagem.evento_id == comunicacao.evento_id,
+                AutorizacaoViagem.autorizado.is_(True),
+                Aluno.ativo.is_(True),
+                Aluno.email.isnot(None),
+                Aluno.email != "",
+            )
+            .distinct()
+            .order_by(Aluno.nome)
+            .all()
+        )
+        for aluno in alunos:
+            existente = ComunicacaoDestinatario.query.filter_by(
+                comunicacao_id=comunicacao.id,
+                tipo_destinatario="integrante",
+                destinatario_id=aluno.id,
+            ).first()
+            if existente:
+                continue
+            destinatario = ComunicacaoDestinatario(
+                comunicacao_id=comunicacao.id,
+                tipo_destinatario="integrante",
+                destinatario_id=aluno.id,
+                destinatario_nome=aluno.nome,
+                destinatario_email=aluno.email,
                 canal="email",
                 status="pendente",
             )
@@ -1124,6 +1609,159 @@ def listar_alunos():
                            ativo_filter=ativo_filter)
 
 
+@main_bp.route("/admin/passes", methods=["GET", "POST"])
+@login_required
+@admin_required
+def gerenciar_passes():
+    """Cadastra e consulta cotas mensais de passes por integrante com cartão."""
+    mes_parametro = request.values.get("mes_referencia", "")
+    try:
+        mes_referencia = datetime.strptime(mes_parametro, "%Y-%m").date().replace(day=1)
+    except (TypeError, ValueError):
+        mes_referencia = datetime.now(timezone.utc).date().replace(day=1)
+
+    if request.method == "POST":
+        aluno_id = request.form.get("aluno_id", type=int)
+        quantidade_texto = request.form.get("quantidade_disponibilizada", "").strip()
+        try:
+            quantidade = int(quantidade_texto)
+        except (TypeError, ValueError):
+            quantidade = -1
+
+        aluno = Aluno.query.get_or_404(aluno_id)
+        if not aluno.cartao_passe or not aluno.cartao_passe.ativo:
+            flash("Somente integrantes com cartão de passe ativo podem receber uma cota.", "danger")
+            return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
+        if quantidade < 0:
+            flash("Informe uma quantidade de passes igual ou maior que zero.", "danger")
+            return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
+
+        cota = CotaMensalPasse.query.filter_by(
+            aluno_id=aluno.id,
+            mes_referencia=mes_referencia,
+        ).first()
+        if cota is None:
+            cota = CotaMensalPasse(
+                aluno_id=aluno.id,
+                mes_referencia=mes_referencia,
+            )
+            db.session.add(cota)
+        cota.quantidade_disponibilizada = quantidade
+        db.session.commit()
+        flash("Cota mensal de passes salva com sucesso.", "success")
+        return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
+
+    alunos_com_cartao = (
+        Aluno.query.join(CartaoPasse)
+        .filter(Aluno.ativo.is_(True), CartaoPasse.ativo.is_(True))
+        .order_by(Aluno.nome)
+        .all()
+    )
+    cotas = {
+        cota.aluno_id: cota
+        for cota in CotaMensalPasse.query.filter_by(mes_referencia=mes_referencia).all()
+    }
+    return render_template(
+        "admin_passes.html",
+        alunos=alunos_com_cartao,
+        cotas=cotas,
+        recargas={
+            aluno_id: MovimentoPasse.query.filter_by(
+                cota_id=cota.id,
+                tipo="RECARGA",
+            ).first()
+            for aluno_id, cota in cotas.items()
+        },
+        mes_referencia=mes_referencia,
+    )
+
+
+@main_bp.route("/admin/passes/recarga", methods=["POST"])
+@login_required
+@admin_required
+def adicionar_recarga_passe():
+    """Registra a única recarga extra mensal, com justificativa administrativa."""
+    aluno_id = request.form.get("aluno_id", type=int)
+    mes_parametro = request.form.get("mes_referencia", "")
+    motivo = request.form.get("motivo", "").strip()
+    quantidade_texto = request.form.get("quantidade", "").strip()
+    try:
+        mes_referencia = datetime.strptime(mes_parametro, "%Y-%m").date().replace(day=1)
+        quantidade = int(quantidade_texto)
+    except (TypeError, ValueError):
+        flash("Informe mês e quantidade válidos para a recarga.", "danger")
+        return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_parametro))
+
+    aluno = Aluno.query.get_or_404(aluno_id)
+    cota = CotaMensalPasse.query.filter_by(
+        aluno_id=aluno.id,
+        mes_referencia=mes_referencia,
+    ).first()
+    if not aluno.cartao_passe or not aluno.cartao_passe.ativo:
+        flash("Somente integrantes com cartão de passe ativo podem receber recarga.", "danger")
+    elif cota is None:
+        flash("Cadastre a cota mensal antes de registrar uma recarga extra.", "danger")
+    elif quantidade <= 0:
+        flash("A recarga extra deve ser maior que zero.", "danger")
+    elif not motivo:
+        flash("Informe o motivo administrativo da recarga extra.", "danger")
+    elif MovimentoPasse.query.filter_by(cota_id=cota.id, tipo="RECARGA").first():
+        flash("A recarga extra deste integrante já foi utilizada neste mês.", "danger")
+    else:
+        db.session.add(MovimentoPasse(
+            cota_id=cota.id,
+            quantidade=quantidade,
+            tipo="RECARGA",
+            motivo=motivo,
+            registrado_por_id=current_user.id,
+        ))
+        db.session.commit()
+        flash("Recarga extra registrada com sucesso.", "success")
+    return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
+
+
+@main_bp.route("/admin/passes/historico")
+@login_required
+@admin_required
+def historico_passes():
+    """Consulta administrativa dos movimentos e saldos de passes."""
+    mes_parametro = request.args.get("mes_referencia", "")
+    try:
+        mes_referencia = datetime.strptime(mes_parametro, "%Y-%m").date().replace(day=1)
+    except (TypeError, ValueError):
+        mes_referencia = datetime.now(timezone.utc).date().replace(day=1)
+
+    aluno_id = request.args.get("aluno_id", type=int)
+    query = MovimentoPasse.query.join(CotaMensalPasse).filter(
+        CotaMensalPasse.mes_referencia == mes_referencia
+    )
+    if aluno_id:
+        query = query.filter(CotaMensalPasse.aluno_id == aluno_id)
+    movimentos = query.order_by(MovimentoPasse.data_hora.desc(), MovimentoPasse.id.desc()).all()
+    cotas = CotaMensalPasse.query.filter_by(mes_referencia=mes_referencia).order_by(
+        CotaMensalPasse.aluno_id
+    ).all()
+    if aluno_id:
+        cotas = [cota for cota in cotas if cota.aluno_id == aluno_id]
+
+    alunos = Aluno.query.order_by(Aluno.nome).all()
+    saldos = {
+        cota.id: cota.quantidade_disponibilizada + sum(
+            movimento.quantidade for movimento in cota.movimentos
+        )
+        for cota in cotas
+    }
+    return render_template(
+        "admin_passes_historico.html",
+        alunos=alunos,
+        aluno_id=aluno_id,
+        cotas=cotas,
+        movimentos=movimentos,
+        saldos=saldos,
+        mes_referencia=mes_referencia,
+    )
+
+
 @main_bp.route("/admin/aluno/create", methods=["GET", "POST"])
 @login_required
 @profissional_required
@@ -1152,6 +1790,7 @@ def criar_aluno():
         estado = request.form.get("estado").upper().strip() if request.form.get("estado") else None
         data_entrada_banda = request.form.get("data_entrada_banda")
         data_desligamento_banda = request.form.get("data_desligamento_banda")
+        numero_cartao_passe = request.form.get("numero_cartao_passe", "").strip() or None
         
         if not nome:
             flash("Nome é obrigatório.")
@@ -1159,6 +1798,12 @@ def criar_aluno():
         
         if cin_rg and Aluno.query.filter_by(cin_rg=cin_rg).first():
             flash("RG já cadastrado.")
+            return redirect(url_for("main.criar_aluno"))
+
+        if numero_cartao_passe and CartaoPasse.query.filter_by(
+            numero_controle=numero_cartao_passe
+        ).first():
+            flash("Número de controle do cartão de passe já cadastrado.")
             return redirect(url_for("main.criar_aluno"))
         
         data_nasc = None
@@ -1222,6 +1867,12 @@ def criar_aluno():
         )
         db.session.add(novo_aluno)
         db.session.flush()
+
+        if numero_cartao_passe:
+            db.session.add(CartaoPasse(
+                aluno_id=novo_aluno.id,
+                numero_controle=numero_cartao_passe,
+            ))
 
         if foto and foto.filename:
             foto_path = salvar_foto_aluno(foto, novo_aluno.id)
@@ -1347,6 +1998,7 @@ def editar_aluno(aluno_id):
         estado = request.form.get("estado").upper().strip() if request.form.get("estado") else None
         data_entrada_banda = request.form.get("data_entrada_banda")
         data_desligamento_banda = request.form.get("data_desligamento_banda")
+        numero_cartao_passe = request.form.get("numero_cartao_passe", "").strip() or None
         
         if not nome:
             flash("Nome é obrigatório.")
@@ -1357,6 +2009,13 @@ def editar_aluno(aluno_id):
             if aluno_existente and aluno_existente.id != aluno_id:
                 flash("RG já cadastrado para outro aluno.")
                 return redirect(url_for("main.editar_aluno", aluno_id=aluno_id))
+
+        cartao_existente = CartaoPasse.query.filter_by(
+            numero_controle=numero_cartao_passe
+        ).first() if numero_cartao_passe else None
+        if cartao_existente and cartao_existente.aluno_id != aluno.id:
+            flash("Número de controle do cartão de passe já cadastrado para outro integrante.")
+            return redirect(url_for("main.editar_aluno", aluno_id=aluno_id))
         
         data_nasc = None
         if data_nascimento:
@@ -1415,6 +2074,15 @@ def editar_aluno(aluno_id):
         aluno.bairro = bairro
         aluno.cidade = cidade
         aluno.estado = estado
+
+        if aluno.cartao_passe:
+            if numero_cartao_passe:
+                aluno.cartao_passe.numero_controle = numero_cartao_passe
+                aluno.cartao_passe.ativo = True
+            else:
+                db.session.delete(aluno.cartao_passe)
+        elif numero_cartao_passe:
+            aluno.cartao_passe = CartaoPasse(numero_controle=numero_cartao_passe)
 
         if foto and foto.filename:
             foto_path = salvar_foto_aluno(foto, aluno.id)

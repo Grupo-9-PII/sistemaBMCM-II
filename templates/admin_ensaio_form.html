@@ -15,7 +15,7 @@
             <div class="row g-3">
               <div class="col-md-4">
                 <label for="data_ensaio" class="form-label">Data</label>
-                <input id="data_ensaio" name="data_ensaio" type="date" class="form-control" value="{{ ensaio.data_ensaio.strftime('%Y-%m-%d') if ensaio and ensaio.data_ensaio else '' }}" required>
+                <input id="data_ensaio" name="data_ensaio" type="date" class="form-control" value="{{ ensaio.data_ensaio.strftime('%Y-%m-%d') if ensaio and ensaio.data_ensaio else (data_inicial or '') }}" required>
               </div>
               <div class="col-md-4">
                 <label for="horario" class="form-label">Horário</label>

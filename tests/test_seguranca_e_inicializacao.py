@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -15,7 +15,7 @@ import app.google_drive as google_drive
 import app.google_oauth as google_oauth
 import app.backup as backup
 from app import create_app, db
-from app.models import Aluno, Ensaio, Presenca, User, Comunicacao, ComunicacaoDestinatario, Responsavel, Evento, Naipe, Instrumento, AlunoInstrumento, ContatoComunicacao, SistemaConfig, GoogleCalendarSync
+from app.models import Aluno, Atividade, AutorizacaoViagem, CartaoPasse, CotaMensalPasse, Ensaio, MovimentoPasse, Presenca, User, Comunicacao, ComunicacaoDestinatario, Responsavel, Evento, Naipe, Instrumento, AlunoInstrumento, ContatoComunicacao, SistemaConfig, GoogleCalendarSync
 from config import Config, obter_secret_key_local, proxima_versao
 
 
@@ -114,6 +114,250 @@ def test_inicializacao_limpa_e_protecoes_criticas(monkeypatch):
             for linha in db.session.execute(text("PRAGMA index_list('presenca')")).all()
         }
         assert {"uq_presenca_aluno_ensaio", "uq_presenca_aluno_evento"} <= indices
+
+
+def test_cartao_passe_opcional_e_cota_mensal_administrativa(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    token = _login_admin(client)
+
+    with app.app_context():
+        sem_cartao = Aluno(nome="SEM CARTAO", ativo=True)
+        com_cartao = Aluno(nome="COM CARTAO", ativo=True)
+        db.session.add_all([sem_cartao, com_cartao])
+        db.session.flush()
+        com_cartao_id = com_cartao.id
+        db.session.add(CartaoPasse(aluno_id=com_cartao.id, numero_controle="CARTAO-001"))
+        db.session.commit()
+
+    resposta = client.get("/admin/passes?mes_referencia=2026-09")
+    assert resposta.status_code == 200
+    assert b"COM CARTAO" in resposta.data
+    assert b"SEM CARTAO" not in resposta.data
+
+    resposta = client.post(
+        "/admin/passes",
+        data={
+            "aluno_id": com_cartao_id,
+            "mes_referencia": "2026-09",
+            "quantidade_disponibilizada": "40",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert resposta.status_code == 302
+
+    with app.app_context():
+        cota = CotaMensalPasse.query.one()
+        assert cota.mes_referencia.isoformat() == "2026-09-01"
+        assert cota.quantidade_disponibilizada == 40
+
+    resposta = client.post(
+        "/admin/passes/recarga",
+        data={
+            "aluno_id": com_cartao_id,
+            "mes_referencia": "2026-09",
+            "quantidade": "10",
+            "motivo": "Quantidade de ensaios superior à cota inicial.",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert resposta.status_code == 302
+
+    with app.app_context():
+        recarga = MovimentoPasse.query.filter_by(tipo="RECARGA").one()
+        assert recarga.quantidade == 10
+        assert recarga.motivo.startswith("Quantidade de ensaios")
+
+    resposta = client.get(
+        f"/admin/passes/historico?mes_referencia=2026-09&aluno_id={com_cartao_id}"
+    )
+    assert resposta.status_code == 200
+    assert b"Quantidade de ensaios superior" in resposta.data
+
+    resposta = client.post(
+        "/admin/passes/recarga",
+        data={
+            "aluno_id": com_cartao_id,
+            "mes_referencia": "2026-09",
+            "quantidade": "5",
+            "motivo": "Segunda tentativa",
+            "csrf_token": token,
+        },
+        follow_redirects=True,
+    )
+    assert b"j\xc3\xa1 foi utilizada neste m\xc3\xaas" in resposta.data
+
+
+def test_presenca_consumo_estorno_e_excecao_sem_cartao(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+
+    with app.app_context():
+        ensaio = Ensaio(titulo="Ensaio de teste", data_ensaio=date(2026, 9, 29))
+        sem_cartao = Aluno(nome="SEM CARTAO", ativo=True)
+        com_cartao = Aluno(nome="COM CARTAO", ativo=True)
+        sem_saldo = Aluno(nome="SEM SALDO", ativo=True)
+        db.session.add_all([ensaio, sem_cartao, com_cartao, sem_saldo])
+        db.session.flush()
+        db.session.add_all([
+            CartaoPasse(aluno_id=com_cartao.id, numero_controle="CARTAO-002"),
+            CartaoPasse(aluno_id=sem_saldo.id, numero_controle="CARTAO-003"),
+            CotaMensalPasse(
+                aluno_id=com_cartao.id,
+                mes_referencia=date(2026, 9, 1),
+                quantidade_disponibilizada=4,
+            ),
+            CotaMensalPasse(
+                aluno_id=sem_saldo.id,
+                mes_referencia=date(2026, 9, 1),
+                quantidade_disponibilizada=0,
+            ),
+        ])
+        db.session.flush()
+
+        presenca_sem_cartao = Presenca(
+            aluno_id=sem_cartao.id,
+            ensaio_id=ensaio.id,
+            data_presenca=ensaio.data_ensaio,
+            presente=True,
+        )
+        presenca_com_cartao = Presenca(
+            aluno_id=com_cartao.id,
+            ensaio_id=ensaio.id,
+            data_presenca=ensaio.data_ensaio,
+            presente=True,
+        )
+        presenca_sem_saldo = Presenca(
+            aluno_id=sem_saldo.id,
+            ensaio_id=ensaio.id,
+            data_presenca=ensaio.data_ensaio,
+            presente=True,
+        )
+        db.session.add_all([presenca_sem_cartao, presenca_com_cartao, presenca_sem_saldo])
+        db.session.flush()
+
+        routes._atualizar_movimento_passe(presenca_sem_cartao)
+        routes._atualizar_movimento_passe(presenca_com_cartao)
+        assert MovimentoPasse.query.filter_by(presenca_id=presenca_sem_cartao.id).count() == 0
+        assert MovimentoPasse.query.filter_by(presenca_id=presenca_com_cartao.id).one().quantidade == -2
+
+        presenca_com_cartao.presente = False
+        routes._atualizar_movimento_passe(presenca_com_cartao)
+        assert sum(
+            movimento.quantidade
+            for movimento in MovimentoPasse.query.filter_by(presenca_id=presenca_com_cartao.id)
+        ) == 0
+
+        with pytest.raises(ValueError, match="são necessários 2"):
+            routes._atualizar_movimento_passe(presenca_sem_saldo)
+
+
+def test_cria_atividade_avulsa_e_registra_presenca(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    token = _login_admin(client)
+
+    with app.app_context():
+        aluno = Aluno(nome="ALUNO DE ATIVIDADE", ativo=True)
+        db.session.add(aluno)
+        db.session.commit()
+        aluno_id = aluno.id
+
+    resposta = client.post(
+        "/admin/atividade/create",
+        data={
+            "tipo": "TREINAMENTO",
+            "titulo": "Treinamento de percussão",
+            "data_atividade": "2026-09-29",
+            "horario_inicio": "16:00",
+            "horario_fim": "18:00",
+            "area": "Percussão",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert resposta.status_code == 302
+
+    with app.app_context():
+        atividade = Atividade.query.one()
+        atividade_id = atividade.id
+
+    resposta = client.post(
+        f"/admin/atividade/{atividade_id}/presenca",
+        data={f"presenca_{aluno_id}": "presente", "csrf_token": token},
+        follow_redirects=False,
+    )
+    assert resposta.status_code == 302
+
+    with app.app_context():
+        registro = Presenca.query.filter_by(
+            aluno_id=aluno_id, atividade_id=atividade_id
+        ).one()
+        assert registro.presente is True
+        assert MovimentoPasse.query.filter_by(presenca_id=registro.id).count() == 0
+
+
+def test_historico_e_folha_diaria_incluem_atividade_avulsa(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    token = _login_admin(client)
+
+    with app.app_context():
+        aluno = Aluno(nome="Aluno de atividade", ativo=True)
+        atividade = Atividade(
+            tipo="TREINAMENTO",
+            titulo="Treinamento de percussão",
+            data_atividade=date(2026, 9, 29),
+            horario_inicio="16:00",
+            horario_fim="18:00",
+            local="Sala de ensaio",
+            area="Percussão",
+            responsavel="Prof. Tarde",
+        )
+        db.session.add_all([aluno, atividade])
+        db.session.flush()
+        presenca = Presenca(
+            aluno_id=aluno.id,
+            atividade_id=atividade.id,
+            data_presenca=atividade.data_atividade,
+            presente=True,
+        )
+        db.session.add(presenca)
+        db.session.commit()
+
+    response = client.get("/admin/presencas/historico")
+    assert response.status_code == 200
+    assert "Treinamento de percussão".encode("utf-8") in response.data
+
+    response = client.get("/admin/presencas/diaria?data=2026-09-29")
+    assert response.status_code == 200
+    assert "Treinamento de percussão".encode("utf-8") in response.data
+    assert "Sala de ensaio".encode("utf-8") in response.data
 
 
 def test_central_de_comunicacoes_cria_mensagem_e_status_inicial(monkeypatch):
@@ -289,6 +533,68 @@ def test_central_de_comunicacoes_suporta_publico_responsaveis_e_vinculo_atividad
         assert destinatarios[0].status == "enviado"
 
 
+def test_central_de_comunicacoes_envia_para_participantes_autorizados_do_evento(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    _autorizar_google_workspace_em_teste(monkeypatch)
+
+    token = _csrf_token(client)
+    _login_admin(client)
+
+    with app.app_context():
+        aluno = Aluno(nome="Integrante autorizado", ativo=True, email="integrante@teste.com")
+        aluno_pendente = Aluno(nome="Integrante sem autorização", ativo=True, email="pendente@teste.com")
+        aluno_inativo = Aluno(nome="Integrante inativo", ativo=False, email="inativo@teste.com")
+        evento = Evento(nome_evento="Apresentação municipal", data_evento=date(2026, 10, 20))
+        db.session.add_all([aluno, aluno_pendente, aluno_inativo, evento])
+        db.session.commit()
+        db.session.add_all([
+            AutorizacaoViagem(aluno_id=aluno.id, evento_id=evento.id, autorizado=True),
+            AutorizacaoViagem(aluno_id=aluno_pendente.id, evento_id=evento.id, autorizado=False),
+            AutorizacaoViagem(aluno_id=aluno_inativo.id, evento_id=evento.id, autorizado=True),
+        ])
+        db.session.commit()
+        evento_id = evento.id
+
+    response = client.post(
+        "/admin/comunicacoes/nova",
+        data={
+            "assunto": "Orientações do evento",
+            "mensagem": "Comparecer no horário combinado.",
+            "tipo": "informativo",
+            "publico": "evento",
+            "evento_id": str(evento_id),
+            "canal": "email",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    with app.app_context():
+        comunicacao = Comunicacao.query.order_by(Comunicacao.id.desc()).first()
+        comunicacao_id = comunicacao.id
+
+    response = client.post(
+        f"/admin/comunicacoes/{comunicacao_id}/enviar",
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    with app.app_context():
+        destinatarios = ComunicacaoDestinatario.query.filter_by(comunicacao_id=comunicacao_id).all()
+        assert len(destinatarios) == 1
+        assert destinatarios[0].destinatario_email == "integrante@teste.com"
+        assert destinatarios[0].status == "enviado"
+
+
 def test_central_de_comunicacoes_suporta_publico_naipe(monkeypatch):
     monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
     monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
@@ -388,6 +694,8 @@ def test_central_de_comunicacoes_suporta_publico_externo(monkeypatch):
             "publico": "externo",
             "canal": "email",
             "contato_email": "cultura@prefeitura.gov.br",
+            "consentimento_email": "on",
+            "origem_consentimento_email": "Autorização registrada pela coordenação",
             "csrf_token": token,
         },
         follow_redirects=False,
@@ -414,6 +722,10 @@ def test_central_de_comunicacoes_suporta_publico_externo(monkeypatch):
         assert destinatarios[0].tipo_destinatario == "contato_externo"
         assert destinatarios[0].destinatario_id == 1
         assert destinatarios[0].status == "enviado"
+        contato_atualizado = db.session.get(ContatoComunicacao, 1)
+        assert contato_atualizado.autorizacao_email is True
+        assert contato_atualizado.autorizacao_email_em is not None
+        assert contato_atualizado.origem_autorizacao_email == "Autorização registrada pela coordenação"
 
 
 def test_central_de_comunicacoes_exclui_apenas_rascunho_sem_log(monkeypatch):
@@ -477,6 +789,8 @@ def test_central_de_comunicacoes_permite_email_externo_avulso(monkeypatch):
             "canal": "email",
             "destinatario_nome": "Secretaria de Educação",
             "destinatario_email": "educacao@outra-prefeitura.gov.br",
+            "consentimento_email": "on",
+            "origem_consentimento_email": "Autorização recebida por ofício",
             "csrf_token": token,
         },
         follow_redirects=False,
@@ -486,8 +800,13 @@ def test_central_de_comunicacoes_permite_email_externo_avulso(monkeypatch):
     with app.app_context():
         comunicacao = Comunicacao.query.order_by(Comunicacao.id.desc()).first()
         comunicacao_id = comunicacao.id
+        contato_id = comunicacao.contato_externo_id
         assert comunicacao.destinatario_nome == "Secretaria de Educação"
         assert comunicacao.destinatario_email == "educacao@outra-prefeitura.gov.br"
+        contato = db.session.get(ContatoComunicacao, comunicacao.contato_externo_id)
+        assert contato.autorizacao_email is True
+        assert contato.autorizacao_email_em is not None
+        assert contato.origem_autorizacao_email == "Autorização recebida por ofício"
 
     response = client.post(
         f"/admin/comunicacoes/{comunicacao_id}/enviar",
@@ -499,8 +818,70 @@ def test_central_de_comunicacoes_permite_email_externo_avulso(monkeypatch):
     with app.app_context():
         destinatarios = ComunicacaoDestinatario.query.filter_by(comunicacao_id=comunicacao_id).all()
         assert len(destinatarios) == 1
-        assert destinatarios[0].destinatario_id == 0
+        assert destinatarios[0].destinatario_id == contato_id
         assert destinatarios[0].destinatario_email == "educacao@outra-prefeitura.gov.br"
+
+
+def test_central_de_comunicacoes_bloqueia_envio_apos_revogacao(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    _autorizar_google_workspace_em_teste(monkeypatch)
+
+    token = _csrf_token(client)
+    _login_admin(client)
+
+    with app.app_context():
+        contato = ContatoComunicacao(
+            nome="Contato autorizado",
+            email="autorizado@prefeitura.gov.br",
+            autorizacao_email=True,
+            autorizacao_email_em=datetime.now(timezone.utc),
+            origem_autorizacao_email="Autorização institucional",
+            ativo=True,
+        )
+        db.session.add(contato)
+        db.session.flush()
+        comunicacao = Comunicacao(
+            assunto="Aviso institucional",
+            mensagem="Mensagem de teste",
+            publico="externo",
+            contato_externo_id=contato.id,
+            destinatario_nome=contato.nome,
+            destinatario_email=contato.email,
+            criado_por_id=1,
+        )
+        db.session.add(comunicacao)
+        db.session.commit()
+        contato_id = contato.id
+        comunicacao_id = comunicacao.id
+
+    response = client.post(
+        f"/admin/comunicacoes/contatos/{contato_id}/revogar-email",
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    response = client.post(
+        f"/admin/comunicacoes/{comunicacao_id}/enviar",
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
+    assert response.status_code == 302
+
+    with app.app_context():
+        contato = db.session.get(ContatoComunicacao, contato_id)
+        assert contato.autorizacao_email is False
+        assert contato.email_revogado_em is not None
+        assert ComunicacaoDestinatario.query.filter_by(
+            comunicacao_id=comunicacao_id
+        ).count() == 0
 
 
 def _criar_app_calendar_teste(monkeypatch):
@@ -604,6 +985,156 @@ def test_google_calendar_evento_usa_dia_inteiro_e_recusa_escopo_ausente(monkeypa
             google_calendar.sincronizar_atividade("evento", evento)
 
 
+def test_google_calendar_atividade_usa_horario_local_e_detalhes(monkeypatch):
+    atividade = Atividade(
+        tipo="TREINAMENTO",
+        titulo="Treinamento de percussão",
+        data_atividade=date(2026, 10, 2),
+        horario_inicio="18:30",
+        horario_fim="20:00",
+        local="Sede da Banda",
+        area="Percussão",
+        responsavel="Coordenação",
+        observacoes="Levar baquetas.",
+    )
+
+    payload = google_calendar._activity_payload("atividade", atividade)
+
+    assert payload["summary"] == "Treinamento de percussão"
+    assert payload["start"]["dateTime"] == "2026-10-02T18:30:00-03:00"
+    assert payload["end"]["dateTime"] == "2026-10-02T20:00:00-03:00"
+    assert payload["location"] == "Sede da Banda"
+    assert "TREINAMENTO" in payload["description"]
+    assert "Coordenação" in payload["description"]
+    assert "Levar baquetas." in payload["description"]
+
+
+def test_google_calendar_sincroniza_atividade_sem_duplicar(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    chamadas = {"post": [], "patch": []}
+
+    class RespostaGoogle:
+        status_code = 200
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"id": chamadas["post"][0][1]["json"]["id"]}
+
+    def post(url, **kwargs):
+        chamadas["post"].append((url, kwargs))
+        return RespostaGoogle()
+
+    def patch(url, **kwargs):
+        chamadas["patch"].append((url, kwargs))
+        return RespostaGoogle()
+
+    monkeypatch.setattr(google_calendar.requests, "post", post)
+    monkeypatch.setattr(google_calendar.requests, "patch", patch)
+
+    with app.app_context():
+        atividade = Atividade(
+            tipo="APRESENTACAO",
+            titulo="Apresentação da Banda",
+            data_atividade=date(2026, 10, 10),
+            status="REALIZADA",
+        )
+        db.session.add(atividade)
+        db.session.commit()
+
+        assert google_calendar.sincronizar_atividade("atividade", atividade) is True
+        sync = GoogleCalendarSync.query.filter_by(atividade_id=atividade.id).one()
+        event_id = sync.google_event_id
+        assert chamadas["post"][0][1]["json"]["start"] == {"date": "2026-10-10"}
+
+        atividade.titulo = "Apresentação atualizada"
+        assert google_calendar.sincronizar_atividade("atividade", atividade) is True
+        assert chamadas["patch"][-1][0].endswith(event_id)
+        assert chamadas["patch"][-1][1]["json"]["summary"] == "Apresentação atualizada"
+        assert GoogleCalendarSync.query.filter_by(atividade_id=atividade.id).count() == 1
+
+        atividade.status = "CANCELADO"
+        assert google_calendar.sincronizar_atividade("atividade", atividade) is True
+        assert chamadas["patch"][-1][1]["json"]["status"] == "cancelled"
+
+
+def test_migracao_calendar_preserva_vinculo_legado_de_ensaio(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    with app.app_context():
+        ensaio = Ensaio(titulo="Ensaio vinculado", data_ensaio=date(2026, 10, 15))
+        db.session.add(ensaio)
+        db.session.commit()
+        ensaio_id = ensaio.id
+
+        db.session.execute(text("DROP TABLE google_calendar_sync"))
+        db.session.execute(text(
+            "CREATE TABLE google_calendar_sync ("
+            "id INTEGER PRIMARY KEY, ensaio_id INTEGER UNIQUE, evento_id INTEGER UNIQUE, "
+            "google_event_id VARCHAR(255) NOT NULL UNIQUE, sincronizado_em DATETIME, "
+            "CHECK ((ensaio_id IS NOT NULL AND evento_id IS NULL) OR "
+            "(ensaio_id IS NULL AND evento_id IS NOT NULL)), "
+            "FOREIGN KEY(ensaio_id) REFERENCES ensaio(id), "
+            "FOREIGN KEY(evento_id) REFERENCES evento(id)"
+            ")"
+        ))
+        db.session.execute(text(
+            "INSERT INTO google_calendar_sync "
+            "(id, ensaio_id, evento_id, google_event_id, sincronizado_em) "
+            "VALUES (1, :ensaio_id, NULL, 'evento-google-legado', '2026-09-29 12:00:00')"
+        ), {"ensaio_id": ensaio_id})
+        db.session.commit()
+
+        utils.migrar_banco_novos_campos()
+
+        colunas = db.session.execute(
+            text("PRAGMA table_info(google_calendar_sync)")
+        ).fetchall()
+        assert "atividade_id" in {coluna[1] for coluna in colunas}
+        sync = db.session.get(GoogleCalendarSync, 1)
+        assert sync.ensaio_id == ensaio_id
+        assert sync.evento_id is None
+        assert sync.atividade_id is None
+        assert sync.google_event_id == "evento-google-legado"
+
+
+def test_migracao_adiciona_trilha_de_consentimento_a_contato_legado(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    with app.app_context():
+        db.session.execute(text("DROP TABLE contato_comunicacao"))
+        db.session.execute(text(
+            "CREATE TABLE contato_comunicacao ("
+            "id INTEGER PRIMARY KEY, nome VARCHAR(200) NOT NULL, email VARCHAR(200), "
+            "telefone VARCHAR(30), autorizacao_email BOOLEAN, "
+            "autorizacao_whatsapp BOOLEAN, observacoes TEXT, ativo BOOLEAN, criado_em DATETIME"
+            ")"
+        ))
+        db.session.execute(text(
+            "INSERT INTO contato_comunicacao "
+            "(id, nome, email, autorizacao_email, ativo) "
+            "VALUES (1, 'Contato legado', 'legado@prefeitura.gov.br', 1, 1)"
+        ))
+        db.session.commit()
+
+        utils.migrar_banco_novos_campos()
+
+        colunas = db.session.execute(
+            text("PRAGMA table_info(contato_comunicacao)")
+        ).fetchall()
+        nomes_colunas = {coluna[1] for coluna in colunas}
+        assert {
+            "autorizacao_email_em",
+            "origem_autorizacao_email",
+            "email_revogado_em",
+            "autorizacao_whatsapp_em",
+            "origem_autorizacao_whatsapp",
+            "whatsapp_revogado_em",
+        }.issubset(nomes_colunas)
+        contato = db.session.get(ContatoComunicacao, 1)
+        assert contato.nome == "Contato legado"
+        assert contato.autorizacao_email is True
+
+
 def test_google_oauth_solicita_escopos_dos_servicos_integrados(monkeypatch):
     monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_ID", "teste.apps.googleusercontent.com")
     monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_SECRET", "segredo-de-teste")
@@ -663,6 +1194,113 @@ def test_rota_de_sincronizacao_calendar_exige_login_e_csrf(monkeypatch):
 
     assert response.status_code == 302
     assert sincronizadas == [("ensaio", ensaio_id)]
+
+
+def test_rota_de_sincronizacao_calendar_para_atividade_exige_login_e_csrf(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    client = app.test_client()
+    _autorizar_google_workspace_em_teste(monkeypatch)
+    token = _login_admin(client)
+
+    with app.app_context():
+        atividade = Atividade(
+            tipo="TREINAMENTO",
+            titulo="Treinamento da rota",
+            data_atividade=date(2026, 10, 20),
+        )
+        db.session.add(atividade)
+        db.session.commit()
+        atividade_id = atividade.id
+
+    sincronizadas = []
+    monkeypatch.setattr(
+        routes,
+        "sincronizar_atividade",
+        lambda activity_type, activity: sincronizadas.append(
+            (activity_type, activity.id)
+        ),
+    )
+
+    response = client.get("/admin/atividades")
+    assert response.status_code == 200
+    assert b"Google Calendar" in response.data
+    assert client.post(
+        f"/admin/atividade/{atividade_id}/calendar/sincronizar"
+    ).status_code == 400
+    response = client.post(
+        f"/admin/atividade/{atividade_id}/calendar/sincronizar",
+        data={"csrf_token": token},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert sincronizadas == [("atividade", atividade_id)]
+
+
+def test_calendario_bmcm_agrega_atividades_e_acoes_por_dia(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    client = app.test_client()
+    _login_admin(client)
+
+    with app.app_context():
+        ensaio = Ensaio(
+            titulo="Ensaio do calendário",
+            data_ensaio=date(2026, 10, 20),
+            horario="19:00",
+            local="Sede",
+        )
+        evento = Evento(
+            nome_evento="Apresentação do calendário",
+            data_evento=date(2026, 10, 20),
+            cidade="Marília",
+        )
+        atividade = Atividade(
+            tipo="TREINAMENTO",
+            titulo="Treinamento do calendário",
+            data_atividade=date(2026, 10, 20),
+            horario_inicio="16:00",
+            horario_fim="17:30",
+        )
+        db.session.add_all([ensaio, evento, atividade])
+        db.session.commit()
+        ensaio_id = ensaio.id
+        evento_id = evento.id
+        atividade_id = atividade.id
+
+    response = client.get(
+        "/admin/calendario?mes=2026-10&data=2026-10-20"
+    )
+
+    assert response.status_code == 200
+    assert "Calendário BMCM".encode("utf-8") in response.data
+    assert "terça-feira, 20/10/2026".encode("utf-8") in response.data
+    assert "Ensaio do calendário".encode("utf-8") in response.data
+    assert "Apresentação do calendário".encode("utf-8") in response.data
+    assert "Treinamento do calendário".encode("utf-8") in response.data
+    assert f"/admin/ensaio/{ensaio_id}/presenca".encode() in response.data
+    assert f"/admin/evento/{evento_id}/presenca".encode() in response.data
+    assert f"/admin/atividade/{atividade_id}/presenca".encode() in response.data
+    assert f"/admin/evento/{evento_id}/relatorio".encode() in response.data
+    assert b"/admin/presencas/diaria?data=2026-10-20" in response.data
+    assert b"/admin/atividade/create?data=2026-10-20" in response.data
+    assert b"/admin/ensaio/create?data=2026-10-20" in response.data
+    assert b"/admin/evento/create?data=2026-10-20" in response.data
+
+    for path in (
+        "/admin/atividade/create?data=2026-10-20",
+        "/admin/ensaio/create?data=2026-10-20",
+        "/admin/evento/create?data=2026-10-20",
+    ):
+        form_response = client.get(path)
+        assert form_response.status_code == 200
+        assert b'value="2026-10-20"' in form_response.data
+
+    dia_vazio = client.get(
+        "/admin/calendario?mes=2026-10&data=2026-10-21"
+    )
+    assert dia_vazio.status_code == 200
+    assert "Nenhum ensaio, evento ou atividade registrado nesta data.".encode("utf-8") in dia_vazio.data
+    assert b">Hoje</a>" in dia_vazio.data
 
 
 def test_menu_exibe_google_calendar_apenas_com_escopo_autorizado(monkeypatch):
@@ -790,6 +1428,7 @@ def test_rota_backup_drive_exige_csrf_e_preserva_fluxo_local(tmp_path, monkeypat
         archive.writestr("database.db", b"backup-local")
     client = app.test_client()
     _autorizar_google_workspace_em_teste(monkeypatch)
+    monkeypatch.setattr(routes, "has_scope", lambda scope: False)
     token = _login_admin(client)
     enviados = []
     monkeypatch.setattr(

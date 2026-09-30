@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}Calendário BMCM — Sistema BMCM{% endblock %}
+{% block content %}
+<main class="container mt-4 mb-5 bmcm-calendar">
+  <header class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+    <div>
+      <h1 class="h3 mb-1">Calendário BMCM</h1>
+      <p class="text-muted mb-0">Ensaios, eventos e atividades registrados no sistema.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-primary" href="{{ url_for('main.criar_atividade') }}">
+        <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Nova atividade
+      </a>
+      <a class="btn btn-outline-primary" href="{{ url_for('main.criar_ensaio') }}">Novo ensaio</a>
+      <a class="btn btn-outline-primary" href="{{ url_for('main.criar_evento') }}">Novo evento</a>
+      {% if google_calendar_authorized %}
+      <a class="btn btn-outline-secondary" href="https://calendar.google.com/calendar/u/0/r" target="_blank" rel="noopener noreferrer" aria-label="Abrir Google Calendar em nova aba">
+        <i class="bi bi-calendar-week me-1" aria-hidden="true"></i>Google Calendar
+      </a>
+      {% endif %}
+    </div>
+  </header>
+
+  <section class="calendar-panel" aria-label="Calendário mensal">
+    <div class="calendar-toolbar">
+      <a class="btn btn-outline-secondary" href="{{ url_for('main.calendario_bmcm', mes=mes_anterior.strftime('%Y-%m')) }}" aria-label="Mês anterior" title="Mês anterior">
+        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+      </a>
+      <h2 class="h4 mb-0" aria-live="polite">{{ mes_nome }} {{ mes_inicio.year }}</h2>
+      <a class="btn btn-outline-secondary" href="{{ url_for('main.calendario_bmcm', mes=mes_seguinte.strftime('%Y-%m')) }}" aria-label="Próximo mês" title="Próximo mês">
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+      </a>
+      <a class="btn btn-outline-primary" href="{{ url_for('main.calendario_bmcm', mes=hoje.strftime('%Y-%m'), data=hoje.isoformat()) }}">Hoje</a>
+      <form method="GET" class="calendar-jump">
+        <label class="visually-hidden" for="mes">Selecionar mês</label>
+        <input class="form-control" type="month" id="mes" name="mes" value="{{ mes_inicio.strftime('%Y-%m') }}">
+        <button class="btn btn-outline-primary" type="submit">Ir</button>
+      </form>
+    </div>
+
+    <div class="calendar-scroll">
+      <table class="calendar-grid">
+        <thead>
+          <tr>
+            <th scope="col">Seg</th><th scope="col">Ter</th><th scope="col">Qua</th>
+            <th scope="col">Qui</th><th scope="col">Sex</th><th scope="col">Sáb</th>
+            <th scope="col">Dom</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for semana in semanas %}
+          <tr>
+            {% for dia in semana %}
+            {% set itens = itens_por_dia.get(dia, []) %}
+            <td class="calendar-cell {% if dia.month != mes_inicio.month %}outside-month{% endif %} {% if dia == data_selecionada %}selected-day{% endif %} {% if itens %}has-items{% endif %}">
+              <a href="{{ url_for('main.calendario_bmcm', mes=dia.strftime('%Y-%m'), data=dia.isoformat()) }}"
+                 aria-label="{{ dia.strftime('%d/%m/%Y') }}{% if itens %}, {{ itens|length }} atividade(s){% else %}, sem atividades{% endif %}"
+                 {% if dia == data_selecionada %}aria-current="date"{% endif %}>
+                <span class="day-number">{{ dia.day }}</span>
+                {% if itens %}<span class="day-count">{{ itens|length }} registro(s)</span>{% endif %}
+              </a>
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <p class="calendar-note mb-0">A grade mostra registros existentes. Ela não define nem presume horário de funcionamento da Banda.</p>
+  </section>
+
+  <section class="selected-date mt-4" aria-labelledby="selected-date-title">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+      <div>
+        <h2 id="selected-date-title" class="h5 mb-1">{{ dia_semana }}, {{ data_selecionada.strftime('%d/%m/%Y') }}</h2>
+        <p class="text-muted small mb-0">{{ itens_selecionados|length }} atividade(s) registrada(s)</p>
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" href="{{ url_for('main.criar_atividade', data=data_selecionada.isoformat()) }}">Nova atividade neste dia</a>
+        <a class="btn btn-outline-primary" href="{{ url_for('main.criar_ensaio', data=data_selecionada.isoformat()) }}">Novo ensaio neste dia</a>
+        <a class="btn btn-outline-primary" href="{{ url_for('main.criar_evento', data=data_selecionada.isoformat()) }}">Novo evento neste dia</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('main.relatorio_presenca_diaria', data=data_selecionada.isoformat()) }}">
+          <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>Relatório diário
+        </a>
+      </div>
+    </div>
+
+    {% for item in itens_selecionados %}
+    <article class="calendar-item">
+      <div class="calendar-item-info">
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
+          <span class="badge text-bg-secondary">{{ item.tipo }}</span>
+          {% if item.status %}<span class="small text-muted">{{ item.status|replace('_', ' ')|title }}</span>{% endif %}
+          {% if item.sincronizado %}<span class="badge text-bg-success">Google Calendar</span>{% endif %}
+        </div>
+        <h3 class="h6 mb-1">{{ item.titulo }}</h3>
+        <p class="small text-muted mb-0">
+          {% if item.horario %}<span>{{ item.horario }}</span>{% endif %}
+          {% if item.horario and item.local %}<span aria-hidden="true"> · </span>{% endif %}
+          {% if item.local %}<span>{{ item.local }}</span>{% endif %}
+          {% if not item.horario and not item.local %}<span>Horário e local não informados</span>{% endif %}
+        </p>
+      </div>
+      <div class="calendar-item-actions">
+        <a class="btn btn-sm btn-outline-primary" href="{{ item.url_chamada }}">
+          <i class="bi bi-clipboard-check me-1" aria-hidden="true"></i>Chamada
+        </a>
+        {% if item.tipo == 'Evento' %}
+        <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('main.relatorio_presenca_evento', evento_id=item.id) }}">
+          <i class="bi bi-file-earmark-text me-1" aria-hidden="true"></i>Relatório
+        </a>
+        {% endif %}
+        <form method="POST" action="{{ item.url_sincronizar }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button class="btn btn-sm btn-outline-secondary" type="submit">
+            <i class="bi bi-calendar-event me-1" aria-hidden="true"></i>{{ 'Atualizar calendário' if item.sincronizado else 'Sincronizar Google' }}
+          </button>
+        </form>
+      </div>
+    </article>
+    {% else %}
+    <p class="empty-day">Nenhum ensaio, evento ou atividade registrado nesta data.</p>
+    {% endfor %}
+  </section>
+</main>
+
+<style>
+.bmcm-calendar { max-width: 1180px; }
+.calendar-panel { border-top: 1px solid var(--bs-border-color); border-bottom: 1px solid var(--bs-border-color); }
+.calendar-toolbar { display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 1rem 0; }
+.calendar-toolbar h2 { min-width: 12rem; text-align: center; }
+.calendar-jump { display: flex; gap: .5rem; margin-left: auto; }
+.calendar-jump input { width: 10.5rem; }
+.calendar-scroll { overflow-x: auto; }
+.calendar-grid { width: 100%; min-width: 620px; table-layout: fixed; border-collapse: collapse; }
+.calendar-grid th { padding: .55rem; text-align: center; font-size: .78rem; text-transform: uppercase; border: 1px solid var(--bs-border-color); }
+.calendar-cell { height: 5.4rem; vertical-align: top; border: 1px solid var(--bs-border-color); }
+.calendar-cell a { display: flex; min-height: 5.35rem; flex-direction: column; gap: .35rem; padding: .5rem; color: inherit; text-decoration: none; }
+.calendar-cell a:hover, .calendar-cell a:focus-visible { background: var(--bs-tertiary-bg); outline: 2px solid var(--bs-primary); outline-offset: -2px; }
+.day-number { font-weight: 600; }
+.day-count { color: var(--bs-primary); font-size: .72rem; }
+.outside-month { color: var(--bs-secondary-color); background: var(--bs-tertiary-bg); }
+.selected-day { box-shadow: inset 0 0 0 2px var(--bs-primary); }
+.has-items .day-number::after { display: inline-block; width: .4rem; height: .4rem; margin-left: .35rem; border-radius: 50%; background: var(--bs-primary); content: ""; vertical-align: middle; }
+.calendar-note { padding: .65rem 0; color: var(--bs-secondary-color); font-size: .78rem; }
+.selected-date { scroll-margin-top: 1rem; }
+.calendar-item { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 1rem 0; border-top: 1px solid var(--bs-border-color); }
+.calendar-item-info { min-width: 0; }
+.calendar-item-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .45rem; }
+.calendar-item-actions form { display: inline-flex; }
+.empty-day { margin: 0; padding: 1.5rem; text-align: center; border-top: 1px solid var(--bs-border-color); color: var(--bs-secondary-color); }
+@media (max-width: 700px) {
+  .calendar-toolbar { flex-wrap: wrap; }
+  .calendar-toolbar h2 { min-width: 0; flex: 1; }
+  .calendar-jump { width: 100%; margin-left: 0; }
+  .calendar-jump input { flex: 1; width: auto; }
+  .calendar-item { align-items: flex-start; flex-direction: column; }
+  .calendar-item-actions { justify-content: flex-start; }
+}
+</style>
+{% endblock %}

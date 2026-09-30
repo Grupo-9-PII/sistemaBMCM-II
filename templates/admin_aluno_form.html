@@ -173,6 +173,15 @@ Declaro estar ciente de que o tratamento dos dados será realizado em conformida
                       {% endfor %}
                     </select>
                   </div>
+
+                  <div class="col-md-4">
+                    <label for="numero_cartao_passe" class="form-label">Número de controle do cartão de passe</label>
+                    <input type="text" name="numero_cartao_passe" id="numero_cartao_passe"
+                           class="form-control" maxlength="80"
+                           value="{{ aluno.cartao_passe.numero_controle if aluno and aluno.cartao_passe else '' }}"
+                           autocomplete="off">
+                    <small class="form-text text-muted">Opcional. Preencha somente para integrantes que recebem cartão.</small>
+                  </div>
                   
                   <div class="col-md-4">
                     <label for="data_entrada_banda" class="form-label">Data de Entrada na Banda</label>
