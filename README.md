@@ -20,6 +20,8 @@
 - [Nome do Projeto](#nome-do-projeto)
 - [Contexto e Justificativa](#contexto-e-justificativa)
 - [Evolução do Projeto - PI I e PI II](#evolução-do-projeto---pi-i-e-pi-ii)
+  - [Atualizações realizadas no PI II](#atualizações-realizadas-no-pi-ii)
+  - [Controle de versão da aplicação](#controle-de-versão-da-aplicação)
 - [Objetivos](#objetivos)
   - [Objetivo Geral](#objetivo-geral)
   - [Objetivos Específicos](#objetivos-específicos)
@@ -33,6 +35,7 @@
     - [Endereço por CEP](#endereço-por-cep)
 - [Funcionalidades em Evolução](#funcionalidades-em-evolução)
   - [Controle de presença](#controle-de-presença)
+    - [Controle de passes](#controle-de-passes)
   - [Ensaios](#ensaios)
   - [Eventos e apresentações](#eventos-e-apresentações)
 - [Integrações Google: Situação e Próximas Etapas](#integrações-google-situação-e-próximas-etapas)
@@ -49,6 +52,7 @@
   - [Documento](#documento)
   - [Consentimento de imagem de menor](#consentimento-de-imagem-de-menor)
 - [Acessibilidade e Experiência do Usuário](#acessibilidade-e-experiência-do-usuário)
+  - [Análise opcional de presença e indicadores de dados](#análise-opcional-de-presença-e-indicadores-de-dados)
 - [Segurança e Privacidade](#segurança-e-privacidade)
 - [APIs e Serviços Externos](#apis-e-serviços-externos)
 - [Computação em Nuvem](#computação-em-nuvem)
@@ -59,15 +63,12 @@
     - [Windows - CMD](#windows---cmd)
     - [Linux/Mac](#linuxmac)
 - [Variáveis de Ambiente](#variáveis-de-ambiente)
-    - [Windows - PowerShell](#windows---powershell-1)
-    - [Windows - CMD](#windows---cmd-1)
-    - [Linux/Mac](#linuxmac-1)
 - [Execução do Sistema](#execução-do-sistema)
 - [Credencial Inicial](#credencial-inicial)
 - [Manual do Usuário](#manual-do-usuário)
 - [Testes Automatizados](#testes-automatizados)
     - [Windows](#windows)
-    - [Linux/Mac](#linuxmac-2)
+    - [Linux/Mac](#linuxmac-1)
 - [Controle de Versão](#controle-de-versão)
 - [Evidências de Interface](#evidências-de-interface)
 - [Integrantes](#integrantes)
@@ -931,7 +932,7 @@ Exemplos:
 
 # Facilitadora UNIVESP
 
-* David Miguel Soares Junior
+* Jessica Caroline Pena Alves Da Silva
 
 ---
 
