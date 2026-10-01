@@ -919,12 +919,12 @@ Exemplos:
 # Integrantes
 
 1. Adriano Guedes Ferraz
-2. Alessandra da Silva Zanirato Garcia
-3. Aparecido Fernandes de Souza
-4. David Miguel Soares Junior
-5. Fabiane Fernanda de Barros Ranke
-6. Felipe Oldani dos Santos
-7. Kelly Cristina Ferreira da Costa
+2. Aparecido Fernandes de Souza
+3. Fabiane Fernanda de Barros Ranke
+4. Felipe Oldani dos Santos
+5. Kelly Cristina Ferreira da Costa
+6. Laerte Alves Pinheiro
+7. Renan Ranke Detzel Alves
 8. Rafael Veranelli Scalzo Moraes
 9. Renato de Abreu Mantovanelli
 
