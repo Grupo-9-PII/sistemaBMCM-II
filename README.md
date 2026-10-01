@@ -174,6 +174,10 @@ As seguintes melhorias já foram incorporadas ao sistema existente:
 * envio para participantes ativos com autorização aprovada no evento;
 * registro da data e origem do consentimento de e-mail de contatos externos, com bloqueio após revogação;
 * calendário interno mensal reunindo ensaios, eventos e atividades, com acesso às chamadas e relatórios por data;
+* calendário administrativo com filtros por tipo, status e texto, visão mensal e visão Agenda;
+* indicadores de registros, chamadas pendentes, chamadas realizadas e presenças no período;
+* resumo mensal de presença e relatório profissional por integrante, atividade e registro detalhado;
+* controle de cartões, cotas mensais, recargas, consumos, estornos e histórico auditável de passes;
 * fluxo OAuth 2.0 do Google e envio de mensagens pelo Gmail;
 * configuração do OAuth por variáveis de ambiente e arquivo local `.env`, ignorado pelo Git;
 * persistência do token OAuth em `instance/google_oauth_token.json` e envio de e-mails autorizados com suporte a anexos.
@@ -298,7 +302,7 @@ Os fluxos básicos de presença, ensaios, eventos e apresentações já estão i
 
 ## Controle de presença
 
-O sistema possui controle **manual** de presença dos integrantes, atualmente relacionado a ensaios e eventos. A direção de evolução é relacionar a presença à atividade correspondente, que também poderá ser uma apresentação, treinamento ou outra atividade válida da Banda.
+O sistema possui controle **manual** de presença dos integrantes, relacionado a ensaios, eventos e atividades avulsas. Cada registro de presença é associado à atividade correspondente, que pode ser uma apresentação, treinamento ou outra atividade válida da Banda.
 
 Uma atividade de treinamento pode ser registrada sem ter sido previamente cadastrada como ensaio ou compromisso. O calendário interno mensal reúne ensaios, eventos e atividades avulsas, permitindo selecionar uma data, abrir chamadas e relatórios e iniciar novos cadastros com a data escolhida. Horários de funcionamento citados como contexto são apenas referência e não são modelados nem usados como validação. O cadastro, a chamada e a publicação manual opcional de atividades avulsas no Google Calendar estão disponíveis; essa publicação ainda precisa de validação com conta Google real.
 
@@ -308,9 +312,9 @@ Os fluxos atuais permitem:
 * consultar histórico e frequência;
 * realizar consultas administrativas e imprimir folhas de chamada e históricos.
 
-O controle manual foi escolhido para manter o sistema simples, acessível e alinhado às necessidades atuais da banda. A ampliação dos testes e relatórios permanece como evolução.
+O controle manual foi escolhido para manter o sistema simples, acessível e alinhado às necessidades atuais da banda. O sistema oferece histórico, resumo mensal, relatório profissional e indicadores operacionais.
 
-### Diretriz futura para passes
+### Controle de passes
 
 Cada integrante poderá possuir uma cota mensal de passes de transporte. Toda presença diária registrada consome exatamente **2 passes**, sendo um para a ida e outro para a volta, independentemente de a atividade ser ensaio, evento, apresentação, treinamento ou outra atividade válida.
 
@@ -320,7 +324,7 @@ O controle deverá manter histórico das disponibilizações e dos consumos rela
 
 Integrantes sem cartão cadastrado continuam podendo ter a presença registrada, mas não geram desconto de passes. O motivo administrativo ou operacional para não possuírem cartão não será registrado no sistema.
 
-O cadastro do cartão, da cota mensal, o consumo automático de 2 passes na presença, uma recarga extra mensal justificada e a consulta administrativa do histórico já estão implementados. O sistema mantém movimentos de recarga, consumo e estorno.
+O cadastro do cartão, da cota mensal, o consumo automático de 2 passes na presença, uma recarga extra mensal justificada e a consulta administrativa do histórico já estão implementados. O sistema mantém movimentos de disponibilização inicial, recarga, consumo e estorno, preservando compatibilidade com cotas antigas.
 
 A recarga extra não substitui a cota inicial, deve ser maior que zero, exige motivo informado pelo administrador e só pode ocorrer uma vez por integrante em cada mês.
 
@@ -521,6 +525,11 @@ Entidades atualmente mapeadas:
 * `AutorizacaoFotoMenor`
 * `AutorizacaoViagem`
 * `Evento`
+* `Ensaio`
+* `Atividade`
+* `CotaMensalPasse`
+* `MovimentoPasse`
+* `GoogleCalendarSync`
 
 Tabelas de referência:
 
@@ -530,12 +539,7 @@ Tabelas de referência:
 
 A evolução do PI II poderá acrescentar ou ajustar entidades relacionadas a:
 
-* ensaios;
-* eventos;
-* atividades e seus tipos;
-* presença;
-* cotas mensais de passes;
-* movimentos/consumos de passes;
+* novas modalidades de atividade e presença;
 * integração com serviços externos;
 * configurações;
 * registros de comunicação;
@@ -977,7 +981,7 @@ Consulte o arquivo [LICENSE](LICENSE) para obter os termos completos.
 
 **PI I:** Base funcional implementada.
 
-**PI II:** Evolução em andamento. Presença, ensaios, eventos, atividades avulsas e calendário interno mensal possuem fluxos implementados. A Central de Comunicações foi validada por testes automatizados; Calendar publica manualmente registros do BMCM; Drive mantém o MVP de backup remoto. A sincronização Calendar de atividades avulsas ainda precisa de validação com conta real.
+**PI II:** Evolução em andamento. Presença, ensaios, eventos, atividades avulsas, calendário administrativo, relatórios profissionais e controle de passes possuem fluxos implementados. A Central de Comunicações foi validada por testes automatizados; Calendar publica manualmente registros do BMCM; Drive mantém o MVP de backup remoto. A sincronização Calendar de atividades avulsas ainda precisa de validação com conta real.
 
 ### Principais objetivos da evolução
 
@@ -995,6 +999,9 @@ Consulte o arquivo [LICENSE](LICENSE) para obter os termos completos.
 * [x] Gestão de eventos e apresentações
 * [x] Cadastro e presença em atividades avulsas
 * [x] Calendário interno mensal com seleção de data e atalhos para chamadas/relatórios
+* [x] Filtros, visão Agenda e indicadores administrativos no calendário
+* [x] Resumo mensal e relatório profissional de presença
+* [x] Controle de passes com recarga, consumo, estorno e histórico
 * [x] Base funcional da Central de Comunicações administrativa
 * [x] Conclusão funcional e validação automatizada da Central de Comunicações
 * [x] Fluxo OAuth 2.0 e envio de mensagens pelo Gmail
@@ -1006,7 +1013,7 @@ Consulte o arquivo [LICENSE](LICENSE) para obter os termos completos.
 * [x] Validar upload e consulta Drive com uma conta Google real
 * [x] Autenticação OAuth 2.0 para Google Workspace
 * [x] Documentação das integrações e serviços em nuvem
-* [ ] Ampliação dos testes automatizados
+* [x] Ampliação dos testes automatizados para calendário, relatórios e passes
 * [ ] Ampliação dos recursos de acessibilidade
 * [ ] Atualizador controlado de versões da aplicação
 

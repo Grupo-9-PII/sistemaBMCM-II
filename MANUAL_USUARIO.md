@@ -100,6 +100,9 @@ Estatísticas apresentadas:
 - Instrumentos ativos
 - Usuários ativos
 - Usuários administradores
+- Atividades registradas
+- Registros de presença
+- Atividades e presenças do dia
 
 ### 4.2 Menu de Navegação
 O menu principal está disponível na barra superior ou lateral e permite acesso a todas as funcionalidades do sistema.
@@ -372,13 +375,15 @@ Gerencie as seções da banda (ex: metais, madeiras, percussão).
 
 No menu **Atividades**, acesse **Calendário BMCM** para visualizar os ensaios, eventos e atividades avulsas cadastrados por mês. Use as setas, o seletor de mês ou **Hoje** para navegar; selecione um dia para consultar seus registros.
 
+Use os filtros para pesquisar por título, local ou status e restringir a consulta por tipo de registro. A visualização **Mês** exibe a grade tradicional; a visualização **Agenda** lista os registros em ordem cronológica. Os indicadores mostram o total de registros, quantos possuem chamada, quantos estão pendentes e o total de presenças.
+
 Para cada registro, use **Chamada** para lançar ou consultar presença e, quando disponível, **Relatório**. **Relatório diário** abre a folha consolidada da data. Os botões de criação do dia abrem o formulário correspondente com a data selecionada já preenchida.
 
 O calendário BMCM é independente do Google Calendar. A grade não representa horário de funcionamento da Banda e não presume horário para atividades sem essa informação. A sincronização Google é manual e opcional em cada registro.
 
 ### 9.1 Criar um Ensaio
 
-1. No menu superior, clique em **Presença**
+1. No menu superior, abra **Atividades** e clique em **Ensaios**
 2. Clique em **Novo ensaio**
 3. Informe:
   - título;
@@ -405,7 +410,7 @@ O botão **Imprimir** gera uma versão adequada para impressão e conferência d
 
 ### 9.3 Editar ou Cancelar um Ensaio
 
-Na tela **Presença**, use:
+Na tela **Ensaios**, use:
 
 - **Editar** para alterar título, data, horário, local, observações ou status;
 - **Cancelar** para alterar o status para cancelado.
@@ -451,14 +456,37 @@ Quando houver início e fim, ambos são usados no evento. Com apenas horário in
 
 ### 9.8 Consultar Histórico e Frequência
 
-1. Acesse **Presença**
-2. Clique em **Histórico**
+1. Abra o menu **Atividades**
+2. Clique em **Relatório de presença**
 3. Selecione um integrante ou mantenha **Todos os integrantes**
 4. Clique em **Filtrar histórico**
 
 O sistema exibirá as chamadas, datas, atividades, locais, integrantes e situações. Quando um integrante for selecionado, será exibido o percentual de frequência calculado com base nos registros disponíveis.
 
 Use **Imprimir** para gerar uma cópia do histórico.
+
+### 9.9 Consultar o resumo mensal e o relatório profissional
+
+1. Abra o menu **Atividades** e clique em **Resumo mensal**.
+2. Informe o mês de referência e clique em **Consultar**.
+3. Consulte os totais de presentes, ausentes, justificados e o percentual de frequência.
+4. Use **Relatório profissional** para abrir o documento formal do período, com resumo por integrante, resumo por atividade e detalhamento dos registros.
+
+O relatório profissional é preparado para impressão e pode ser salvo como PDF pelo navegador. O relatório considera integrantes ativos e registros do mês selecionado.
+
+### 9.10 Administrar passes de transporte
+
+O controle de passes está disponível para administradores em **Usuário > Passes de Transporte**.
+
+1. Selecione o mês de referência.
+2. Informe a cota inicial de cada integrante com cartão ativo e clique em **Salvar**.
+3. O sistema registra a disponibilização inicial no histórico de movimentos.
+4. Quando necessário, informe a quantidade e o motivo da recarga extra e clique em **Recarga extra**.
+5. Consulte **Histórico** para verificar disponibilizações, recargas, consumos, estornos e saldos.
+
+Cada presença registrada para integrante com cartão consome 2 passes. Com saldo inferior a 2, a presença é bloqueada. Integrantes sem cartão continuam podendo registrar presença, mas não geram consumo de passes.
+
+A recarga extra deve ser maior que zero, exige motivo obrigatório e pode ser utilizada uma única vez por integrante em cada mês. Alterações de presença podem gerar o estorno correspondente no histórico.
 
 ---
 
@@ -481,6 +509,17 @@ Acesse através da visualização de cada aluno para obter um relatório detalha
 Acesse para visualizar todas as escolas e seus alunos vinculados.
 
 ![Rel Escolas](./assets/imgs/tela-relatorio-escolas.png)
+
+### 10.4 Relatório profissional de presença
+O relatório profissional pode ser aberto a partir do **Resumo mensal de presenças**. Ele apresenta:
+
+- período de referência e data de geração;
+- totais de registros, presentes, justificados e frequência;
+- resumo de frequência por integrante;
+- resumo por ensaio, evento ou atividade;
+- detalhamento de data, integrante, atividade, situação e observações.
+
+Use a função de impressão do navegador para gerar uma versão formal em papel ou PDF.
 
 ---
 
@@ -697,7 +736,7 @@ Essa identificação é mantida pela equipe responsável pelo desenvolvimento. O
 
 ---
 
-**Versão do Manual**: 1.1
+**Versão do Manual**: 1.2
 **Sistema**: Sistema BMCM - Banda Marcial Municipal de Marília
 **Data de Criação**: 2026
 

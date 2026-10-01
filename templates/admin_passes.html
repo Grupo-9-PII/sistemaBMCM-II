@@ -45,7 +45,7 @@
           {% for aluno in alunos %}
           {% set cota = cotas.get(aluno.id) %}
           {% set recarga = recargas.get(aluno.id) %}
-          {% set saldo = (cota.quantidade_disponibilizada if cota else 0) + (cota.movimentos|map(attribute='quantidade')|sum if cota else 0) %}
+          {% set saldo = saldos.get(aluno.id, 0) %}
           <tr>
             <td>{{ aluno.nome }}</td>
             <td><code>{{ aluno.cartao_passe.numero_controle }}</code></td>

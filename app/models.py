@@ -95,7 +95,7 @@ class Aluno(db.Model):
     complemento = db.Column(db.String(200))
     funcao_id = db.Column(db.Integer, db.ForeignKey('funcao_banda.id'))
     funcao = db.relationship('FuncaoBanda', backref='alunos')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     data_entrada_banda = db.Column(db.Date, nullable=True)
     data_desligamento_banda = db.Column(db.Date, nullable=True)
     
@@ -200,7 +200,7 @@ class HardDeleteAlunoLog(db.Model):
     aluno_id = db.Column(db.Integer, db.ForeignKey('aluno.id'), nullable=False, index=True)
     deletado_por_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     justificativa = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class AutorizacaoFotoMenor(db.Model):
@@ -217,7 +217,7 @@ class AutorizacaoFotoMenor(db.Model):
     termo_versao = db.Column(db.String(32), nullable=False)
     registrado_por_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     ip_origem = db.Column(db.String(45))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     aluno = db.relationship('Aluno', back_populates='autorizacoes_foto')
     registrado_por = db.relationship('User', foreign_keys=[registrado_por_id])

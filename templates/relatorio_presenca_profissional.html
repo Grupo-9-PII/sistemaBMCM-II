@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Relatório profissional de presença - {{ periodo }}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 11px;
+      line-height: 1.4;
+      color: black;
+      background: white;
+      margin: 1cm;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      border-bottom: 3px double black;
+      padding-bottom: 12px;
+    }
+    .header h1 { font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; }
+    .header h2 { font-size: 13px; text-transform: uppercase; margin-bottom: 10px; }
+    .info { margin-bottom: 18px; font-size: 10px; text-align: center; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .summary-card {
+      border: 1px solid black;
+      padding: 8px;
+      background: #f7f7f7;
+      text-align: center;
+    }
+    .summary-card strong { display: block; font-size: 16px; margin-top: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+    th, td { border: 1px solid black; padding: 5px 6px; text-align: left; vertical-align: top; }
+    th {
+      background-color: #e4e4e4;
+      font-weight: bold;
+      text-transform: uppercase;
+      font-size: 10px;
+    }
+    tr:nth-child(even) { background-color: #f8f8f8; }
+    .rodape {
+      text-align: center;
+      font-size: 9px;
+      margin-top: 20px;
+      border-top: 1px solid black;
+      padding-top: 10px;
+    }
+    @media print {
+      body { margin: 0.5cm; }
+      .summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body onload="window.print()">
+  <div class="header">
+    <h1>Banda Marcial Cidade de Marília - Marília/SP</h1>
+    <h2>RELATÓRIO PROFISSIONAL DE PRESENÇA</h2>
+  </div>
+
+  <div class="info">
+    <strong>Período:</strong> {{ periodo }} | <strong>Gerado em:</strong> {{ data_geracao.strftime('%d/%m/%Y às %H:%M') }}
+  </div>
+
+  <div class="summary-grid">
+    <div class="summary-card">
+      <span>Total de registros</span>
+      <strong>{{ total_registros }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Presentes</span>
+      <strong>{{ total_presentes }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Justificados</span>
+      <strong>{{ total_justificados }}</strong>
+    </div>
+    <div class="summary-card">
+      <span>Frequência</span>
+      <strong>
+        {% if total_registros %}
+          {{ '%.1f'|format((total_presentes / total_registros) * 100) }}%
+        {% else %}
+          0.0%
+        {% endif %}
+      </strong>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 32%;">Integrante</th>
+        <th style="width: 15%;">Total</th>
+        <th style="width: 15%;">Presentes</th>
+        <th style="width: 15%;">Justificados</th>
+        <th style="width: 23%;">Frequência</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in resumo_por_aluno %}
+      <tr>
+        <td>{{ item.aluno.nome }}</td>
+        <td>{{ item.total }}</td>
+        <td>{{ item.presentes }}</td>
+        <td>{{ item.justificados }}</td>
+        <td>{{ '%.1f'|format(item.percentual) }}%</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5">Nenhum registro de presença para o período selecionado.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 30%;">Categoria</th>
+        <th style="width: 30%;">Atividade</th>
+        <th style="width: 12%;">Total</th>
+        <th style="width: 12%;">Presentes</th>
+        <th style="width: 16%;">Frequência</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in resumo_por_atividade %}
+      <tr>
+        <td>{{ item.categoria }}</td>
+        <td>{{ item.titulo }}</td>
+        <td>{{ item.total }}</td>
+        <td>{{ item.presentes }}</td>
+        <td>{{ '%.1f'|format(item.percentual) }}%</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5">Nenhuma atividade com presença registrada.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 18%;">Data</th>
+        <th style="width: 28%;">Integrante</th>
+        <th style="width: 28%;">Atividade</th>
+        <th style="width: 12%;">Situação</th>
+        <th style="width: 14%;">Obs.</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for registro in registros %}
+      <tr>
+        <td>{{ registro.data_presenca.strftime('%d/%m/%Y') if registro.data_presenca else '-' }}</td>
+        <td>{{ registro.aluno.nome if registro.aluno else '-' }}</td>
+        <td>
+          {% if registro.ensaio %}
+            {{ registro.ensaio.titulo }}
+          {% elif registro.evento %}
+            {{ registro.evento.nome_evento }}
+          {% elif registro.atividade %}
+            {{ registro.atividade.titulo }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>
+          {% if registro.observacoes == 'JUSTIFICADO' %}JUSTIFICADO{% elif registro.presente %}PRESENTE{% else %}AUSENTE{% endif %}
+        </td>
+        <td>{{ registro.observacoes or '-' }}</td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="5">Nenhum registro encontrado.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="rodape">
+    <strong>Sistema de Controle BMCM</strong><br>
+    Documento gerado automaticamente em {{ data_geracao.strftime('%d/%m/%Y %H:%M') }}
+  </div>
+</body>
+</html>

@@ -156,7 +156,14 @@ O consumo de cada presença será registrado como movimento de quantidade `-2`, 
 
 Antes de registrar uma presença de integrante com cartão, o sistema deverá verificar se existem pelo menos 2 passes disponíveis. Com apenas 0 ou 1 passe, o registro da presença deverá ser impedido e a situação informada claramente. Integrantes sem cartão não entram nessa validação e não geram movimento de passe. O sistema não deve criar saldo negativo silenciosamente.
 
-O controle de passes ainda não faz parte do fluxo implementado no sistema. Esta regra deve orientar a análise e a implementação futura, inclusive testes de saldo, histórico e integridade transacional.
+O controle de passes está implementado no fluxo atual para ensaios,
+eventos e atividades. O sistema controla cartão, cota mensal, recarga
+extra, consumo de 2 passes por presença, estorno e histórico de movimentos.
+A disponibilização inicial permanece no campo da cota para compatibilidade,
+mas também é registrada como movimento auditável individual. Cotas antigas
+sem esse movimento continuam sendo calculadas pelo formato legado. Esta regra
+deve orientar a análise e a implementação futura, inclusive testes de saldo,
+histórico e integridade transacional.
 
 ### Calendário e futuras integrações
 
@@ -588,7 +595,8 @@ Priorizar inicialmente:
 * controle de presença;
 * eventos;
 * integrações;
-* regras de consumo de passes, quando implementadas;
+* invariantes de passes implementados: consumo de 2, estorno mesmo após desativação do cartão, idempotência, saldo não negativo e rollback coletivo;
+* migrações de presença preservando registros, movimentos associados e índices parciais;
 * validações;
 * operações críticas do banco de dados;
 * acessibilidade básica em telas críticas;

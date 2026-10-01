@@ -7,6 +7,7 @@ import pyzipper
 import zipfile
 from dotenv import dotenv_values
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 
 import app.utils as utils
 import app.routes as routes
@@ -23,6 +24,139 @@ def test_incremento_de_versao_com_transporte():
     assert proxima_versao(1, 4, 6) == (1, 4, 7)
     assert proxima_versao(1, 4, 99) == (1, 5, 0)
     assert proxima_versao(1, 99, 99) == (2, 0, 0)
+
+
+def test_dashboard_exibe_indicadores_operacionais(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    _login_admin(client)
+
+    with app.app_context():
+        aluno = Aluno(nome="INDICADOR", ativo=True)
+        atividade = Atividade(
+            tipo="TREINAMENTO",
+            titulo="Treino do dashboard",
+            data_atividade=date.today(),
+        )
+        db.session.add_all([aluno, atividade])
+        db.session.flush()
+        db.session.add(Presenca(aluno_id=aluno.id, atividade_id=atividade.id, presente=True))
+        db.session.commit()
+
+    response = client.get("/")
+    assert response.status_code == 200
+    assert b"Atividades" in response.data
+    assert b"Presen\xc3\xa7as" in response.data
+    assert b"Hoje" in response.data
+
+
+def test_calendario_agenda_filtra_registros_e_exibe_status_da_chamada(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    _login_admin(client)
+
+    with app.app_context():
+        aluno = Aluno(nome="ALUNO CALENDARIO", ativo=True)
+        atividade_com_chamada = Atividade(
+            tipo="TREINAMENTO",
+            titulo="Treino administrativo",
+            data_atividade=date(2026, 9, 10),
+        )
+        atividade_sem_chamada = Atividade(
+            tipo="OUTRA",
+            titulo="Registro que não deve aparecer",
+            data_atividade=date(2026, 9, 11),
+        )
+        db.session.add_all([aluno, atividade_com_chamada, atividade_sem_chamada])
+        db.session.flush()
+        db.session.add(
+            Presenca(
+                aluno_id=aluno.id,
+                atividade_id=atividade_com_chamada.id,
+                data_presenca=atividade_com_chamada.data_atividade,
+                presente=True,
+            )
+        )
+        db.session.commit()
+
+    response = client.get(
+        "/admin/calendario?mes=2026-09&visao=agenda&tipo=Atividade&q=administrativo"
+    )
+    assert response.status_code == 200
+    assert b"Treino administrativo" in response.data
+    assert b"Registrada" in response.data
+    assert b"1 presente(s)" in response.data
+    assert b"Registro que n\xc3\xa3o deve aparecer" not in response.data
+
+
+def test_resumo_mensal_de_presencas_exibe_estatisticas(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    _login_admin(client)
+
+    with app.app_context():
+        aluno = Aluno(nome="ALUNO RESUMO", ativo=True)
+        atividade = Atividade(
+            tipo="TREINAMENTO",
+            titulo="Resumo mensal",
+            data_atividade=date.today(),
+        )
+        db.session.add_all([aluno, atividade])
+        db.session.flush()
+        registro = Presenca(aluno_id=aluno.id, atividade_id=atividade.id, presente=True)
+        db.session.add(registro)
+        db.session.commit()
+        registro.presente = False
+        db.session.commit()
+
+    response = client.get("/admin/presencas/resumo?mes=2026-09")
+    assert response.status_code == 200
+    assert b"Resumo mensal de presen\xc3\xa7as" in response.data
+    assert b"1" in response.data
+    assert b"relatorio-profissional" in response.data
+
+
+def test_relatorio_profissional_presenca_exibe_resumo_por_aluno_e_atividade(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    _login_admin(client)
+
+    with app.app_context():
+        aluno = Aluno(nome="ALUNO RELATORIO", ativo=True)
+        atividade = Atividade(tipo="TREINAMENTO", titulo="Treino final", data_atividade=date(2026, 9, 10))
+        db.session.add_all([aluno, atividade])
+        db.session.flush()
+        db.session.add(Presenca(aluno_id=aluno.id, atividade_id=atividade.id, presente=True))
+        db.session.commit()
+
+    response = client.get("/admin/presencas/relatorio-profissional?mes=2026-09")
+    assert response.status_code == 200
+    assert b"RELAT\xc3\x93RIO PROFISSIONAL DE PRESEN\xc3\x87A" in response.data
+    assert b"ALUNO RELATORIO" in response.data
 
 
 def test_secret_key_local_eh_persistente(tmp_path):
@@ -113,7 +247,11 @@ def test_inicializacao_limpa_e_protecoes_criticas(monkeypatch):
             linha[1]
             for linha in db.session.execute(text("PRAGMA index_list('presenca')")).all()
         }
-        assert {"uq_presenca_aluno_ensaio", "uq_presenca_aluno_evento"} <= indices
+        assert {
+            "uq_presenca_aluno_ensaio",
+            "uq_presenca_aluno_evento",
+            "uq_presenca_aluno_atividade",
+        } <= indices
 
 
 def test_cartao_passe_opcional_e_cota_mensal_administrativa(monkeypatch):
@@ -157,6 +295,11 @@ def test_cartao_passe_opcional_e_cota_mensal_administrativa(monkeypatch):
         cota = CotaMensalPasse.query.one()
         assert cota.mes_referencia.isoformat() == "2026-09-01"
         assert cota.quantidade_disponibilizada == 40
+        disponibilizacao = MovimentoPasse.query.filter_by(
+            cota_id=cota.id,
+            tipo="DISPONIBILIZACAO",
+        ).one()
+        assert disponibilizacao.quantidade == 40
 
     resposta = client.post(
         "/admin/passes/recarga",
@@ -194,6 +337,77 @@ def test_cartao_passe_opcional_e_cota_mensal_administrativa(monkeypatch):
         follow_redirects=True,
     )
     assert b"j\xc3\xa1 foi utilizada neste m\xc3\xaas" in resposta.data
+
+
+def test_validacoes_admin_passes_rejeitam_valores_invalidos_e_cartao_duplicado(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    token = _login_admin(client)
+
+    with app.app_context():
+        aluno = Aluno(nome="PASSES VALIDACAO", ativo=True)
+        outro_aluno = Aluno(nome="OUTRO CARTAO", ativo=True)
+        db.session.add_all([aluno, outro_aluno])
+        db.session.flush()
+        cartao = CartaoPasse(aluno_id=aluno.id, numero_controle="VALIDACAO-001")
+        db.session.add_all([
+            cartao,
+            CotaMensalPasse(
+                aluno_id=aluno.id,
+                mes_referencia=date(2026, 9, 1),
+                quantidade_disponibilizada=20,
+            ),
+        ])
+        aluno_id = aluno.id
+        outro_aluno_id = outro_aluno.id
+        db.session.commit()
+
+    resposta = client.post(
+        "/admin/passes",
+        data={
+            "aluno_id": aluno_id,
+            "mes_referencia": "2026-09",
+            "quantidade_disponibilizada": "-1",
+            "csrf_token": token,
+        },
+        follow_redirects=True,
+    )
+    assert "igual ou maior que zero".encode("utf-8") in resposta.data
+
+    for quantidade, motivo, mensagem in (
+        ("0", "Quantidade informada", "maior que zero"),
+        ("5", "", "Informe o motivo administrativo"),
+    ):
+        resposta = client.post(
+            "/admin/passes/recarga",
+            data={
+                "aluno_id": aluno_id,
+                "mes_referencia": "2026-09",
+                "quantidade": quantidade,
+                "motivo": motivo,
+                "csrf_token": token,
+            },
+            follow_redirects=True,
+        )
+        assert mensagem.encode("utf-8") in resposta.data
+
+    with app.app_context():
+        cota = CotaMensalPasse.query.filter_by(aluno_id=aluno_id).one()
+        assert cota.quantidade_disponibilizada == 20
+        assert MovimentoPasse.query.filter_by(tipo="RECARGA").count() == 0
+        with pytest.raises(IntegrityError):
+            db.session.add(CartaoPasse(
+                aluno_id=outro_aluno_id,
+                numero_controle="VALIDACAO-001",
+            ))
+            db.session.flush()
+        db.session.rollback()
 
 
 def test_presenca_consumo_estorno_e_excecao_sem_cartao(monkeypatch):
@@ -254,15 +468,156 @@ def test_presenca_consumo_estorno_e_excecao_sem_cartao(monkeypatch):
         assert MovimentoPasse.query.filter_by(presenca_id=presenca_sem_cartao.id).count() == 0
         assert MovimentoPasse.query.filter_by(presenca_id=presenca_com_cartao.id).one().quantidade == -2
 
+        routes._atualizar_movimento_passe(presenca_com_cartao)
+        assert MovimentoPasse.query.filter_by(
+            presenca_id=presenca_com_cartao.id,
+            tipo="CONSUMO",
+        ).count() == 1
+
         presenca_com_cartao.presente = False
         routes._atualizar_movimento_passe(presenca_com_cartao)
+        movimentos_estornados = MovimentoPasse.query.filter_by(
+            presenca_id=presenca_com_cartao.id
+        ).all()
         assert sum(
             movimento.quantidade
-            for movimento in MovimentoPasse.query.filter_by(presenca_id=presenca_com_cartao.id)
+            for movimento in movimentos_estornados
         ) == 0
+        assert [movimento.tipo for movimento in movimentos_estornados] == ["CONSUMO", "ESTORNO"]
+
+        presenca_com_cartao.presente = True
+        routes._atualizar_movimento_passe(presenca_com_cartao)
+        routes._atualizar_movimento_passe(presenca_com_cartao)
+        movimentos_reativados = MovimentoPasse.query.filter_by(
+            presenca_id=presenca_com_cartao.id
+        ).all()
+        assert sum(movimento.quantidade for movimento in movimentos_reativados) == -2
+        assert sum(1 for movimento in movimentos_reativados if movimento.tipo == "CONSUMO") == 2
 
         with pytest.raises(ValueError, match="são necessários 2"):
             routes._atualizar_movimento_passe(presenca_sem_saldo)
+
+
+def test_estorno_de_passes_ocorre_com_cartao_inativo_ou_removido(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+
+    with app.app_context():
+        ensaio = Ensaio(titulo="Ensaio de estorno", data_ensaio=date(2026, 9, 29))
+        aluno_cartao_inativo = Aluno(nome="CARTAO INATIVO", ativo=True)
+        aluno_cartao_removido = Aluno(nome="CARTAO REMOVIDO", ativo=True)
+        db.session.add_all([ensaio, aluno_cartao_inativo, aluno_cartao_removido])
+        db.session.flush()
+        cartao_inativo = CartaoPasse(
+            aluno_id=aluno_cartao_inativo.id,
+            numero_controle="CARTAO-ESTORNO-001",
+        )
+        cartao_removido = CartaoPasse(
+            aluno_id=aluno_cartao_removido.id,
+            numero_controle="CARTAO-ESTORNO-002",
+        )
+        db.session.add_all([
+            cartao_inativo,
+            cartao_removido,
+            CotaMensalPasse(
+                aluno_id=aluno_cartao_inativo.id,
+                mes_referencia=date(2026, 9, 1),
+                quantidade_disponibilizada=4,
+            ),
+            CotaMensalPasse(
+                aluno_id=aluno_cartao_removido.id,
+                mes_referencia=date(2026, 9, 1),
+                quantidade_disponibilizada=4,
+            ),
+        ])
+        db.session.flush()
+        presencas = [
+            Presenca(
+                aluno_id=aluno.id,
+                ensaio_id=ensaio.id,
+                data_presenca=ensaio.data_ensaio,
+                presente=True,
+            )
+            for aluno in (aluno_cartao_inativo, aluno_cartao_removido)
+        ]
+        db.session.add_all(presencas)
+        db.session.commit()
+
+        for presenca in presencas:
+            routes._atualizar_movimento_passe(presenca)
+        db.session.commit()
+
+        cartao_inativo.ativo = False
+        db.session.delete(cartao_removido)
+        db.session.commit()
+        db.session.expire_all()
+
+        for presenca in presencas:
+            presenca.presente = False
+            routes._atualizar_movimento_passe(presenca)
+        db.session.commit()
+
+        for presenca in presencas:
+            movimentos = MovimentoPasse.query.filter_by(presenca_id=presenca.id).all()
+            assert [movimento.tipo for movimento in movimentos] == ["CONSUMO", "ESTORNO"]
+            assert sum(movimento.quantidade for movimento in movimentos) == 0
+
+
+def test_chamada_coletiva_faz_rollback_se_um_integrante_nao_tem_saldo(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    token = _login_admin(client)
+
+    with app.app_context():
+        ensaio = Ensaio(titulo="Chamada atômica", data_ensaio=date(2026, 9, 30))
+        aluno_com_saldo = Aluno(nome="A COM SALDO", ativo=True)
+        aluno_sem_saldo = Aluno(nome="B SEM SALDO", ativo=True)
+        db.session.add_all([ensaio, aluno_com_saldo, aluno_sem_saldo])
+        db.session.flush()
+        db.session.add_all([
+            CartaoPasse(aluno_id=aluno_com_saldo.id, numero_controle="ATOMICO-001"),
+            CartaoPasse(aluno_id=aluno_sem_saldo.id, numero_controle="ATOMICO-002"),
+            CotaMensalPasse(
+                aluno_id=aluno_com_saldo.id,
+                mes_referencia=date(2026, 9, 1),
+                quantidade_disponibilizada=2,
+            ),
+            CotaMensalPasse(
+                aluno_id=aluno_sem_saldo.id,
+                mes_referencia=date(2026, 9, 1),
+                quantidade_disponibilizada=0,
+            ),
+        ])
+        db.session.commit()
+        ensaio_id = ensaio.id
+        aluno_com_saldo_id = aluno_com_saldo.id
+        aluno_sem_saldo_id = aluno_sem_saldo.id
+
+    resposta = client.post(
+        f"/admin/ensaio/{ensaio_id}/presenca",
+        data={
+            f"presenca_{aluno_com_saldo_id}": "presente",
+            f"presenca_{aluno_sem_saldo_id}": "presente",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+
+    assert resposta.status_code == 302
+    with app.app_context():
+        assert Presenca.query.filter_by(ensaio_id=ensaio_id).count() == 0
+        assert MovimentoPasse.query.count() == 0
 
 
 def test_cria_atividade_avulsa_e_registra_presenca(monkeypatch):
@@ -1096,6 +1451,89 @@ def test_migracao_calendar_preserva_vinculo_legado_de_ensaio(monkeypatch):
         assert sync.evento_id is None
         assert sync.atividade_id is None
         assert sync.google_event_id == "evento-google-legado"
+
+
+def test_migracao_presenca_legada_preserva_dados_e_cria_indice_de_atividade(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    with app.app_context():
+        aluno = Aluno(nome="ALUNO PRESENCA LEGADA", ativo=True)
+        ensaio = Ensaio(titulo="Ensaio legado", data_ensaio=date(2026, 9, 15))
+        db.session.add_all([aluno, ensaio])
+        db.session.commit()
+        cota = CotaMensalPasse(
+            aluno_id=aluno.id,
+            mes_referencia=date(2026, 9, 1),
+            quantidade_disponibilizada=10,
+        )
+        db.session.add(cota)
+        db.session.commit()
+
+        db.session.execute(text("DROP TABLE movimento_passe"))
+        db.session.execute(text("DROP TABLE presenca"))
+        db.session.execute(text(
+            "CREATE TABLE presenca ("
+            "id INTEGER PRIMARY KEY, aluno_id INTEGER NOT NULL, ensaio_id INTEGER, "
+            "evento_id INTEGER, data_presenca DATE, presente BOOLEAN, observacoes TEXT, "
+            "registrado_por_id INTEGER, registrado_at DATETIME, "
+            "CHECK ((ensaio_id IS NOT NULL AND evento_id IS NULL) OR "
+            "(ensaio_id IS NULL AND evento_id IS NOT NULL)), "
+            "FOREIGN KEY(aluno_id) REFERENCES aluno(id), "
+            "FOREIGN KEY(ensaio_id) REFERENCES ensaio(id), "
+            "FOREIGN KEY(evento_id) REFERENCES evento(id), "
+            "FOREIGN KEY(registrado_por_id) REFERENCES user(id)"
+            ")"
+        ))
+        db.session.execute(text(
+            "CREATE TABLE movimento_passe ("
+            "id INTEGER PRIMARY KEY, cota_id INTEGER NOT NULL, presenca_id INTEGER NOT NULL, "
+            "data_hora DATETIME NOT NULL, quantidade INTEGER NOT NULL, "
+            "tipo VARCHAR(20) NOT NULL DEFAULT 'CONSUMO', "
+            "FOREIGN KEY(cota_id) REFERENCES cota_mensal_passe(id), "
+            "FOREIGN KEY(presenca_id) REFERENCES presenca(id)"
+            ")"
+        ))
+        db.session.execute(text(
+            "INSERT INTO presenca "
+            "(id, aluno_id, ensaio_id, evento_id, data_presenca, presente, "
+            "observacoes, registrado_por_id, registrado_at) "
+            "VALUES (77, :aluno_id, :ensaio_id, NULL, '2026-09-15', 1, "
+            "'registro legado', NULL, '2026-09-15 18:00:00')"
+        ), {"aluno_id": aluno.id, "ensaio_id": ensaio.id})
+        db.session.execute(text(
+            "INSERT INTO movimento_passe "
+            "(id, cota_id, presenca_id, data_hora, quantidade, tipo) "
+            "VALUES (91, :cota_id, 77, '2026-09-15 18:00:00', -2, 'CONSUMO')"
+        ), {"cota_id": cota.id})
+        db.session.commit()
+
+        utils.migrar_banco_novos_campos()
+        db.session.expire_all()
+
+        registro = db.session.get(Presenca, 77)
+        assert registro is not None
+        assert registro.aluno_id == aluno.id
+        assert registro.ensaio_id == ensaio.id
+        assert registro.evento_id is None
+        assert registro.atividade_id is None
+        assert registro.data_presenca == date(2026, 9, 15)
+        assert registro.presente is True
+        assert registro.observacoes == "registro legado"
+        movimento = db.session.get(MovimentoPasse, 91)
+        assert movimento is not None
+        assert movimento.cota_id == cota.id
+        assert movimento.presenca_id == registro.id
+        assert movimento.quantidade == -2
+        assert movimento.tipo == "CONSUMO"
+
+        indices = {
+            linha[1]
+            for linha in db.session.execute(text("PRAGMA index_list('presenca')")).all()
+        }
+        assert {
+            "uq_presenca_aluno_ensaio",
+            "uq_presenca_aluno_evento",
+            "uq_presenca_aluno_atividade",
+        } <= indices
 
 
 def test_migracao_adiciona_trilha_de_consentimento_a_contato_legado(monkeypatch):

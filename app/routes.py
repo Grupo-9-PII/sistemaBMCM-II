@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session, abort
 from flask_login import login_required, current_user
 import calendar
-from datetime import timedelta
+from datetime import date, timedelta
 from dotenv import set_key
 from .models import (
     User,
@@ -104,6 +104,13 @@ def _status_google_workspace():
     return google_workspace_status(obter_configuracao("communication_sender_email"))
 
 
+def _get_or_404(model, identifier):
+    instance = db.session.get(model, identifier)
+    if instance is None:
+        abort(404)
+    return instance
+
+
 def _bloquear_central_comunicacoes():
     status = _status_google_workspace()
     if status["available"]:
@@ -145,13 +152,31 @@ def _sincronizar_calendar(activity_type, activity, somente_vinculada=False):
 
 def _atualizar_movimento_passe(presenca):
     """Sincroniza o consumo de passes da presença sem criar saldo negativo."""
-    cartao = presenca.aluno.cartao_passe
-    if not cartao or not cartao.ativo:
+    movimentos = (
+        MovimentoPasse.query.filter_by(presenca_id=presenca.id)
+        .order_by(MovimentoPasse.data_hora.desc(), MovimentoPasse.id.desc())
+        .all()
+    )
+    movimento_presenca = sum(movimento.quantidade for movimento in movimentos)
+    if not presenca.presente:
+        if movimento_presenca >= 0:
+            return
+        movimento_consumo = next(
+            (movimento for movimento in movimentos if movimento.quantidade < 0),
+            None,
+        )
+        if movimento_consumo is None:
+            raise ValueError("Não foi possível localizar o consumo de passes desta presença.")
+        db.session.add(MovimentoPasse(
+            cota_id=movimento_consumo.cota_id,
+            presenca_id=presenca.id,
+            quantidade=-movimento_presenca,
+            tipo="ESTORNO",
+        ))
         return
 
-    movimentos = MovimentoPasse.query.filter_by(presenca_id=presenca.id).all()
-    movimento_presenca = sum(movimento.quantidade for movimento in movimentos)
-    if not presenca.presente and movimento_presenca >= 0:
+    cartao = presenca.aluno.cartao_passe
+    if not cartao or not cartao.ativo or movimento_presenca != 0:
         return
 
     mes_referencia = presenca.data_presenca.replace(day=1)
@@ -165,29 +190,29 @@ def _atualizar_movimento_passe(presenca):
             f"{mes_referencia.strftime('%m/%Y')}."
         )
 
-    saldo = cota.quantidade_disponibilizada + sum(
-        movimento.quantidade for movimento in cota.movimentos
-    )
+    saldo = _saldo_cota_passe(cota)
 
-    if presenca.presente and movimento_presenca == 0:
-        if saldo < 2:
-            raise ValueError(
-                f"{presenca.aluno.nome} possui apenas {saldo} passe(s) disponível(is); "
-                "são necessários 2 para registrar a presença."
-            )
-        db.session.add(MovimentoPasse(
-            cota_id=cota.id,
-            presenca_id=presenca.id,
-            quantidade=-2,
-            tipo="CONSUMO",
-        ))
-    elif not presenca.presente and movimento_presenca < 0:
-        db.session.add(MovimentoPasse(
-            cota_id=cota.id,
-            presenca_id=presenca.id,
-            quantidade=2,
-            tipo="ESTORNO",
-        ))
+    if saldo < 2:
+        raise ValueError(
+            f"{presenca.aluno.nome} possui apenas {saldo} passe(s) disponível(is); "
+            "são necessários 2 para registrar a presença."
+        )
+    db.session.add(MovimentoPasse(
+        cota_id=cota.id,
+        presenca_id=presenca.id,
+        quantidade=-2,
+        tipo="CONSUMO",
+    ))
+
+
+def _saldo_cota_passe(cota):
+    """Calcula o saldo usando o histórico novo ou o formato legado da cota."""
+    movimentos = list(cota.movimentos)
+    if any(movimento.tipo == "DISPONIBILIZACAO" for movimento in movimentos):
+        return sum(movimento.quantidade for movimento in movimentos)
+    return cota.quantidade_disponibilizada + sum(
+        movimento.quantidade for movimento in movimentos
+    )
 
 
 def _reautenticar_admin_para_senha_backup(senha_admin):
@@ -241,13 +266,17 @@ def callback_google_oauth():
 @session_timeout
 def dashboard():
     update_activity()
+    hoje = datetime.now(timezone.utc).date()
     stats = {
         'total_alunos': Aluno.query.count(),
         'alunos_ativos': Aluno.query.filter_by(ativo=True).count(),
         'total_escolas': Escola.query.count(),
         'instrumentos_ativos': Instrumento.query.filter_by(ativo=True).count(),
         'usuarios': User.query.filter_by(is_active=True).count(),
-        'usuarios_admin': User.query.filter_by(is_admin=True, is_active=True).count()
+        'usuarios_admin': User.query.filter_by(is_admin=True, is_active=True).count(),
+        'atividades_total': Atividade.query.count(),
+        'presencas_total': Presenca.query.count(),
+        'presencas_hoje': Presenca.query.filter_by(data_presenca=hoje).count(),
     }
     return render_template("dashboard.html", stats=stats)
 
@@ -284,6 +313,12 @@ def listar_atividades():
 @profissional_required
 def calendario_bmcm():
     hoje = datetime.now().date()
+    filtro_tipo = request.args.get("tipo", "").strip()
+    filtro_status = request.args.get("status", "").strip()
+    filtro_busca = request.args.get("q", "").strip()
+    visualizacao = request.args.get("visao", "mes").strip().lower()
+    if visualizacao not in {"mes", "agenda"}:
+        visualizacao = "mes"
     data_selecionada = None
     try:
         if request.args.get("data"):
@@ -312,6 +347,22 @@ def calendario_bmcm():
     mes_seguinte = proximo_mes
 
     itens_por_dia = {}
+    presencas_por_item = {}
+    presencas_mes = Presenca.query.filter(
+        Presenca.data_presenca >= mes_inicio,
+        Presenca.data_presenca < proximo_mes,
+    ).all()
+    for registro in presencas_mes:
+        if registro.ensaio_id is not None:
+            chave = ("Ensaio", registro.ensaio_id)
+        elif registro.evento_id is not None:
+            chave = ("Evento", registro.evento_id)
+        elif registro.atividade_id is not None:
+            chave = ("Atividade", registro.atividade_id)
+        else:
+            continue
+        presencas_por_item.setdefault(chave, []).append(registro)
+
     sincronizados = set()
     for vinculo in GoogleCalendarSync.query.all():
         if vinculo.ensaio_id is not None:
@@ -323,8 +374,10 @@ def calendario_bmcm():
 
     def adicionar_item(tipo, dia, titulo, horario, local, status,
                        url_chamada, url_sincronizar, vinculo_id):
-        itens_por_dia.setdefault(dia, []).append({
+        registros = presencas_por_item.get((tipo, vinculo_id), [])
+        item = {
             "id": vinculo_id,
+            "data": dia,
             "tipo": tipo,
             "titulo": titulo,
             "horario": horario or "",
@@ -333,7 +386,22 @@ def calendario_bmcm():
             "url_chamada": url_chamada,
             "url_sincronizar": url_sincronizar,
             "sincronizado": (tipo, vinculo_id) in sincronizados,
-        })
+            "total_presencas": len(registros),
+            "presentes": sum(1 for registro in registros if registro.presente),
+            "ausentes": sum(1 for registro in registros if not registro.presente),
+        }
+        item["chamada_status"] = "Registrada" if registros else "Pendente"
+
+        texto_filtro = " ".join(
+            (item["tipo"], item["titulo"], item["local"], item["status"])
+        ).casefold()
+        if filtro_tipo and item["tipo"].casefold() != filtro_tipo.casefold():
+            return
+        if filtro_status and item["status"].casefold() != filtro_status.casefold():
+            return
+        if filtro_busca and filtro_busca.casefold() not in texto_filtro:
+            return
+        itens_por_dia.setdefault(dia, []).append(item)
 
     ensaios = Ensaio.query.filter(
         Ensaio.data_ensaio >= mes_inicio,
@@ -380,6 +448,23 @@ def calendario_bmcm():
     for itens in itens_por_dia.values():
         itens.sort(key=lambda item: (item["horario"], item["tipo"], item["titulo"].casefold()))
 
+    itens_agenda = [
+        item
+        for dia in sorted(itens_por_dia)
+        for item in itens_por_dia[dia]
+    ]
+    tipos_disponiveis = sorted({item["tipo"] for item in itens_agenda})
+    status_disponiveis = sorted(
+        {item["status"] for item in itens_agenda if item["status"]},
+        key=str.casefold,
+    )
+    indicadores = {
+        "total": len(itens_agenda),
+        "com_chamada": sum(1 for item in itens_agenda if item["total_presencas"]),
+        "sem_chamada": sum(1 for item in itens_agenda if not item["total_presencas"]),
+        "presentes": sum(item["presentes"] for item in itens_agenda),
+    }
+
     mes_calendario = calendar.Calendar(firstweekday=0).monthdatescalendar(
         mes_inicio.year, mes_inicio.month
     )
@@ -395,6 +480,14 @@ def calendario_bmcm():
         itens_por_dia=itens_por_dia,
         data_selecionada=data_selecionada,
         itens_selecionados=itens_por_dia.get(data_selecionada, []),
+        itens_agenda=itens_agenda,
+        visualizacao=visualizacao,
+        filtro_tipo=filtro_tipo,
+        filtro_status=filtro_status,
+        filtro_busca=filtro_busca,
+        tipos_disponiveis=tipos_disponiveis,
+        status_disponiveis=status_disponiveis,
+        indicadores=indicadores,
     )
 
 
@@ -405,7 +498,7 @@ def calendario_bmcm():
 @login_required
 @profissional_required
 def sincronizar_atividade_calendar(atividade_id):
-    atividade = Atividade.query.get_or_404(atividade_id)
+    atividade = _get_or_404(Atividade, atividade_id)
     _sincronizar_calendar("atividade", atividade)
     return redirect(url_for("main.listar_atividades"))
 
@@ -461,7 +554,7 @@ def criar_atividade():
 @login_required
 @profissional_required
 def registrar_presenca_atividade(atividade_id):
-    atividade = Atividade.query.get_or_404(atividade_id)
+    atividade = _get_or_404(Atividade, atividade_id)
     alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
 
     if request.method == "POST":
@@ -541,7 +634,7 @@ def listar_eventos():
 @login_required
 @profissional_required
 def sincronizar_evento_calendar(evento_id):
-    evento = Evento.query.get_or_404(evento_id)
+    evento = _get_or_404(Evento, evento_id)
     _sincronizar_calendar("evento", evento)
     return redirect(url_for("main.listar_eventos"))
 
@@ -586,7 +679,7 @@ def criar_evento():
 @login_required
 @profissional_required
 def editar_evento(evento_id):
-    evento = Evento.query.get_or_404(evento_id)
+    evento = _get_or_404(Evento, evento_id)
     if request.method == "POST":
         nome_evento = normalizar_campo_texto(request.form.get("nome_evento"))
         try:
@@ -616,7 +709,7 @@ def editar_evento(evento_id):
 @login_required
 @profissional_required
 def cancelar_evento(evento_id):
-    evento = Evento.query.get_or_404(evento_id)
+    evento = _get_or_404(Evento, evento_id)
     evento.status = "CANCELADO"
     db.session.commit()
     _sincronizar_calendar("evento", evento, somente_vinculada=True)
@@ -646,7 +739,7 @@ def listar_ensaios():
 @login_required
 @profissional_required
 def sincronizar_ensaio_calendar(ensaio_id):
-    ensaio = Ensaio.query.get_or_404(ensaio_id)
+    ensaio = _get_or_404(Ensaio, ensaio_id)
     _sincronizar_calendar("ensaio", ensaio)
     return redirect(url_for("main.listar_ensaios"))
 
@@ -689,7 +782,7 @@ def criar_ensaio():
 @login_required
 @profissional_required
 def editar_ensaio(ensaio_id):
-    ensaio = Ensaio.query.get_or_404(ensaio_id)
+    ensaio = _get_or_404(Ensaio, ensaio_id)
     if request.method == "POST":
         titulo = normalizar_campo_texto(request.form.get("titulo")) or "ENSAIO"
         try:
@@ -716,7 +809,7 @@ def editar_ensaio(ensaio_id):
 @login_required
 @profissional_required
 def cancelar_ensaio(ensaio_id):
-    ensaio = Ensaio.query.get_or_404(ensaio_id)
+    ensaio = _get_or_404(Ensaio, ensaio_id)
     ensaio.status = "CANCELADO"
     db.session.commit()
     _sincronizar_calendar("ensaio", ensaio, somente_vinculada=True)
@@ -728,7 +821,7 @@ def cancelar_ensaio(ensaio_id):
 @login_required
 @profissional_required
 def registrar_presenca(ensaio_id):
-    ensaio = Ensaio.query.get_or_404(ensaio_id)
+    ensaio = _get_or_404(Ensaio, ensaio_id)
     alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
 
     if request.method == "POST":
@@ -790,7 +883,7 @@ def registrar_presenca(ensaio_id):
 @login_required
 @profissional_required
 def registrar_presenca_evento(evento_id):
-    evento = Evento.query.get_or_404(evento_id)
+    evento = _get_or_404(Evento, evento_id)
     alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
 
     if request.method == "POST":
@@ -849,7 +942,7 @@ def registrar_presenca_evento(evento_id):
 @login_required
 @profissional_required
 def relatorio_presenca_evento(evento_id):
-    evento = Evento.query.get_or_404(evento_id)
+    evento = _get_or_404(Evento, evento_id)
     alunos = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
     registros = Presenca.query.filter_by(evento_id=evento.id).all()
     registros_por_aluno = {registro.aluno_id: registro for registro in registros}
@@ -979,6 +1072,134 @@ def relatorio_presenca_diaria():
     )
 
 
+@main_bp.route("/admin/presencas/resumo")
+@login_required
+@profissional_required
+def resumo_presencas():
+    mes_param = request.args.get("mes", "")
+    try:
+        ano, mes = map(int, mes_param.split("-"))
+    except (TypeError, ValueError):
+        hoje = datetime.now(timezone.utc)
+        ano, mes = hoje.year, hoje.month
+
+    inicio = date(ano, mes, 1)
+    fim = date(ano + 1, 1, 1) if mes == 12 else date(ano, mes + 1, 1)
+
+    registros = (
+        Presenca.query.filter(Presenca.data_presenca >= inicio, Presenca.data_presenca < fim)
+        .order_by(Presenca.data_presenca.desc(), Presenca.id.desc())
+        .all()
+    )
+    registros_ativos = [registro for registro in registros if registro.aluno and registro.aluno.ativo]
+
+    resumo = {
+        "total": len(registros_ativos),
+        "presentes": sum(1 for registro in registros_ativos if registro.presente),
+        "ausentes": sum(1 for registro in registros_ativos if not registro.presente and registro.observacoes != "JUSTIFICADO"),
+        "justificados": sum(1 for registro in registros_ativos if registro.observacoes == "JUSTIFICADO"),
+    }
+    resumo["percentual_presenca"] = round((resumo["presentes"] / resumo["total"]) * 100, 1) if resumo["total"] else 0.0
+
+    por_tipo = {
+        "Ensaio": {"total": 0, "presentes": 0},
+        "Evento": {"total": 0, "presentes": 0},
+        "Atividade": {"total": 0, "presentes": 0},
+    }
+    for registro in registros_ativos:
+        if registro.ensaio_id is not None:
+            categoria = "Ensaio"
+        elif registro.evento_id is not None:
+            categoria = "Evento"
+        else:
+            categoria = "Atividade"
+        por_tipo[categoria]["total"] += 1
+        if registro.presente:
+            por_tipo[categoria]["presentes"] += 1
+
+    periodo = inicio.strftime("%B de %Y")
+    return render_template(
+        "admin_resumo_presencas.html",
+        mes=f"{ano:04d}-{mes:02d}",
+        periodo=periodo,
+        resumo=resumo,
+        por_tipo=sorted(por_tipo.items()),
+        registros=registros_ativos,
+    )
+
+
+@main_bp.route("/admin/presencas/relatorio-profissional")
+@login_required
+@profissional_required
+def relatorio_presenca_profissional():
+    mes_param = request.args.get("mes", "")
+    try:
+        ano, mes = map(int, mes_param.split("-"))
+    except (TypeError, ValueError):
+        hoje = datetime.now(timezone.utc)
+        ano, mes = hoje.year, hoje.month
+
+    inicio = date(ano, mes, 1)
+    fim = date(ano + 1, 1, 1) if mes == 12 else date(ano, mes + 1, 1)
+
+    registros = (
+        Presenca.query.filter(Presenca.data_presenca >= inicio, Presenca.data_presenca < fim)
+        .order_by(Presenca.data_presenca.desc(), Presenca.id.desc())
+        .all()
+    )
+    registros_ativos = [registro for registro in registros if registro.aluno and registro.aluno.ativo]
+
+    resumo_por_aluno = []
+    for aluno in Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all():
+        dados = [registro for registro in registros_ativos if registro.aluno_id == aluno.id]
+        presentes = sum(1 for registro in dados if registro.presente)
+        justificados = sum(1 for registro in dados if registro.observacoes == "JUSTIFICADO")
+        total = len(dados)
+        resumo_por_aluno.append({
+            "aluno": aluno,
+            "total": total,
+            "presentes": presentes,
+            "justificados": justificados,
+            "percentual": round((presentes / total) * 100, 1) if total else 0.0,
+        })
+
+    resumo_por_atividade = {}
+    for registro in registros_ativos:
+        if registro.ensaio_id is not None:
+            titulo = registro.ensaio.titulo if registro.ensaio else "Ensaio sem título"
+            categoria = "Ensaio"
+        elif registro.evento_id is not None:
+            titulo = registro.evento.nome_evento if registro.evento else "Evento sem título"
+            categoria = "Evento"
+        else:
+            titulo = registro.atividade.titulo if registro.atividade else "Atividade sem título"
+            categoria = "Atividade"
+        chave = (categoria, titulo)
+        resumo_por_atividade.setdefault(chave, {"total": 0, "presentes": 0})
+        resumo_por_atividade[chave]["total"] += 1
+        if registro.presente:
+            resumo_por_atividade[chave]["presentes"] += 1
+
+    return render_template(
+        "relatorio_presenca_profissional.html",
+        mes=f"{ano:04d}-{mes:02d}",
+        periodo=inicio.strftime("%B de %Y"),
+        registros=registros_ativos,
+        resumo_por_aluno=sorted(resumo_por_aluno, key=lambda item: (-item["percentual"], item["aluno"].nome.casefold())),
+        resumo_por_atividade=sorted(
+            (
+                {"categoria": categoria, "titulo": titulo, "total": dados["total"], "presentes": dados["presentes"], "percentual": round((dados["presentes"] / dados["total"]) * 100, 1) if dados["total"] else 0.0}
+                for (categoria, titulo), dados in resumo_por_atividade.items()
+            ),
+            key=lambda item: (-item["percentual"], item["titulo"].casefold()),
+        ),
+        total_registros=len(registros_ativos),
+        total_presentes=sum(1 for registro in registros_ativos if registro.presente),
+        total_justificados=sum(1 for registro in registros_ativos if registro.observacoes == "JUSTIFICADO"),
+        data_geracao=datetime.now(timezone.utc),
+    )
+
+
 @main_bp.route("/admin/comunicacoes")
 @login_required
 @profissional_required
@@ -1004,7 +1225,7 @@ def listar_comunicacoes():
 @login_required
 @profissional_required
 def revogar_email_contato_comunicacao(contato_id):
-    contato = ContatoComunicacao.query.get_or_404(contato_id)
+    contato = _get_or_404(ContatoComunicacao, contato_id)
     contato.autorizacao_email = False
     contato.email_revogado_em = datetime.now(timezone.utc)
     db.session.commit()
@@ -1165,14 +1386,14 @@ def detalhar_comunicacao(comunicacao_id):
     bloqueio = _bloquear_central_comunicacoes()
     if bloqueio:
         return bloqueio
-    comunicacao = Comunicacao.query.get_or_404(comunicacao_id)
+    comunicacao = _get_or_404(Comunicacao, comunicacao_id)
     destinatarios = comunicacao.destinatarios.order_by(ComunicacaoDestinatario.criado_em.desc()).all()
 
     detalhes = []
     for destinatario in destinatarios:
         nome_destinatario = "Destinatário removido"
         if destinatario.tipo_destinatario == "integrante":
-            aluno = Aluno.query.get(destinatario.destinatario_id)
+            aluno = db.session.get(Aluno, destinatario.destinatario_id)
             if aluno:
                 nome_destinatario = aluno.nome
         elif destinatario.tipo_destinatario == "contato_externo":
@@ -1196,7 +1417,7 @@ def detalhar_comunicacao(comunicacao_id):
 @login_required
 @profissional_required
 def excluir_comunicacao(comunicacao_id):
-    comunicacao = Comunicacao.query.get_or_404(comunicacao_id)
+    comunicacao = _get_or_404(Comunicacao, comunicacao_id)
     if comunicacao.status != "rascunho":
         flash("Somente comunicações em rascunho podem ser excluídas.", "warning")
         return redirect(url_for("main.listar_comunicacoes"))
@@ -1216,7 +1437,7 @@ def excluir_comunicacao(comunicacao_id):
 @login_required
 @profissional_required
 def enviar_comunicacao(comunicacao_id):
-    comunicacao = Comunicacao.query.get_or_404(comunicacao_id)
+    comunicacao = _get_or_404(Comunicacao, comunicacao_id)
     if comunicacao.publico == "externo":
         contato_externo = db.session.get(
             ContatoComunicacao, comunicacao.contato_externo_id
@@ -1486,7 +1707,7 @@ def criar_usuario():
 @login_required
 @admin_required
 def editar_usuario(user_id):
-    usuario = User.query.get_or_404(user_id)
+    usuario = _get_or_404(User, user_id)
     
     # Proteção para usuário 'admin'
     if usuario.username == 'admin' and usuario.id != current_user.id:
@@ -1520,7 +1741,7 @@ def editar_usuario(user_id):
 @login_required
 @admin_required
 def excluir_usuario(user_id):
-    usuario = User.query.get_or_404(user_id)
+    usuario = _get_or_404(User, user_id)
     
     # Proteção para usuário 'admin'
     if usuario.username == 'admin' and usuario.id != current_user.id:
@@ -1542,7 +1763,7 @@ def excluir_usuario(user_id):
 @login_required
 @admin_required
 def resetar_senha(user_id):
-    user = User.query.get_or_404(user_id)
+    user = _get_or_404(User, user_id)
     
     # Proteção para usuário 'admin'
     if user.username == 'admin' and user.id != current_user.id:
@@ -1561,7 +1782,7 @@ def resetar_senha(user_id):
 @login_required
 @admin_required
 def toggle_usuario(user_id):
-    user = User.query.get_or_404(user_id)
+    user = _get_or_404(User, user_id)
     
     # Proteção para usuário 'admin'
     if user.username == 'admin' and user.id != current_user.id:
@@ -1628,7 +1849,7 @@ def gerenciar_passes():
         except (TypeError, ValueError):
             quantidade = -1
 
-        aluno = Aluno.query.get_or_404(aluno_id)
+        aluno = _get_or_404(Aluno, aluno_id)
         if not aluno.cartao_passe or not aluno.cartao_passe.ativo:
             flash("Somente integrantes com cartão de passe ativo podem receber uma cota.", "danger")
             return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
@@ -1646,7 +1867,23 @@ def gerenciar_passes():
                 mes_referencia=mes_referencia,
             )
             db.session.add(cota)
+            db.session.flush()
         cota.quantidade_disponibilizada = quantidade
+        movimento_inicial = MovimentoPasse.query.filter_by(
+            cota_id=cota.id,
+            tipo="DISPONIBILIZACAO",
+        ).first()
+        if movimento_inicial is None:
+            db.session.add(MovimentoPasse(
+                cota_id=cota.id,
+                quantidade=quantidade,
+                tipo="DISPONIBILIZACAO",
+                motivo="Disponibilização inicial da cota mensal.",
+                registrado_por_id=current_user.id,
+            ))
+        else:
+            movimento_inicial.quantidade = quantidade
+            movimento_inicial.registrado_por_id = current_user.id
         db.session.commit()
         flash("Cota mensal de passes salva com sucesso.", "success")
         return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
@@ -1665,6 +1902,7 @@ def gerenciar_passes():
         "admin_passes.html",
         alunos=alunos_com_cartao,
         cotas=cotas,
+        saldos={aluno_id: _saldo_cota_passe(cota) for aluno_id, cota in cotas.items()},
         recargas={
             aluno_id: MovimentoPasse.query.filter_by(
                 cota_id=cota.id,
@@ -1692,7 +1930,7 @@ def adicionar_recarga_passe():
         flash("Informe mês e quantidade válidos para a recarga.", "danger")
         return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_parametro))
 
-    aluno = Aluno.query.get_or_404(aluno_id)
+    aluno = _get_or_404(Aluno, aluno_id)
     cota = CotaMensalPasse.query.filter_by(
         aluno_id=aluno.id,
         mes_referencia=mes_referencia,
@@ -1745,12 +1983,7 @@ def historico_passes():
         cotas = [cota for cota in cotas if cota.aluno_id == aluno_id]
 
     alunos = Aluno.query.order_by(Aluno.nome).all()
-    saldos = {
-        cota.id: cota.quantidade_disponibilizada + sum(
-            movimento.quantidade for movimento in cota.movimentos
-        )
-        for cota in cotas
-    }
+    saldos = {cota.id: _saldo_cota_passe(cota) for cota in cotas}
     return render_template(
         "admin_passes_historico.html",
         alunos=alunos,
@@ -1964,7 +2197,7 @@ def criar_aluno():
 @login_required
 @profissional_required
 def editar_aluno(aluno_id):
-    aluno = Aluno.query.get_or_404(aluno_id)
+    aluno = _get_or_404(Aluno, aluno_id)
     
     escolas = Escola.query.all()
     funcoes = FuncaoBanda.query.all()
@@ -2211,7 +2444,7 @@ def editar_aluno(aluno_id):
 @profissional_required
 def toggle_aluno(aluno_id):
     """Ativa ou inativa um aluno"""
-    aluno = Aluno.query.get_or_404(aluno_id)
+    aluno = _get_or_404(Aluno, aluno_id)
     
     aluno.ativo = not aluno.ativo
     db.session.commit()
@@ -2226,7 +2459,7 @@ def toggle_aluno(aluno_id):
 @profissional_required
 def excluir_aluno(aluno_id):
     """Exclui um aluno (soft delete - inativa ao invés de excluir)"""
-    aluno = Aluno.query.get_or_404(aluno_id)
+    aluno = _get_or_404(Aluno, aluno_id)
     
     aluno.ativo = False
     db.session.commit()
@@ -2239,7 +2472,7 @@ def excluir_aluno(aluno_id):
 @login_required
 @admin_required
 def hard_delete_aluno(aluno_id):
-    aluno = Aluno.query.get_or_404(aluno_id)
+    aluno = _get_or_404(Aluno, aluno_id)
 
     justificativa = (request.form.get("justificativa") or "").strip()
     if not justificativa:
@@ -2343,7 +2576,7 @@ def criar_escola():
 @profissional_required
 def editar_escola(escola_id):
     """Edita uma escola existente"""
-    escola = Escola.query.get_or_404(escola_id)
+    escola = _get_or_404(Escola, escola_id)
     
     if request.method == "POST":
         nome = normalizar_campo_texto(request.form.get("nome"))
@@ -2446,7 +2679,7 @@ def criar_instrumento():
 @login_required
 @profissional_required
 def editar_instrumento(instrumento_id):
-    inst = Instrumento.query.get_or_404(instrumento_id)
+    inst = _get_or_404(Instrumento, instrumento_id)
     tipos = TipoInstrumento.query.all()
     naipes = Naipe.query.all()
     
@@ -2487,7 +2720,7 @@ def editar_instrumento(instrumento_id):
 @login_required
 @profissional_required
 def toggle_instrumento(instrumento_id):
-    inst = Instrumento.query.get_or_404(instrumento_id)
+    inst = _get_or_404(Instrumento, instrumento_id)
     inst.ativo = not inst.ativo
     db.session.commit()
     flash(f"Instrumento {'ativado' if inst.ativo else 'inativado'}")
@@ -2498,7 +2731,7 @@ def toggle_instrumento(instrumento_id):
 @login_required
 @profissional_required
 def excluir_instrumento(instrumento_id):
-    inst = Instrumento.query.get_or_404(instrumento_id)
+    inst = _get_or_404(Instrumento, instrumento_id)
     db.session.delete(inst)
     db.session.commit()
     flash("Instrumento excluído")
@@ -2537,7 +2770,7 @@ def listar_tipos():
 @profissional_required
 def editar_tipo(tipo_id):
     """Edita um tipo de instrumento"""
-    tipo = TipoInstrumento.query.get_or_404(tipo_id)
+    tipo = _get_or_404(TipoInstrumento, tipo_id)
     if request.method == "POST":
         nome = normalizar_campo_texto(request.form.get("nome"))
         if not nome:
@@ -2562,7 +2795,7 @@ def editar_tipo(tipo_id):
 @profissional_required
 def excluir_tipo(tipo_id):
     """Exclui um tipo de instrumento se não houver dependências"""
-    tipo = TipoInstrumento.query.get_or_404(tipo_id)
+    tipo = _get_or_404(TipoInstrumento, tipo_id)
     if tipo.instrumentos:
         flash(f"Não é possível excluir: existem {len(tipo.instrumentos)} instrumento(s) vinculado(s) a este tipo.", "warning")
         return redirect(url_for("main.listar_tipos"))
@@ -2604,7 +2837,7 @@ def listar_naipes():
 @profissional_required
 def editar_naipe(naipe_id):
     """Edita um naipe"""
-    naipe = Naipe.query.get_or_404(naipe_id)
+    naipe = _get_or_404(Naipe, naipe_id)
     if request.method == "POST":
         nome = normalizar_campo_texto(request.form.get("nome"))
         if not nome:
@@ -2629,7 +2862,7 @@ def editar_naipe(naipe_id):
 @profissional_required
 def excluir_naipe(naipe_id):
     """Exclui um naipe se não houver dependências"""
-    naipe = Naipe.query.get_or_404(naipe_id)
+    naipe = _get_or_404(Naipe, naipe_id)
     if naipe.instrumentos:
         flash(f"Não é possível excluir: existem {len(naipe.instrumentos)} instrumento(s) vinculado(s) a este naipe.", "warning")
         return redirect(url_for("main.listar_naipes"))
@@ -2643,7 +2876,7 @@ def excluir_naipe(naipe_id):
 @login_required
 @admin_required
 def excluir_escola(escola_id):
-    escola = Escola.query.get_or_404(escola_id)
+    escola = _get_or_404(Escola, escola_id)
     
     db.session.delete(escola)
     db.session.commit()
