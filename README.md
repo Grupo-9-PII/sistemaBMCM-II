@@ -925,8 +925,7 @@ Exemplos:
 5. Kelly Cristina Ferreira da Costa
 6. Laerte Alves Pinheiro
 7. Renan Ranke Detzel Alves
-8. Rafael Veranelli Scalzo Moraes
-9. Renato de Abreu Mantovanelli
+8. Renato de Abreu Mantovanelli
 
 ---
 
