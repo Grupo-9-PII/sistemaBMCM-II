@@ -203,6 +203,8 @@ Nesse formato:
 
 A versão oficial fica centralizada em `config.py`, nas constantes `APP_VERSION_MAJOR`, `APP_VERSION_UPDATE` e `APP_VERSION_COUNT`. Cada correção, rotina ou formulário concluído incrementa o terceiro componente a partir da versão atual. Ao passar de `99`, a contagem volta a `0` e o segundo componente é incrementado; se ele também passar de `99`, volta a `0` e o primeiro componente é incrementado. A função `proxima_versao()` formaliza essa regra. Mudanças estruturais maiores podem incrementar o primeiro componente.
 
+Versão atual: **1.4.20**.
+
 A versão é exibida no login, na área de créditos e nas configurações administrativas. A contagem representa o controle acumulado de alterações do desenvolvimento e não é alterada automaticamente pelo uso do sistema em produção.
 
 ---
@@ -319,7 +321,7 @@ O controle manual foi escolhido para manter o sistema simples, acessível e alin
 
 Cada integrante poderá possuir uma cota mensal de passes de transporte. Toda presença diária registrada consome exatamente **2 passes**, sendo um para a ida e outro para a volta, independentemente de a atividade ser ensaio, evento, apresentação, treinamento ou outra atividade válida.
 
-O cartão de passe é opcional no cadastro do integrante. Quando existir, o administrador poderá informar seu número de controle, que será associado de forma única ao integrante. A rotina administrativa de passes permite cadastrar ou atualizar a quantidade disponibilizada para cada integrante com cartão ativo, por mês de referência.
+O cartão de passe é opcional no cadastro do integrante. Quando existir, seu número de controle é associado de forma única ao integrante. Em **Passes de Transporte**, o seletor mostra todos os integrantes ativos e identifica os que não têm cartão ativo; esses ficam desabilitados para lançamento. Se nenhum integrante tiver cartão ativo, a tela orienta o administrador a cadastrar o número de controle no cadastro do integrante. Para os elegíveis, o administrador seleciona o mês e o modo de lançamento: **Cota mensal** define a quantidade regular daquele mês; **Avulso** acrescenta uma quantidade excepcional e exige motivo. O lançamento avulso pode ser feito mesmo sem cota mensal prévia, criando o período com cota mensal zero.
 
 O controle deverá manter histórico das disponibilizações e dos consumos relacionados à atividade ou presença, permitindo calcular o saldo e explicar cada utilização. O sistema deverá impedir o registro da presença quando houver menos de 2 passes disponíveis.
 
@@ -327,7 +329,7 @@ Integrantes sem cartão cadastrado continuam podendo ter a presença registrada,
 
 O cadastro do cartão, da cota mensal, o consumo automático de 2 passes na presença, uma recarga extra mensal justificada e a consulta administrativa do histórico já estão implementados. O sistema mantém movimentos de disponibilização inicial, recarga, consumo e estorno, preservando compatibilidade com cotas antigas.
 
-A recarga extra não substitui a cota inicial, deve ser maior que zero, exige motivo informado pelo administrador e só pode ocorrer uma vez por integrante em cada mês.
+O lançamento avulso não substitui a cota mensal, deve ser maior que zero, exige motivo informado pelo administrador e só pode ocorrer uma vez por integrante em cada mês.
 
 ## Ensaios
 
@@ -881,40 +883,111 @@ Arquivos contendo senhas, tokens, chaves de API ou outras informações sensíve
 
 # Evidências de Interface
 
-Imagens presentes no repositório:
+As capturas abaixo documentam as principais telas do sistema. Dados pessoais identificáveis foram cobertos com máscaras opacas antes da inclusão nesta galeria.
 
-| Tela                   | Arquivo                                      | Descrição                                  |
-| ---------------------- | -------------------------------------------- | ------------------------------------------ |
-| Login                  | `assets/imgs/Login.png`                      | Página de autenticação                     |
-| Bloqueio               | `assets/imgs/bloq.png`                       | Tela de bloqueio após tentativas inválidas |
-| Dashboard              | `assets/imgs/Dash.png`                       | Painel principal                           |
-| Menu                   | `assets/imgs/tela-menu.png`                  | Menu principal                             |
-| Usuários               | `assets/imgs/tela-admin-usuarios.png`        | Administração de usuários                  |
-| Novo usuário           | `assets/imgs/tela-criar-usuario.png`         | Cadastro de usuário                        |
-| Integrantes            | `assets/imgs/tela-admin-alunos.png`          | Administração de integrantes               |
-| Cadastro de integrante | `assets/imgs/tela-cadastrar-aluno.png`       | Cadastro de integrante                     |
-| Relatório individual   | `assets/imgs/tela-relatorio-aluno.png`       | Relatório de integrante                    |
-| Escolas                | `assets/imgs/tela-admin-escolas.png`         | Administração de escolas                   |
-| Nova escola            | `assets/imgs/tela-cadastrar-escola.png`      | Cadastro de escola                         |
-| Relatório de escolas   | `assets/imgs/tela-relatorio-escolas.png`     | Relatório por escola                       |
-| Instrumentos           | `assets/imgs/tela-admin-instrumentos.png`    | Administração de instrumentos              |
-| Novo instrumento       | `assets/imgs/tela-cadastrar-instrumento.png` | Cadastro de instrumento                    |
-| Tipos                  | `assets/imgs/tela-admin-tipos.png`           | Tipos de instrumentos                      |
-| Naipes                 | `assets/imgs/tela-admin-naipes.png`          | Naipes                                     |
-| Backup                 | `assets/imgs/tela-admin-backup.png`          | Área relacionada ao backup                 |
-| Alteração de senha     | `assets/imgs/tela-alterar-senha.png`         | Alteração de senha                         |
+<details>
+<summary>Acesso, navegação e administração</summary>
 
-Exemplos:
+![Tela de login](./assets/imgs/Login.png)
 
-![Tela de Login](./assets/imgs/Login.png)
-
-![Tela de bloqueio](./assets/imgs/bloq.png)
+![Bloqueio após tentativas inválidas](./assets/imgs/bloq.png)
 
 ![Dashboard](./assets/imgs/Dash.png)
 
-![Menu](./assets/imgs/tela-menu.png)
+![Menu principal](./assets/imgs/tela-menu.png)
 
----
+![Administração de usuários](./assets/imgs/tela-admin-usuarios.png)
+
+![Cadastro de usuário](./assets/imgs/tela-criar-usuario.png)
+
+![Alteração de senha](./assets/imgs/tela-alterar-senha.png)
+
+![Configurações de segurança](./assets/imgs/tela-config-seg.png)
+
+![Backup e restauração](./assets/imgs/tela-admin-backup.png)
+
+</details>
+
+<details>
+<summary>Integrantes, cadastros e relatórios</summary>
+
+![Administração de integrantes com dados pessoais anonimizados](./assets/imgs/tela-admin-alunos.png)
+
+![Cadastro de integrante](./assets/imgs/tela-cadastrar-aluno.png)
+
+![Cadastro de endereço](./assets/imgs/tela-cadastrar-aluno-endereco.png)
+
+![Cadastro de responsáveis](./assets/imgs/tela-cadastrar-aluno-responsavel.png)
+
+![Vínculo com escola](./assets/imgs/tela-cadastrar-aluno-escola.png)
+
+![Vínculo com instrumento](./assets/imgs/tela-cadastrar-aluno-instrumentos.png)
+
+![Administração de escolas](./assets/imgs/tela-admin-escolas.png)
+
+![Cadastro de escola](./assets/imgs/tela-cadastrar-escola.png)
+
+![Administração de instrumentos](./assets/imgs/tela-admin-instrumentos.png)
+
+![Cadastro de instrumento](./assets/imgs/tela-cadastrar-instrumento.png)
+
+![Tipos de instrumentos](./assets/imgs/tela-admin-tipos.png)
+
+![Naipes](./assets/imgs/tela-admin-naipes.png)
+
+![Relatório individual com dados pessoais anonimizados](./assets/imgs/tela-relatorio-aluno.png)
+
+![Relatório geral com dados pessoais anonimizados](./assets/imgs/tela-relatorio-geral.png)
+
+![Relatório de escolas](./assets/imgs/tela-relatorio-escolas.png)
+
+</details>
+
+<details>
+<summary>Ensaios, eventos, atividades e presença</summary>
+
+![Lista de ensaios](./assets/imgs/tela-ensaios.png)
+
+![Cadastro de ensaio](./assets/imgs/tela-novo-ensaio.png)
+
+![Edição de ensaio](./assets/imgs/tela-editar-enssaio.png)
+
+![Lista de eventos e apresentações](./assets/imgs/tela-criacao-eventos.png)
+
+![Cadastro de evento](./assets/imgs/tela-novo-evento.png)
+
+![Atividades avulsas](./assets/imgs/tela-ativi-avulsa.png)
+
+![Calendário do BMCM](./assets/imgs/calendario-BMCM.png)
+
+![Lista de chamada com nomes anonimizados](./assets/imgs/lista-de-chamada.png)
+
+![Folha diária de presença com nomes e identificadores anonimizados](./assets/imgs/folha-relatorio-presenca.png)
+
+![Resumo mensal de presença com nomes anonimizados](./assets/imgs/resumo-mensal-presen%C3%A7a.png)
+
+![Relatório profissional de presença com nomes anonimizados](./assets/imgs/relatorio-mensal-presenca.png)
+
+![Lançamento de passes](./assets/imgs/lancamento-passes.png)
+
+</details>
+
+<details>
+<summary>Comunicação e serviços Google</summary>
+
+![Central de comunicações com contato pessoal anonimizado](./assets/imgs/Central-de-comunicacoes.png)
+
+![Nova comunicação com e-mail remetente anonimizado](./assets/imgs/tela-nova%20comunicacao.png)
+
+![Configurações dos serviços Google com e-mail remetente anonimizado](./assets/imgs/tela-configuracoes-google-services.png)
+
+![Seleção de conta Google com identidades anonimizadas](./assets/imgs/tela-login-google.png)
+
+![Aviso de verificação do aplicativo Google](./assets/imgs/tela-aut.google.png)
+
+![Permissões Google com identidade da conta anonimizada](./assets/imgs/servicoa-google.png)
+
+</details>
 
 # Integrantes
 

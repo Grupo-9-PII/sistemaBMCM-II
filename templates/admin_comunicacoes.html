@@ -44,7 +44,15 @@
                 <div class="btn-group" role="group">
                   <a href="{{ url_for('main.detalhar_comunicacao', comunicacao_id=comunicacao.id) }}" class="btn btn-sm btn-outline-light">Detalhes</a>
                   <form method="POST" action="{{ url_for('main.enviar_comunicacao', comunicacao_id=comunicacao.id) }}" class="d-inline">
-                    <button type="submit" class="btn btn-sm btn-outline-success">Enviar</button>
+                    {% if comunicacao.publico == 'geral' %}
+                    {% set confirmacao_envio = 'Este envio será direcionado a todos os integrantes ativos que possuem e-mail cadastrado. Deseja continuar?' %}
+                    {% elif comunicacao.publico == 'externo' %}
+                    {% set confirmacao_envio = 'Enviar somente para ' ~ (comunicacao.destinatario_nome or 'o contato externo selecionado') ~ ' (' ~ (comunicacao.destinatario_email or 'e-mail cadastrado') ~ ')?' %}
+                    {% else %}
+                    {% set confirmacao_envio = 'Confirma o envio para o público "' ~ comunicacao.alvo_descricao ~ '"?' %}
+                    {% endif %}
+                    <button type="submit" class="btn btn-sm btn-outline-success"
+                            onclick="return confirm({{ confirmacao_envio|tojson }});">Enviar</button>
                   </form>
                   {% if comunicacao.status == 'rascunho' %}
                   <form method="POST" action="{{ url_for('main.excluir_comunicacao', comunicacao_id=comunicacao.id) }}" class="d-inline">

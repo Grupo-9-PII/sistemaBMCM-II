@@ -29,7 +29,8 @@
               </div>
               <div class="col-md-6">
                 <label for="publico" class="form-label">Público-alvo</label>
-                <select id="publico" name="publico" class="form-select">
+                <select id="publico" name="publico" class="form-select" required>
+                  <option value="" selected disabled>Selecione o público da comunicação</option>
                   <option value="geral">Integrantes ativos</option>
                   <option value="responsaveis">Responsáveis</option>
                   <option value="evento">Participantes de evento</option>
@@ -73,14 +74,13 @@
                 </select>
               </div>
               <div class="col-12 border rounded p-3 bg-body-tertiary">
-                <label for="contato_email" class="form-label">Contato externo cadastrado</label>
-                <input id="contato_email" name="contato_email" class="form-control" type="email"
-                       list="contatos_externos" placeholder="Busque por nome ou e-mail">
-                <datalist id="contatos_externos">
+                <label for="contato_externo_id" class="form-label">Contato externo desta comunicação</label>
+                <select id="contato_externo_id" name="contato_externo_id" class="form-select">
+                  <option value="">Selecione um único contato externo</option>
                   {% for contato in contatos_externos %}
-                  <option value="{{ contato.email }}" label="{{ contato.nome }}">{{ contato.nome }}</option>
+                  <option value="{{ contato.id }}">{{ contato.nome }}{% if contato.email %} ({{ contato.email }}){% endif %}</option>
                   {% endfor %}
-                </datalist>
+                </select>
                 <div class="form-text">O público externo é sempre um único destinatário por comunicação.</div>
               </div>
               <div class="col-md-6">

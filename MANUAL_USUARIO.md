@@ -81,6 +81,10 @@ Na área de configurações administrativas, o administrador pode autorizar os e
 
 Após a autorização, o sistema salva o token localmente em `instance/google_oauth_token.json`. O token é usado para enviar mensagens pelo Gmail, sincronizar ensaios, eventos e atividades avulsas para o Google Calendar e enviar backups ao Google Drive, conforme os escopos autorizados.
 
+![Configurações dos serviços Google](./assets/imgs/tela-configuracoes-google-services.png)
+
+![Seleção de conta Google com identidades anonimizadas](./assets/imgs/tela-login-google.png)
+
 ### 3.5 Recuperação de Senha
 Em caso de esquecimento de senha, entre em contato com o administrador do sistema.
 
@@ -205,6 +209,8 @@ Acesse o menu superior e clique em **Integrantes** para visualizar todos os alun
 - Cidade
 - Estado
 
+![Aba de contato e endereço](./assets/imgs/tela-cadastrar-aluno-endereco.png)
+
 **Aba Informações da Banda:**
 - Função na banda (maestro, aluno, etc.)
 - Foto do aluno
@@ -213,9 +219,13 @@ Acesse o menu superior e clique em **Integrantes** para visualizar todos os alun
 - Selecione a escola
 - Ano letivo
 
+![Aba de vínculo com escola](./assets/imgs/tela-cadastrar-aluno-escola.png)
+
 **Aba Instrumento:**
 - Selecione o instrumento atualmente associado ao integrante
 - Informe observações, quando necessário
+
+![Aba de vínculo com instrumento](./assets/imgs/tela-cadastrar-aluno-instrumentos.png)
 
 Ao trocar o instrumento, a associação anterior recebe uma data de devolução e permanece no histórico. Instrumentos inativos não podem ser associados a novos integrantes.
 
@@ -224,6 +234,8 @@ Ao trocar o instrumento, a associação anterior recebe uma data de devolução 
 - Parentesco
 - Telefone
 - E-mail
+
+![Aba de responsáveis](./assets/imgs/tela-cadastrar-aluno-responsavel.png)
 
 **Aba Autorizações:**
 - Termo de autorização de foto (obrigatório para menores)
@@ -381,6 +393,10 @@ Para cada registro, use **Chamada** para lançar ou consultar presença e, quand
 
 O calendário BMCM é independente do Google Calendar. A grade não representa horário de funcionamento da Banda e não presume horário para atividades sem essa informação. A sincronização Google é manual e opcional em cada registro.
 
+![Calendário mensal do BMCM](./assets/imgs/calendario-BMCM.png)
+
+![Folha diária de presença com nomes e identificadores anonimizados](./assets/imgs/folha-relatorio-presenca.png)
+
 ### 9.1 Criar um Ensaio
 
 1. No menu superior, abra **Atividades** e clique em **Ensaios**
@@ -396,6 +412,10 @@ O calendário BMCM é independente do Google Calendar. A grade não representa h
 
 Após o cadastro, o sistema abrirá automaticamente a folha de chamada.
 
+![Lista de ensaios](./assets/imgs/tela-ensaios.png)
+
+![Formulário para criar ensaio](./assets/imgs/tela-novo-ensaio.png)
+
 ### 9.2 Registrar Presença em um Ensaio
 
 Na folha de chamada, os integrantes ativos são agrupados pelo instrumento atualmente associado. Para cada integrante, marque uma situação:
@@ -407,6 +427,8 @@ Na folha de chamada, os integrantes ativos são agrupados pelo instrumento atual
 Clique em **Salvar presença** para registrar ou atualizar a chamada. O usuário responsável e o horário do registro são armazenados para auditoria.
 
 O botão **Imprimir** gera uma versão adequada para impressão e conferência durante o ensaio.
+
+![Folha de chamada com nomes anonimizados](./assets/imgs/lista-de-chamada.png)
 
 ### 9.3 Editar ou Cancelar um Ensaio
 
@@ -434,6 +456,10 @@ Na listagem de ensaios, use **Sincronizar** para publicar o ensaio no Google Cal
 
 Os status disponíveis são **A confirmar**, **Confirmado** e **Cancelado**.
 
+![Lista de eventos e apresentações](./assets/imgs/tela-criacao-eventos.png)
+
+![Formulário de novo evento](./assets/imgs/tela-novo-evento.png)
+
 ### 9.5 Registrar Presença em Evento
 
 Na listagem de **Eventos**, clique em **Chamada**. A folha funciona da mesma forma que a folha de ensaio, agrupando integrantes por instrumento e permitindo marcar presença, ausência ou justificativa.
@@ -453,6 +479,8 @@ Na listagem de eventos, use **Sincronizar** para publicar o evento no Google Cal
 3. Se a atividade já tiver sido sincronizada, use **Atualizar calendário** para atualizar o mesmo evento remoto.
 
 Quando houver início e fim, ambos são usados no evento. Com apenas horário inicial, o sistema considera uma hora de duração. Sem horário, a atividade é publicada como evento de dia inteiro. Área, responsável, tipo e observações são incluídos na descrição. O BMCM continua sendo o registro oficial; alterações feitas diretamente no Google Calendar não são importadas.
+
+![Lista de atividades avulsas](./assets/imgs/tela-ativi-avulsa.png)
 
 ### 9.8 Consultar Histórico e Frequência
 
@@ -474,19 +502,26 @@ Use **Imprimir** para gerar uma cópia do histórico.
 
 O relatório profissional é preparado para impressão e pode ser salvo como PDF pelo navegador. O relatório considera integrantes ativos e registros do mês selecionado.
 
+![Resumo mensal de presença com nomes anonimizados](./assets/imgs/resumo-mensal-presen%C3%A7a.png)
+
+![Relatório profissional de presença com nomes anonimizados](./assets/imgs/relatorio-mensal-presenca.png)
+
 ### 9.10 Administrar passes de transporte
 
 O controle de passes está disponível para administradores em **Usuário > Passes de Transporte**.
 
 1. Selecione o mês de referência.
-2. Informe a cota inicial de cada integrante com cartão ativo e clique em **Salvar**.
-3. O sistema registra a disponibilização inicial no histórico de movimentos.
-4. Quando necessário, informe a quantidade e o motivo da recarga extra e clique em **Recarga extra**.
-5. Consulte **Histórico** para verificar disponibilizações, recargas, consumos, estornos e saldos.
+2. Escolha o tipo de lançamento: **Cota mensal** ou **Avulso**.
+3. Selecione um integrante com cartão ativo e informe a quantidade.
+4. Para lançamento **Avulso**, informe também o motivo. O avulso pode ser lançado sem cota mensal prévia.
+5. Clique em **Confirmar lançamento**.
+6. Consulte **Histórico** para verificar disponibilizações, recargas, consumos, estornos e saldos.
 
 Cada presença registrada para integrante com cartão consome 2 passes. Com saldo inferior a 2, a presença é bloqueada. Integrantes sem cartão continuam podendo registrar presença, mas não geram consumo de passes.
 
-A recarga extra deve ser maior que zero, exige motivo obrigatório e pode ser utilizada uma única vez por integrante em cada mês. Alterações de presença podem gerar o estorno correspondente no histórico.
+A quantidade avulsa deve ser maior que zero, exige motivo obrigatório e pode ser lançada uma única vez por integrante em cada mês. Integrantes sem cartão ativo não podem receber lançamentos de passes. Alterações de presença podem gerar o estorno correspondente no histórico.
+
+![Tela de passes; lançamento habilitado após cadastrar cartão ativo no integrante](./assets/imgs/lancamento-passes.png)
 
 ---
 
@@ -559,6 +594,8 @@ Os novos arquivos ZIP são protegidos com AES-256. Se `BACKUP_PASSWORD` não est
 ### 12.1 Acesso à Central
 A Central de Comunicações fica disponível para usuários com permissão administrativa ou profissional. A partir dela, o administrador pode criar mensagens para públicos específicos, anexos, comunicação com contatos externos e histórico de envios.
 
+![Central de Comunicações com dados de contato anonimizados](./assets/imgs/Central-de-comunicacoes.png)
+
 ### 12.2 Criar uma comunicação
 1. Acesse **Comunicações** no painel administrativo.
 2. Informe assunto e mensagem.
@@ -574,6 +611,8 @@ A Central de Comunicações fica disponível para usuários com permissão admin
 5. Revise a mensagem e confirme o envio.
 
 Para um contato externo novo ou sem autorização vigente, confirme a autorização de e-mail e informe sua origem. A data e a origem ficam registradas no contato. A autorização pode ser revogada na lista da Central; após a revogação, novos envios são bloqueados. A autorização de e-mail não habilita WhatsApp.
+
+![Formulário de comunicação com e-mail remetente anonimizado](./assets/imgs/tela-nova%20comunicacao.png)
 
 ### 12.3 Status do envio
 A comunicação pode aparecer com os seguintes status:
@@ -736,7 +775,7 @@ Essa identificação é mantida pela equipe responsável pelo desenvolvimento. O
 
 ---
 
-**Versão do Manual**: 1.2
+**Versão do Manual**: 1.3
 **Sistema**: Sistema BMCM - Banda Marcial Municipal de Marília
 **Data de Criação**: 2026
 

@@ -1250,11 +1250,12 @@ def nova_comunicacao():
         assunto = (request.form.get("assunto") or "").strip()
         mensagem = (request.form.get("mensagem") or "").strip()
         tipo = (request.form.get("tipo") or "aviso").strip().lower()
-        publico = (request.form.get("publico") or "geral").strip().lower()
+        publico = (request.form.get("publico") or "").strip().lower()
         canal = (request.form.get("canal") or "email").strip().lower()
         evento_id = request.form.get("evento_id", type=int)
         ensaio_id = request.form.get("ensaio_id", type=int)
         naipe_id = request.form.get("naipe_id", type=int)
+        contato_externo_id = request.form.get("contato_externo_id", type=int)
         contato_email = (request.form.get("contato_email") or "").strip().lower()
         destinatario_nome = (request.form.get("destinatario_nome") or "").strip()
         destinatario_email = (request.form.get("destinatario_email") or "").strip().lower()
@@ -1263,9 +1264,33 @@ def nova_comunicacao():
             request.form.get("origem_consentimento_email") or ""
         ).strip()
 
+        publicos_validos = {"geral", "responsaveis", "evento", "naipe", "externo"}
+        if publico not in publicos_validos:
+            flash("Selecione explicitamente o público-alvo da comunicação.", "danger")
+            return redirect(url_for("main.nova_comunicacao"))
+        if publico != "externo" and (
+            contato_externo_id
+            or contato_email
+            or destinatario_nome
+            or destinatario_email
+        ):
+            flash(
+                "Dados de destinatário externo só podem ser usados com o público Contatos externos. "
+                "Nenhuma comunicação foi criada.",
+                "danger",
+            )
+            return redirect(url_for("main.nova_comunicacao"))
+
         contato_externo = None
         if publico == "externo":
-            if contato_email:
+            if contato_externo_id:
+                contato_externo = db.session.get(ContatoComunicacao, contato_externo_id)
+                if not contato_externo or not contato_externo.ativo:
+                    flash("Selecione um contato externo ativo.", "danger")
+                    return redirect(url_for("main.nova_comunicacao"))
+                destinatario_nome = contato_externo.nome
+                destinatario_email = (contato_externo.email or "").strip().lower()
+            elif contato_email:
                 contato_externo = ContatoComunicacao.query.filter_by(
                     email=contato_email,
                     ativo=True,
@@ -1586,21 +1611,25 @@ def enviar_comunicacao(comunicacao_id):
             novos_destinatarios.append(destinatario)
             destinatarios_criados += 1
     elif comunicacao.publico == "externo":
-        if not comunicacao.destinatario_email:
-            flash("Este rascunho não possui um e-mail externo definido.", "warning")
+        contato_externo = db.session.get(
+            ContatoComunicacao, comunicacao.contato_externo_id
+        ) if comunicacao.contato_externo_id else None
+        if not contato_externo or not contato_externo.email:
+            flash("Este rascunho não possui um contato externo selecionado.", "warning")
             return redirect(url_for("main.listar_comunicacoes"))
 
         existente = ComunicacaoDestinatario.query.filter_by(
             comunicacao_id=comunicacao.id,
             tipo_destinatario="contato_externo",
+            destinatario_id=contato_externo.id,
         ).first()
         if not existente:
             destinatario = ComunicacaoDestinatario(
                 comunicacao_id=comunicacao.id,
                 tipo_destinatario="contato_externo",
-                destinatario_id=comunicacao.contato_externo_id or 0,
-                destinatario_nome=comunicacao.destinatario_nome,
-                destinatario_email=comunicacao.destinatario_email,
+                destinatario_id=contato_externo.id,
+                destinatario_nome=contato_externo.nome,
+                destinatario_email=contato_externo.email.strip().lower(),
                 canal="email",
                 status="pendente",
             )
@@ -1888,18 +1917,18 @@ def gerenciar_passes():
         flash("Cota mensal de passes salva com sucesso.", "success")
         return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
 
-    alunos_com_cartao = (
-        Aluno.query.join(CartaoPasse)
-        .filter(Aluno.ativo.is_(True), CartaoPasse.ativo.is_(True))
-        .order_by(Aluno.nome)
-        .all()
-    )
+    integrantes = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
+    alunos_com_cartao = [
+        aluno for aluno in integrantes
+        if aluno.cartao_passe and aluno.cartao_passe.ativo
+    ]
     cotas = {
         cota.aluno_id: cota
         for cota in CotaMensalPasse.query.filter_by(mes_referencia=mes_referencia).all()
     }
     return render_template(
         "admin_passes.html",
+        integrantes=integrantes,
         alunos=alunos_com_cartao,
         cotas=cotas,
         saldos={aluno_id: _saldo_cota_passe(cota) for aluno_id, cota in cotas.items()},
@@ -1955,6 +1984,81 @@ def adicionar_recarga_passe():
         ))
         db.session.commit()
         flash("Recarga extra registrada com sucesso.", "success")
+    return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
+
+
+@main_bp.route("/admin/passes/lancamento", methods=["POST"])
+@login_required
+@admin_required
+def lancar_passes():
+    """Lança a cota mensal ou uma disponibilização avulsa auditada."""
+    aluno_id = request.form.get("aluno_id", type=int)
+    mes_parametro = request.form.get("mes_referencia", "")
+    modo = request.form.get("modo_lancamento", "mensal")
+    motivo = request.form.get("motivo", "").strip()
+    try:
+        mes_referencia = datetime.strptime(mes_parametro, "%Y-%m").date().replace(day=1)
+        quantidade = int(request.form.get("quantidade", ""))
+    except (TypeError, ValueError):
+        flash("Informe mês e quantidade válidos para o lançamento.", "danger")
+        return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_parametro))
+
+    aluno = _get_or_404(Aluno, aluno_id)
+    if not aluno.cartao_passe or not aluno.cartao_passe.ativo:
+        flash("Somente integrantes com cartão de passe ativo podem receber passes.", "danger")
+    elif modo not in {"mensal", "avulso"}:
+        flash("Selecione o tipo de lançamento.", "danger")
+    elif quantidade < 0 or (modo == "avulso" and quantidade == 0):
+        flash("A quantidade mensal não pode ser negativa; o avulso deve ser maior que zero.", "danger")
+    elif modo == "avulso" and not motivo:
+        flash("Informe o motivo do lançamento avulso.", "danger")
+    else:
+        cota = CotaMensalPasse.query.filter_by(
+            aluno_id=aluno.id,
+            mes_referencia=mes_referencia,
+        ).first()
+        if cota is None:
+            cota = CotaMensalPasse(
+                aluno_id=aluno.id,
+                mes_referencia=mes_referencia,
+            )
+            db.session.add(cota)
+            db.session.flush()
+
+        if modo == "mensal":
+            cota.quantidade_disponibilizada = quantidade
+            movimento = MovimentoPasse.query.filter_by(
+                cota_id=cota.id,
+                tipo="DISPONIBILIZACAO",
+            ).first()
+            if movimento is None:
+                movimento = MovimentoPasse(
+                    cota_id=cota.id,
+                    quantidade=quantidade,
+                    tipo="DISPONIBILIZACAO",
+                    motivo="Lançamento mensal da cota.",
+                    registrado_por_id=current_user.id,
+                )
+                db.session.add(movimento)
+            else:
+                movimento.quantidade = quantidade
+                movimento.registrado_por_id = current_user.id
+            flash("Lançamento mensal de passes salvo.", "success")
+        elif MovimentoPasse.query.filter_by(cota_id=cota.id, tipo="RECARGA").first():
+            flash("O lançamento avulso deste integrante já foi utilizado neste mês.", "danger")
+            db.session.rollback()
+            return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
+        else:
+            db.session.add(MovimentoPasse(
+                cota_id=cota.id,
+                quantidade=quantidade,
+                tipo="RECARGA",
+                motivo=motivo,
+                registrado_por_id=current_user.id,
+            ))
+            flash("Lançamento avulso de passes registrado.", "success")
+        db.session.commit()
+
     return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
 
 

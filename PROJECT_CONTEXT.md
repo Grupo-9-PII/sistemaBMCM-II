@@ -129,7 +129,7 @@ O Google Calendar é uma integração de organização e comunicação. O regist
 
 A Banda disponibiliza mensalmente uma cota de passes por integrante. A cota deve ser controlada por integrante e por mês de referência.
 
-O administrador do sistema deverá possuir uma rotina para cadastrar ou atualizar a cota mensal de cada integrante que possua cartão de passe cadastrado. O número de controle do cartão será associado ao integrante e deverá ser único. Integrantes que não recebem cartão podem permanecer sem esse cadastro; o cartão não é um campo obrigatório do integrante.
+O administrador possui uma rotina explícita de lançamento por integrante e mês, com dois modos: **mensal**, que define a cota daquele mês, e **avulso**, que acrescenta uma quantidade excepcional mediante motivo. O número de controle do cartão é associado ao integrante e é único. Integrantes que não recebem cartão permanecem sem esse cadastro; o cartão não é obrigatório. No seletor, todos os integrantes ativos são exibidos; quem não tem cartão ativo aparece identificado e não pode ser selecionado para lançamento. Se não houver nenhum cartão ativo, a tela orienta o administrador a cadastrá-lo no integrante.
 
 A cota inicial poderá receber **uma única recarga extra no mesmo mês** quando a quantidade de ensaios ou atividades superar os passes disponíveis. A recarga deverá possuir quantidade maior que zero e motivo obrigatório informado pelo administrador. O sistema deverá registrar essa recarga como movimento separado, com data e administrador responsável, e impedir uma segunda recarga extra para o mesmo integrante no mesmo mês.
 
@@ -142,7 +142,7 @@ Quando o integrante não possuir cartão de passe cadastrado, a presença dever�
 
 O controle deve permitir consultar passes disponibilizados, recarregados, consumidos e restantes. O saldo não deve depender somente de um número manual: cada disponibilização, recarga e consumo deve possuir histórico, relacionado à presença ou atividade que originou o movimento quando aplicável.
 
-Conceitualmente, o modelo poderá utilizar uma cota mensal e movimentos de passe, por exemplo:
+O modelo utiliza uma cota mensal e movimentos de passe:
 
 ```text
 COTA_MENSAL_PASSES

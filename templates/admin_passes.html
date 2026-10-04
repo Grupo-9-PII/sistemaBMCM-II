@@ -5,7 +5,7 @@
   <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
     <div>
       <h1 class="h3 mb-1"><i class="bi bi-ticket-perforated me-2"></i>Passes de Transporte</h1>
-      <p class="text-muted mb-0">Cadastre a cota mensal dos integrantes que possuem cartão.</p>
+      <p class="text-muted mb-0">Lance a cota mensal ou uma quantidade avulsa para integrantes com cartão.</p>
     </div>
     <a href="{{ url_for('main.historico_passes', mes_referencia=mes_referencia.strftime('%Y-%m')) }}" class="btn btn-outline-secondary">
       <i class="bi bi-clock-history me-1" aria-hidden="true"></i>Histórico
@@ -27,6 +27,55 @@
     </div>
   </form>
 
+  <section class="card mb-4" aria-labelledby="titulo-lancamento-passes">
+    <div class="card-header">
+      <h2 id="titulo-lancamento-passes" class="h5 mb-0">Lançar passes</h2>
+    </div>
+    {% if integrantes and not alunos %}
+    <div class="alert alert-warning m-3 mb-0" role="status">
+      Nenhum integrante ativo possui cartão de passe ativo. Cadastre o número de controle no <a href="{{ url_for('main.listar_alunos') }}">cadastro de integrantes</a> para habilitar lançamentos.
+    </div>
+    {% endif %}
+    <form method="POST" action="{{ url_for('main.lancar_passes') }}" class="card-body">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="mes_referencia" value="{{ mes_referencia.strftime('%Y-%m') }}">
+      <div class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label for="modo_lancamento" class="form-label">Tipo de lançamento</label>
+          <select name="modo_lancamento" id="modo_lancamento" class="form-select" required>
+            <option value="mensal">Cota mensal</option>
+            <option value="avulso">Avulso</option>
+          </select>
+        </div>
+        <div class="col-md-4">
+          <label for="aluno_id_lancamento" class="form-label">Integrante com cartão</label>
+          <select name="aluno_id" id="aluno_id_lancamento" class="form-select" required>
+            <option value="">Selecione um integrante</option>
+            {% for aluno in integrantes %}
+            {% set possui_cartao_ativo = aluno.cartao_passe and aluno.cartao_passe.ativo %}
+            <option value="{{ aluno.id }}" {% if not possui_cartao_ativo %}disabled{% endif %}>
+              {{ aluno.nome }} — {% if possui_cartao_ativo %}cartão {{ aluno.cartao_passe.numero_controle }}{% else %}sem cartão ativo{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label for="quantidade_lancamento" class="form-label">Quantidade</label>
+          <input type="number" name="quantidade" id="quantidade_lancamento" class="form-control" min="0" step="1" required>
+        </div>
+        <div class="col-md-3" id="motivo-lancamento-container" hidden>
+          <label for="motivo_lancamento" class="form-label">Motivo do avulso</label>
+          <input type="text" name="motivo" id="motivo_lancamento" class="form-control" maxlength="500" disabled>
+        </div>
+        <div class="col-12 d-flex justify-content-end">
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Confirmar lançamento
+          </button>
+        </div>
+      </div>
+    </form>
+  </section>
+
   <div class="card">
     <div class="table-responsive">
       <table class="table table-dark table-hover align-middle mb-0">
@@ -35,10 +84,9 @@
           <tr>
             <th scope="col">Integrante</th>
             <th scope="col">Cartão</th>
-            <th scope="col">Cota inicial</th>
-            <th scope="col">Recarga extra</th>
+            <th scope="col">Cota mensal</th>
+            <th scope="col">Lançamento avulso</th>
             <th scope="col">Saldo atual</th>
-            <th scope="col" class="text-end">Ação</th>
           </tr>
         </thead>
         <tbody>
@@ -49,42 +97,13 @@
           <tr>
             <td>{{ aluno.nome }}</td>
             <td><code>{{ aluno.cartao_passe.numero_controle }}</code></td>
-            <td>
-              <form method="POST" id="form-passe-{{ aluno.id }}" class="row g-2 align-items-center">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <input type="hidden" name="aluno_id" value="{{ aluno.id }}">
-                <input type="hidden" name="mes_referencia" value="{{ mes_referencia.strftime('%Y-%m') }}">
-                <div class="col-auto">
-                  <label class="visually-hidden" for="quantidade-{{ aluno.id }}">Quantidade para {{ aluno.nome }}</label>
-                  <input type="number" min="0" step="1" name="quantidade_disponibilizada"
-                         id="quantidade-{{ aluno.id }}" class="form-control"
-                         value="{{ cota.quantidade_disponibilizada if cota else '' }}" required>
-                </div>
-              </form>
-            </td>
+            <td>{{ cota.quantidade_disponibilizada if cota else '-' }}</td>
             <td>{{ recarga.quantidade if recarga else '-' }}</td>
             <td><strong>{{ saldo }}</strong></td>
-            <td class="text-end">
-                <button type="submit" form="form-passe-{{ aluno.id }}" class="btn btn-sm btn-primary">
-                  <i class="bi bi-save me-1" aria-hidden="true"></i>Salvar
-                </button>
-                {% if cota and not recarga %}
-                <form method="POST" action="{{ url_for('main.adicionar_recarga_passe') }}" class="mt-2 text-start">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                  <input type="hidden" name="aluno_id" value="{{ aluno.id }}">
-                  <input type="hidden" name="mes_referencia" value="{{ mes_referencia.strftime('%Y-%m') }}">
-                  <label class="visually-hidden" for="recarga-quantidade-{{ aluno.id }}">Quantidade da recarga de {{ aluno.nome }}</label>
-                  <input type="number" min="1" step="1" name="quantidade" id="recarga-quantidade-{{ aluno.id }}" class="form-control form-control-sm mb-1" placeholder="Qtd. extra" required>
-                  <label class="visually-hidden" for="recarga-motivo-{{ aluno.id }}">Motivo da recarga de {{ aluno.nome }}</label>
-                  <input type="text" maxlength="500" name="motivo" id="recarga-motivo-{{ aluno.id }}" class="form-control form-control-sm mb-1" placeholder="Motivo obrigatório" required>
-                  <button type="submit" class="btn btn-sm btn-outline-warning w-100">Recarga extra</button>
-                </form>
-                {% endif %}
-            </td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="6" class="text-center py-4">Nenhum integrante ativo possui cartão de passe cadastrado.</td>
+            <td colspan="5" class="text-center py-4">Nenhum integrante ativo possui cartão de passe cadastrado.</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -93,7 +112,23 @@
   </div>
 
   <p class="text-muted small mt-3 mb-5">
-    A primeira cota é cadastrada uma vez por mês. Uma única recarga extra pode ser autorizada pelo administrador mediante justificativa.
+    O lançamento avulso funciona como a única recarga extra permitida por integrante no mês e exige justificativa.
   </p>
 </div>
+<script>
+  const modoLancamento = document.getElementById("modo_lancamento");
+  const motivoContainer = document.getElementById("motivo-lancamento-container");
+  const motivoLancamento = document.getElementById("motivo_lancamento");
+
+  function atualizarCamposLancamento() {
+    const avulso = modoLancamento.value === "avulso";
+    motivoContainer.hidden = !avulso;
+    motivoLancamento.disabled = !avulso;
+    motivoLancamento.required = avulso;
+    document.getElementById("quantidade_lancamento").min = avulso ? "1" : "0";
+  }
+
+  modoLancamento.addEventListener("change", atualizarCamposLancamento);
+  atualizarCamposLancamento();
+</script>
 {% endblock %}

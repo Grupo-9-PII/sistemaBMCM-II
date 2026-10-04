@@ -270,6 +270,7 @@ def test_cartao_passe_opcional_e_cota_mensal_administrativa(monkeypatch):
         com_cartao = Aluno(nome="COM CARTAO", ativo=True)
         db.session.add_all([sem_cartao, com_cartao])
         db.session.flush()
+        sem_cartao_id = sem_cartao.id
         com_cartao_id = com_cartao.id
         db.session.add(CartaoPasse(aluno_id=com_cartao.id, numero_controle="CARTAO-001"))
         db.session.commit()
@@ -277,7 +278,9 @@ def test_cartao_passe_opcional_e_cota_mensal_administrativa(monkeypatch):
     resposta = client.get("/admin/passes?mes_referencia=2026-09")
     assert resposta.status_code == 200
     assert b"COM CARTAO" in resposta.data
-    assert b"SEM CARTAO" not in resposta.data
+    assert b"SEM CARTAO" in resposta.data
+    assert b"sem cart\xc3\xa3o ativo" in resposta.data
+    assert f'<option value="{sem_cartao_id}" disabled>'.encode() in resposta.data
 
     resposta = client.post(
         "/admin/passes",
@@ -408,6 +411,104 @@ def test_validacoes_admin_passes_rejeitam_valores_invalidos_e_cartao_duplicado(m
             ))
             db.session.flush()
         db.session.rollback()
+
+
+def test_lancamento_mensal_e_avulso_de_passes(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    token = _login_admin(client)
+
+    with app.app_context():
+        aluno_mensal = Aluno(nome="LANCAMENTO MENSAL", ativo=True)
+        aluno_avulso = Aluno(nome="LANCAMENTO AVULSO", ativo=True)
+        db.session.add_all([aluno_mensal, aluno_avulso])
+        db.session.flush()
+        aluno_mensal_id = aluno_mensal.id
+        aluno_avulso_id = aluno_avulso.id
+        db.session.add_all([
+            CartaoPasse(aluno_id=aluno_mensal_id, numero_controle="MENSAL-001"),
+            CartaoPasse(aluno_id=aluno_avulso_id, numero_controle="AVULSO-001"),
+        ])
+        db.session.commit()
+
+    resposta = client.get("/admin/passes?mes_referencia=2026-10")
+    assert resposta.status_code == 200
+    assert b"Lancar passes" in resposta.data or "Lançar passes".encode() in resposta.data
+    assert b"Cota mensal" in resposta.data
+    assert b"Avulso" in resposta.data
+
+    resposta = client.post(
+        "/admin/passes/lancamento",
+        data={
+            "modo_lancamento": "mensal",
+            "aluno_id": aluno_mensal_id,
+            "mes_referencia": "2026-10",
+            "quantidade": "30",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert resposta.status_code == 302
+
+    resposta = client.post(
+        "/admin/passes/lancamento",
+        data={
+            "modo_lancamento": "avulso",
+            "aluno_id": aluno_mensal_id,
+            "mes_referencia": "2026-10",
+            "quantidade": "8",
+            "motivo": "Mais ensaios neste mês.",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert resposta.status_code == 302
+
+    resposta = client.post(
+        "/admin/passes/lancamento",
+        data={
+            "modo_lancamento": "avulso",
+            "aluno_id": aluno_avulso_id,
+            "mes_referencia": "2026-10",
+            "quantidade": "6",
+            "motivo": "Cartão emitido após lançamento mensal.",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+    assert resposta.status_code == 302
+
+    with app.app_context():
+        cota_mensal = CotaMensalPasse.query.filter_by(aluno_id=aluno_mensal_id).one()
+        assert cota_mensal.quantidade_disponibilizada == 30
+        assert routes._saldo_cota_passe(cota_mensal) == 38
+        assert MovimentoPasse.query.filter_by(
+            cota_id=cota_mensal.id, tipo="RECARGA"
+        ).one().motivo == "Mais ensaios neste mês."
+
+        cota_avulsa = CotaMensalPasse.query.filter_by(aluno_id=aluno_avulso_id).one()
+        assert cota_avulsa.quantidade_disponibilizada == 0
+        assert routes._saldo_cota_passe(cota_avulsa) == 6
+
+    resposta = client.post(
+        "/admin/passes/lancamento",
+        data={
+            "modo_lancamento": "avulso",
+            "aluno_id": aluno_mensal_id,
+            "mes_referencia": "2026-10",
+            "quantidade": "3",
+            "motivo": "Outra recarga",
+            "csrf_token": token,
+        },
+        follow_redirects=True,
+    )
+    assert "já foi utilizado neste mês".encode() in resposta.data
 
 
 def test_presenca_consumo_estorno_e_excecao_sem_cartao(monkeypatch):
@@ -1037,8 +1138,23 @@ def test_central_de_comunicacoes_suporta_publico_externo(monkeypatch):
             observacoes="Órgão externo",
             ativo=True,
         )
-        db.session.add(contato)
+        outros_contatos = [
+            ContatoComunicacao(
+                nome="Secretaria de Educação",
+                email="educacao@prefeitura.gov.br",
+                ativo=True,
+                autorizacao_email=True,
+            ),
+            ContatoComunicacao(
+                nome="Secretaria de Esportes",
+                email="esportes@prefeitura.gov.br",
+                ativo=True,
+                autorizacao_email=True,
+            ),
+        ]
+        db.session.add_all([contato, *outros_contatos])
         db.session.commit()
+        contato_id = contato.id
 
     response = client.post(
         "/admin/comunicacoes/nova",
@@ -1048,7 +1164,7 @@ def test_central_de_comunicacoes_suporta_publico_externo(monkeypatch):
             "tipo": "informativo",
             "publico": "externo",
             "canal": "email",
-            "contato_email": "cultura@prefeitura.gov.br",
+            "contato_externo_id": str(contato_id),
             "consentimento_email": "on",
             "origem_consentimento_email": "Autorização registrada pela coordenação",
             "csrf_token": token,
@@ -1062,25 +1178,71 @@ def test_central_de_comunicacoes_suporta_publico_externo(monkeypatch):
         assert comunicacao is not None
         assert comunicacao.publico == "externo"
         assert comunicacao.destinatario_email == "cultura@prefeitura.gov.br"
-        assert comunicacao.contato_externo_id == 1
+        assert comunicacao.contato_externo_id == contato_id
 
+    emails_enviados = []
+    monkeypatch.setattr(
+        routes,
+        "enviar_email_gmail",
+        lambda destinatario, assunto, mensagem, anexos: emails_enviados.append(destinatario),
+    )
+    app.config["TESTING"] = False
     response = client.post(
         f"/admin/comunicacoes/{comunicacao.id}/enviar",
         data={"csrf_token": token},
         follow_redirects=False,
     )
     assert response.status_code == 302
+    assert emails_enviados == ["cultura@prefeitura.gov.br"]
 
     with app.app_context():
         destinatarios = ComunicacaoDestinatario.query.filter_by(comunicacao_id=comunicacao.id).all()
         assert len(destinatarios) == 1
         assert destinatarios[0].tipo_destinatario == "contato_externo"
-        assert destinatarios[0].destinatario_id == 1
+        assert destinatarios[0].destinatario_id == contato_id
+        assert destinatarios[0].destinatario_email == "cultura@prefeitura.gov.br"
         assert destinatarios[0].status == "enviado"
-        contato_atualizado = db.session.get(ContatoComunicacao, 1)
+        assert ComunicacaoDestinatario.query.filter(
+            ComunicacaoDestinatario.comunicacao_id == comunicacao.id,
+            ComunicacaoDestinatario.destinatario_email.in_(
+                ["educacao@prefeitura.gov.br", "esportes@prefeitura.gov.br"]
+            ),
+        ).count() == 0
+        contato_atualizado = db.session.get(ContatoComunicacao, contato_id)
         assert contato_atualizado.autorizacao_email is True
         assert contato_atualizado.autorizacao_email_em is not None
         assert contato_atualizado.origem_autorizacao_email == "Autorização registrada pela coordenação"
+
+
+def test_central_bloqueia_email_externo_quando_publico_geral_esta_selecionado(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config.update(TESTING=True)
+    client = app.test_client()
+    token = _login_admin(client)
+
+    response = client.post(
+        "/admin/comunicacoes/nova",
+        data={
+            "assunto": "Destinatário externo com público incorreto",
+            "mensagem": "Esta comunicação não deve ser criada.",
+            "publico": "geral",
+            "destinatario_nome": "Contato avulso",
+            "destinatario_email": "contato@example.org",
+            "csrf_token": token,
+        },
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    with app.app_context():
+        assert Comunicacao.query.filter_by(
+            assunto="Destinatário externo com público incorreto"
+        ).count() == 0
 
 
 def test_central_de_comunicacoes_exclui_apenas_rascunho_sem_log(monkeypatch):
