@@ -66,8 +66,8 @@
       <div class="tab-content" id="configTabsContent">
         <!-- Aba Personalização -->
         <div class="tab-pane fade show active" id="personalizacao" role="tabpanel" aria-labelledby="personalizacao-tab">
-          <h5>Personalização do Sistema</h5>
-          <p>Configure o visual e o texto das telas do sistema.</p>
+          <h5>Acessibilidade e visual do sistema</h5>
+          <p>Temas e tamanhos de texto agora são preferências individuais, disponíveis no menu do usuário em Acessibilidade.</p>
           <form method="POST" enctype="multipart/form-data">
             <div class="mb-3">
               <label for="logo-banda" class="form-label">Logo da Banda (tela de login)</label>
@@ -81,48 +81,7 @@
               <label for="login-subtitulo" class="form-label">Subtítulo da Tela de Login</label>
               <input type="text" name="login_subtitulo" class="form-control" id="login-subtitulo" value="{{ system_settings.get('login_subtitle', 'Banda Marcial Cidade de Marília') }}" placeholder="Digite o subtítulo da tela de login">
             </div>
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="cor-accent" class="form-label">Cor do Tema (accent)</label>
-                <input type="color" name="cor-accent" class="form-control form-control-color" id="cor-accent" value="{{ system_settings.get('theme_accent', '#0d6efd') }}" title="Escolha a cor de destaque">
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="cor-fundo" class="form-label">Cor do Fundo do Tema</label>
-                <input type="color" name="cor-fundo" class="form-control form-control-color" id="cor-fundo" value="{{ system_settings.get('theme_bg', '#121212') }}" title="Escolha a cor de fundo">
-              </div>
-            </div>
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="cor-navbar" class="form-label">Cor da Barra de Navegação</label>
-                <input type="color" name="cor-navbar" class="form-control form-control-color" id="cor-navbar" value="{{ system_settings.get('navbar_bg', '#343a40') }}" title="Escolha a cor da barra de navegação">
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="cor-superficie" class="form-label">Cor da Superfície</label>
-                <input type="color" name="cor-superficie" class="form-control form-control-color" id="cor-superficie" value="{{ system_settings.get('surface_bg', '#1f1f1f') }}" title="Escolha a cor de superfícies do layout">
-              </div>
-            </div>
-            <hr>
-            <h6>Personalização das Abas</h6>
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="cor-texto-aba-ativa" class="form-label">Cor do Texto da Aba Ativa</label>
-                <input type="color" name="cor-texto-aba-ativa" class="form-control form-control-color" id="cor-texto-aba-ativa" value="{{ system_settings.get('tab_active_text', '#ffffff') }}">
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="cor-fundo-aba-ativa" class="form-label">Cor do Fundo da Aba Ativa</label>
-                <input type="color" name="cor-fundo-aba-ativa" class="form-control form-control-color" id="cor-fundo-aba-ativa" value="{{ system_settings.get('tab_active_bg', '#0d6efd') }}">
-              </div>
-            </div>
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label for="cor-texto-aba-inativa" class="form-label">Cor do Texto da Aba Inativa</label>
-                <input type="color" name="cor-texto-aba-inativa" class="form-control form-control-color" id="cor-texto-aba-inativa" value="{{ system_settings.get('tab_inactive_text', '#adb5bd') }}">
-              </div>
-              <div class="col-md-6 mb-3">
-                <label for="cor-fundo-aba-inativa" class="form-label">Cor do Fundo da Aba Inativa</label>
-                <input type="color" name="cor-fundo-aba-inativa" class="form-control form-control-color" id="cor-fundo-aba-inativa" value="{{ system_settings.get('tab_inactive_bg', '#212529') }}">
-              </div>
-            </div>
+
             <div class="mb-3">
               <label for="texto-rodape" class="form-label">Texto de Rodapé</label>
               <input type="text" name="texto-rodape" class="form-control" id="texto-rodape" value="{{ system_settings.get('footer_text', 'Grupo 9 — DPR7 - UNIVESP') }}" placeholder="Digite o texto do rodapé">
@@ -204,7 +163,7 @@
               <div class="card mb-3">
                 <div class="card-header">Versão do Sistema</div>
                 <div class="card-body">
-                  <p class="mb-0">Sistema de Controle de Banda Marcial v1.0.0</p>
+                  <p class="mb-0">Sistema de Controle de Banda Marcial v{{ app_version }}</p>
                 </div>
               </div>
             </div>

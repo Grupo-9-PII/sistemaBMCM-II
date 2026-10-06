@@ -1,263 +1,347 @@
 # Regras de Negócio do Sistema — Versão Atualizada
 
+Este documento representa o estado atual do sistema como implementado no código e nas telas existentes. Ele tem como referência a lógica ativa do aplicativo, não apenas requisitos de projeto em fase de idealização.
 
+## 1. Visão geral e perfis de acesso
 
-## 1. Cadastro
+O sistema é um ambiente web para gestão operacional da banda marcial, com foco em cadastro de integrantes, presenças, eventos, instrumentos, passes, comunicações e manutenção do banco de dados.
 
-O sistema deve ser capaz de realizar vários tipos de cadastro com o objetivo de alimentar a base de dados.
+Os perfis atualmente praticados na aplicação são:
 
+- Administrador: acesso completo à manutenção do sistema, usuários, backup, controles gerais e ações sensíveis.
+- Profissional/operacional: acesso às rotas de gestão da banda, presenças, relatório, comunicações e cadastros operacionais.
+- Usuário comum: acesso restringido às áreas permitidas pela autenticação e pela regra de permissão do sistema.
 
-
-### 1.1. Cadastro de usuário
-
-O Sistema deve ser capaz de cadastrar usuários e distinguir entre usuário administrador, e usuário do sistema.
-
-
-
-#### Regras do usuário administrador
-
-- Ao cadastrar um usuário deverá ser fornecido um nome de usuário, uma senha e marcar a opção "Usuário administrador".
-
-- O campo usuário deverá ser limitado em 40 caracteres e o sistema deve bloquear a inserção de mais caracteres além do limite. O campo deve impedir a digitação de caracteres especiais e números e permitir apenas letras, ponto (.) e underscore (_) e não deve permitir inserir espaço. Esse campo deve ser único.
-
-- O campo senha deve ter no mínimo 6 caracteres e no máximo 10. O campo não deve permitir digitar caracteres além do permitido. O campo deve fornecer um botão para mostrar ou ocultar a visualização da senha. A senha deverá ser encriptada utilizando hash + salt.
-
-- O cadastro de usuário deve incluir um switch para marcar se o usuário é um administrador.
-
-- Os dois campos devem ser obrigatórios e caso não seja preenchido o sistema não deve permitir o cadastro e informar qual campo não foi digitado.
-
-- O sistema deve permitir o cancelamento do cadastro tendo como ação voltar à página anterior.
-
-- A senha deverá ser alterada no primeiro login efetuado.
-
-
-
-#### Regras do usuário comum
-
-O usuário comum deve ser cadastrado por um administrador que vai informar os dados de primeiro acesso (username/password). A senha deverá ser alterada no primeiro login efetuado.
-
-
-
-### 1.2. Gestão de usuários
-
-- O sistema deve listar e exibir usuários cadastrados no sistema. Deve ser exibida uma lista com informações do id, nome de usuário, tipo de usuário (administrador/usuário comum), status (ativo/inativo), status de senha (definida no primeiro acesso ou indefinida) e opções para gerenciar o usuário (editar, resetar senha e bloquear).
-
-- O usuário admin padrão do sistema não deve ser exibido nesse painel.
-
-- A funcionalidade de gerenciar usuários deve ser exibida apenas a um administrador do sistema.
-
-
-
-#### Editar usuário
-
-Ao editar um usuário o sistema deve permitir alterar a senha, bloqueando a digitação do campo de usuário. Também deve ser possível alterar entre usuário comum e administrador do sistema. Ao concluir a ação um popup deverá ser exibido informando a ação concluída.
-
-
-
-#### Resetar senha
-
-A senha deverá ser resetada para o padrão definido e o campo de status de senha deve ficar pendente até que seja efetuado um novo login no usuário editado. Ao concluir a ação um popup deverá ser exibido informando a ação concluída.
-
-
-
-#### Bloquear usuário
-
-A ação deve bloquear completamente o usuário impedindo de utilizar qualquer parte do sistema. Ao concluir a ação um popup deverá ser exibido informando a ação concluída.
-
-
-
-#### Excluir usuário
-
-A ação deve apagar completamente o usuário do banco de dados do sistema.
-
-
-
-#### Proteção do usuário admin padrão
-
-O usuário admin é destinado para manutenção do sistema, sendo que é listado na relação de usuários, mas nenhuma ação pode ser tomada por nenhum outro usuário, mesmo Administradores, não sendo possível a sua exclusão.
-
-O gerenciamento de usuários deve ter um botão para cadastro de novo usuário.
-
-
+A proteção de rotas é feita via autenticação e decorators de permissão. Algumas ações críticas, como alteração de usuários, restauração de backup e gestão de passes, exigem privilégios administrativos.
 
 ---
 
+## 2. Login, autenticação e segurança
 
+### 2.1. Autenticação
 
-## 2. Login e Autenticação
+- O sistema autentica o usuário com nome de usuário e senha.
+- O login exige sessão ativa e validação de CSRF em ações mutáveis.
+- Usuários podem ter senha obrigatória para troca no primeiro acesso ou após reset.
+- A senha deve ser armazenada em hash com salt, nunca em texto puro.
 
-- O sistema deve autenticar o usuário através de nome de usuário e senha.
+### 2.2. Bloqueios e proteção
 
-- Após 3 tentativas de login inválidas consecutivas, o sistema deve bloquear o usuário por 12 horas.
+- Após tentativas inválidas consecutivas, o usuário pode ser bloqueado temporariamente.
+- O bloqueio impede o acesso ao sistema até que o período de contenção termine.
+- O usuário administrador padrão é protegido contra exclusão e reset sem controle explícito.
+- Ações destrutivas e mutáveis exigem confirmação via POST com token CSRF.
 
-- O bloqueio deve impedir completamente o acesso ao sistema durante o período definido.
+### 2.3. Gestão de usuários
 
-- No primeiro login de um usuário recém-cadastrado ou com senha resetada, o sistema deve obrigar a troca da senha antes de permitir o acesso às funcionalidades.
-
-- A troca de senha deve exigir a senha atual, a nova senha e a confirmação da nova senha.
-
-- A nova senha deve ter no mínimo 6 caracteres.
-
-- A senha deve ser armazenada de forma segura utilizando hash com salt.
-
-- O logout deve encerrar a sessão do usuário e redirecioná-lo para a tela de login.
-
-
+- O cadastro de usuários exige usuário e senha.
+- O sistema aceita a distinção entre usuário administrador e usuário comum.
+- Usuários podem ser ativados ou bloqueados.
+- A senha pode ser redefinida por um administrador.
+- O usuário admin padrão deve permanecer preservado para manutenção do sistema.
 
 ---
 
+## 3. Cadastro de integrantes
 
+O módulo de integrantes é o núcleo operacional do sistema e reúne dados pessoais, contatos, evento de vida na banda, vínculo escolar, foto e cartão de passe.
 
-## 3. Cadastro de Integrantes
-
-O sistema deve ser capaz de cadastrar integrantes (alunos) da banda marcial, mantendo dados pessoais, de contato, endereço, responsáveis, vínculo escolar e foto.
-
-
-
-### Regras do cadastro de integrante
+### 3.1. Dados principais
 
 - O campo nome é obrigatório.
+- O campo CIN/RG é obrigatório quando informado e deve ser único no sistema.
+- O e-mail, quando preenchido, é normalizado para minúsculas.
+- O telefone é normalizado para o padrão nacional.
+- O endereço inclui CEP, logradouro, número, complemento, bairro, cidade e estado.
+- O status de ativo/inativo do integrante é administrado pelo sistema.
 
-- O campo CIN/RG deve ser único no sistema; caso já cadastrado, o sistema deve impedir o registro e informar o conflito.
+### 3.2. Funções, escolas e vínculos
 
-- A data de nascimento, quando informada, deve ser validada quanto ao formato (YYYY-MM-DD).
+- O integrante pode ser vinculado a uma função da banda, como Maestro, Instrutor, Aluno ou Coreógrafo.
+- O integrante pode estar vinculado a uma ou mais escolas.
+- O vínculo escolar é preservado e atualizado conforme o cadastro/edição do registro.
+- O cadastro pode incluir dados de responsáveis, como pai, mãe e contato de emergência.
 
-- O campo e-mail, quando informado, deve ser armazenado em minúsculas.
+### 3.3. Datas e status
 
-- O campo telefone deve ser normalizado para o padrão nacional (XX) XXXXX-XXXX.
+- O sistema aceita data de entrada na banda.
+- O sistema aceita data de desligamento da banda.
+- Quando a data de desligamento é preenchida, o integrante é automaticamente inativado.
+- Quando a data de desligamento é removida ou limpa, o integrante pode voltar a ficar ativo.
+- A inativação automática funciona tanto na criação quanto na edição do integrante.
 
-- O endereço deve permitir informação de CEP, logradouro, número, complemento, bairro, cidade e estado.
+### 3.4. Cartão de passe
 
-- O sistema deve permitir o vínculo de um integrante a uma escola previamente cadastrada.
+- O cartão de passe é opcional, mas, quando cadastrado, deve ser único.
+- Somente integrantes com cartão ativo podem receber cota mensal ou lançamentos de passes.
+- O número de controle do cartão deve ser único no banco.
 
-- O sistema deve permitir o cadastro de um ou mais responsáveis vinculados ao integrante (nome do pai, nome da mãe, telefone, e-mail e endereço).
+### 3.5. Foto e autorização de menor
 
-- O sistema deve permitir a seleção da função do integrante na banda (Maestro, Instrutor, Aluno, Coreógrafo).
+- A foto do integrante aceita os formatos comuns de imagem do sistema.
+- Se houver autorização de imagem de menor, o sistema registra o responsável, termo, versão, data, usuário e IP de origem.
+- O consentimento para imagem de menor deve ser ligado ao arquivo fotográfico específico autorizado.
+- Quando a foto da pessoa menor muda, a autorização vigente precisa ser revalidada.
 
-- A foto do integrante deve aceitar apenas os formatos PNG, JPG, JPEG, GIF e WEBP.
+### 3.6. Busca e listagem
 
-- A foto deve ser renomeada automaticamente seguindo o padrão: aluno_{id}_{data_hora}.{extensão}.
-
-- O sistema deve preservar o histórico do integrante; em vez de exclusão física, a inativação deve ser utilizada.
-
-- A listagem de integrantes deve permitir busca por nome e filtro por status (ativo/inativo).
-
-- Ao editar um integrante, o sistema deve manter o vínculo escolar atualizado (remover vínculo anterior e criar novo, se informado).
-
-- O campo CIN/RG na edição deve ser validado contra duplicidade com outros integrantes.
-
-- O sistema deve permitir informar a data de entrada na banda marcial (formato YYYY-MM-DD).
-
-- O sistema deve permitir informar a data de desligamento da banda marcial (formato YYYY-MM-DD).
-
-- Quando a data de desligamento for preenchida, o integrante deve ser automaticamente inativado (status = inativo).
-
-- Quando a data de desligamento for removida/limpa, o integrante deve ser automaticamente ativado (status = ativo).
-
-- A inativação automática deve ocorrer tanto na criação quanto na edição do integrante.
-
-- As datas de entrada e desligamento devem ser validadas quanto ao formato (YYYY-MM-DD) e exibir mensagens de erro em caso de formato inválido.
-
-
+- A listagem de integrantes permite busca por nome.
+- A listagem também pode filtrar por status de ativo/inativo.
+- O histórico do integrante é preservado por inativação, em vez de exclusão física.
 
 ---
 
+## 4. Gestão de escolas
 
-
-## 4. Gestão de Escolas
-
-- O sistema deve permitir o cadastro de escolas com nome e endereço.
-
-- O nome da escola é obrigatório.
-
-- O sistema deve listar todas as escolas cadastradas em ordem alfabética.
-
-- O sistema deve permitir a edição dos dados da escola.
-
-- O sistema deve permitir a exclusão física da escola do banco de dados.
-
-- O sistema deve gerar relatório de escolas contendo o total de escolas cadastradas e o total de matrículas (vínculos de integrantes) por escola.
-
-
+- O cadastro de escola exige nome e permite endereço complementar.
+- A listagem de escolas é tratada como base operacional para vínculo dos integrantes.
+- A escola pode ser editada conforme necessidade administrativa.
+- O sistema trabalha com vínculo de alunos por escola e pode gerar relatórios por unidade.
+- O relatório de escolas deve contemplar quantidade de matrículas por unidade.
 
 ---
 
+## 5. Instrumentos, tipos e naipes
 
+### 5.1. Instrumentos
 
-## 5. Gestão de Instrumentos
+- O cadastro de instrumento inclui nome, tipo, naipe, patrimônio, marca, modelo, estado, data de aquisição e observações.
+- O nome do instrumento é obrigatório.
+- O patrimônio, quando informado, deve ser único.
+- O estado do instrumento pode ser Novo, Bom, Regular ou Ruim.
+- O instrumento pode ser ativado ou inativado.
+- A listagem permite busca por nome e filtros por status e por tipo.
 
-O sistema deve permitir o cadastro, edição, ativação/inativação e exclusão de instrumentos musicais do patrimônio da banda marcial.
+### 5.2. Tipos de instrumento
 
-
-
-### 5.1. Regras do instrumento
-
-- O sistema deve permitir o cadastro de instrumentos com os seguintes campos: nome, tipo, naipe, patrimônio, marca, modelo, estado, data de aquisição e observações.
-
-- O campo nome é obrigatório.
-
-- O campo patrimônio, quando informado, deve ser único no sistema.
-
-- A data de aquisição, quando informada, deve ser validada quanto ao formato (YYYY-MM-DD).
-
-- O campo estado deve classificar o instrumento conforme as condições: Novo, Bom, Regular ou Ruim.
-
-- O sistema deve permitir a edição dos dados do instrumento.
-
-- O sistema deve permitir a ativação/inativação do instrumento (soft delete).
-
-- O sistema deve permitir a exclusão física do instrumento.
-
-- A listagem de instrumentos deve permitir busca por nome e filtros por status (ativo/inativo) e por tipo.
-
-- Os tipos de instrumento pré-cadastrados no sistema são: Sopro e Percussão.
-
-- Os naipes pré-cadastrados no sistema são: Madeira, Metais, Percussão e Clarim.
-
-- O formulário de cadastro/edição de instrumento deve oferecer links de acesso rápido para gerenciamento de tipos e naipes.
-
-
-
-### 5.2. Gestão de Tipos de Instrumento (NOVO)
-
-- O sistema deve permitir o cadastro, edição e exclusão de tipos de instrumento de forma independente.
-
+- O sistema mantém tipos independentes para categoria de instrumento.
+- Os tipos usados no sistema incluem Sopro e Percussão.
 - O nome do tipo é obrigatório.
+- Não é permitido cadastrar nomes duplicados em comparação case-insensitive.
+- O tipo só pode ser excluído se não houver instrumentos vinculados.
+- A exclusão com dependência deve ser bloqueada e informada ao usuário.
 
-- O sistema não deve permitir a criação de tipos com nomes duplicados (validação case-insensitive).
+### 5.3. Naipes
 
-- O sistema deve listar todos os tipos cadastrados em ordem alfabética, exibindo a quantidade de instrumentos vinculados a cada tipo.
-
-- O sistema deve permitir a edição do nome de um tipo existente.
-
-- O sistema deve permitir a exclusão de um tipo **somente se não houver instrumentos vinculados** a ele. Caso existam vínculos, o sistema deve impedir a exclusão e informar a quantidade de instrumentos dependentes.
-
-- A funcionalidade de gerenciamento de tipos deve ser acessível apenas a usuários autenticados com perfil profissional ou administrador.
-
-- A página de gerenciamento de tipos deve possuir formulário inline para criação e edição, sem necessidade de navegação para outra página.
-
-- Ao editar um tipo, o formulário deve exibir o nome atual e permitir cancelar a operação.
-
-- Todas as operações (criação, edição, exclusão) devem exibir mensagens de confirmação (flash messages).
-
-
-
-### 5.3. Gestão de Naipes (NOVO)
-
-- O sistema deve permitir o cadastro, edição e exclusão de naipes de forma independente.
-
+- O sistema mantém naipes independentes, com cadastro e listagem de apoio ao patrimônio musical.
+- Os naipes cadastrados incluem Madeira, Metais, Percussão e Clarim.
 - O nome do naipe é obrigatório.
+- O cadastro de nomes duplicados é bloqueado.
+- O naipe só pode ser excluído quando não houver instrumento vinculado a ele.
 
-- O sistema não deve permitir a criação de naipes com nomes duplicados (validação case-insensitive).
+---
 
-- O sistema deve listar todos os naipes cadastrados em ordem alfabética, exibindo a quantidade de instrumentos vinculados a cada naipe.
+## 6. Presença, ensaios, eventos e atividades
 
-- O sistema deve permitir a edição do nome de um naipe existente.
+### 6.1. Registros de presença
 
-- O sistema deve permitir a exclusão de um naipe **somente se não houver instrumentos vinculados** a ele. Caso existam vínculos, o sistema deve impedir a exclusão e informar a quantidade de instrumentos dependentes.
+- A presença do integrante é registrada por atividade, ensaio ou evento.
+- Cada aluno pode ter apenas uma presença por atividade/ensaio/evento dentro do mesmo contexto.
+- O registro inclui data da presença, atributo de presença/ausência e observações.
+- O sistema registra quem lançou a presença e o momento do registro.
 
-- A funcionalidade de gerenciamento de naipes deve ser acessível apenas a usuários autenticados com perfil profissional ou administrador.
+### 6.2. Atividades, ensaios e eventos
 
+- Atividades avulsas, ensaios e eventos são tratados como categoria de presença.
+- O sistema pode sincronizar atividades com o Google Calendar, quando a integração estiver autorizada.
+- Presenças vinculadas a eventos também podem ser usadas em regras de autorização de viagem.
+
+### 6.3. Autorização de viagem
+
+- O responsável pode autorizar a participação do menor em evento ou viagem.
+- A autorização é registrada por evento e pode ser consultada para envio de comunicação ou controle de presença.
+
+---
+
+## 7. Gestão de passes e cotas
+
+A regra de passes é uma funcionalidade operativa importante do sistema, com histórico, cota mensal, lançamentos avulsos e consumo por presença.
+
+### 7.1. Cota mensal
+
+- Cada aluno pode ter uma cota mensal de passes vinculada a um mês de referência.
+- A cota é registrada por integrante e por mês.
+- A cota mensal só pode ser cadastrada para participante com cartão de passe ativo.
+- O sistema aceita quantidade zero ou positiva para a cota mensal; valores negativos são rejeitados.
+
+### 7.2. Lançamentos e recargas
+
+- A cota pode receber lançamento mensal.
+- O sistema também aceita lançamento avulso, com justificativa obrigatória.
+- A recarga extra mensal exige motivo administrativo e é registrada como movimento de ajuste.
+- O sistema impede múltiplos registros duplicados da mesma recarga ou do mesmo lançamento avulso para o mesmo integrante no mês.
+
+### 7.3. Consumo por presença
+
+- Cada presença registrada consome 2 passes no saldo do aluno para o mês do evento/atividade.
+- O sistema verifica o saldo antes de registrar a presença.
+- Se o saldo for insuficiente, a presença não pode ser validada.
+- O sistema realiza sincronização entre presença e movimento de passe com controle de estorno e saldo atual.
+
+### 7.4. Histórico de movimentos
+
+- Todos os movimentos de passes são auditados: disponibilização, consumo, recarga, estorno e outros ajustes.
+- O histórico é consultável por mês e por aluno.
+- O saldo atual é calculado a partir dos movimentos cumulados.
+
+### 7.5. Condições de elegibilidade
+
+- Somente integrantes com cartão ativo podem receber cotas e movimentações.
+- O sistema bloqueia operações para cartões inativos ou inexistentes.
+
+---
+
+## 8. Central de comunicações
+
+A Central de Comunicações é um módulo de envio de mensagens por e-mail, com público-alvo definido por regras de negócio.
+
+### 8.1. Públicos suportados
+
+- Geral: integrantes ativos.
+- Responsáveis: responsável principal cadastrado do integrante.
+- Evento: alunos autorizados para o evento especificado.
+- Nipe: integrantes ativos com instrumentos vinculados ao naipe escolhido.
+- Contatos externos: contatos previamente cadastrados ou informados com autorização válida.
+
+### 8.2. Criação da comunicação
+
+- A comunicação exige assunto e mensagem.
+- O usuário define canal, tipo e público-alvo.
+- Foi implementado controle explícito para evitar mistura de destinatário externo com outros públicos.
+- Anexos podem ser adicionados à comunicação.
+- A comunicação é criada em rascunho e só é enviada após confirmação de envio.
+
+### 8.3. Regra de contatos externos
+
+- O contato externo deve estar ativo para receber e-mail.
+- O contato só pode receber e-mail se houver autorização de e-mail vigente.
+- Se a autorização não existir, o sistema exige consentimento explícito e origem do consentimento.
+- O contato pode ter autorização revogada; nesse caso o envio é bloqueado.
+- O envio de e-mail para contato externo não pode acontecer sem esse controle.
+
+### 8.4. Envio e rastreio
+
+- O sistema monta a lista de destinatários elegíveis conforme o público selecionado.
+- Os destinatários são registrados em histórico de envio da comunicação.
+- O status da comunicação pode ser rascunho, enviado, parcial ou erro.
+- O envio é processado e o erro individual do destinatário é mantido em log.
+
+### 8.5. Bloqueio do módulo
+
+- A Central de Comunicações fica indisponível quando a integração com o Google Workspace não está autorizada ou configurada.
+- O sistema exibe aviso e bloqueia o fluxo de envio.
+
+---
+
+## 9. Integração com Google Workspace e OAuth
+
+A aplicação pode operar com integrações Google para e-mail e calendário.
+
+### 9.1. Google OAuth
+
+- O sistema depende de autorização OAuth para uso de Gmail e/ou Google Calendar.
+- A validação da disponibilidade da integração é feita por estado da configuração e autorização do usuário.
+- Se a integração não estiver disponível, a funcionalidade de comunicação e sincronização com o calendário fica bloqueada.
+
+### 9.2. Google Calendar
+
+- Atividades, ensaios e eventos podem ser sincronizados com o Google Calendar quando autorizados.
+- O sistema registra o identificador do evento gerado no Google e a data de sincronização.
+- Se a sincronização falhar, a atividade pode ser salva no sistema e o usuário recebe aviso de falha de sincronização, sem interromper o fluxo principal.
+
+### 9.3. Gmail
+
+- O e-mail de envio pode ser usado por meio da conta configurada no Google Workspace.
+- O envio de comunicações depende da validade da conta emissora e da autorização ativa do Google.
+- Um envio de teste foi realizado com sucesso usando uma conta Google real; esta validação confirma o fluxo básico de envio, mas não substitui as verificações de consentimento, autorização e elegibilidade dos destinatários em cada comunicação.
+
+---
+
+## 10. Backup, restauração e proteção do banco
+
+O sistema possui rotinas de backup e restauração do banco SQLite.
+
+### 10.1. Backup local
+
+- O sistema gera backups compactados em ZIP.
+- Os arquivos ficam em pasta local de backup do usuário, na estrutura correspondente ao ambiente do sistema.
+- A nomenclatura dos arquivos segue o padrão de backup do sistema.
+- O painel administrativo expõe ações para criar, listar, restaurar e excluir backups.
+
+### 10.2. Restauração
+
+- Antes da restauração, o sistema salva uma cópia de segurança do banco atual.
+- O backup é validado antes de ser restaurado.
+- A restauração exige confirmação do administrador e informa que a aplicação pode precisar ser reiniciada.
+
+### 10.3. Segurança do backup
+
+- As operações de backup/restauração são restritas a administradores.
+- Os backups devem ser protegidos por senha e por ambiente controlado.
+- A senha do sistema e a localização de armazenamento precisam estar protegidas para evitar perda de dados.
+
+### 10.4. Google Drive (opcional)
+
+- O sistema também pode enviar cópias de backup para pasta específica do Google Drive, quando a integração e a configuração de armazenamento estiverem habilitadas.
+
+---
+
+## 11. LGPD, consentimento e proteção de dados
+
+### 11.1. Autorização de imagem
+
+- Para menores de idade, ou sempre que a autorização for requerida, o sistema exige consentimento do responsável legal antes de armazenar a imagem do integrante.
+- A autorização registra responsável, vínculo, CPF quando informado, assinatura digital, e data/hora do consentimento.
+- O sistema salva o arquivo de assinatura e vincula o consentimento à foto autorizada.
+
+### 11.2. Auditoria
+
+- O sistema registra quem realizou a autorização, qual termo foi aceito, o IP de origem e a versão do termo.
+- Isso fornece rastreabilidade para o uso de imagens e dados pessoais.
+
+### 11.3. Dados sensíveis e armazenamento
+
+- Dados pessoais, contatos e fotos devem ser tratados como informações sensíveis.
+- O sistema usa armazenamento local e controle de regras para evitar uso indevido de dados.
+- O compartilhamento de dados por e-mail é permitido apenas para destinatários autorizados ou públicos elegíveis.
+
+---
+
+## 12. Inicialização do sistema
+
+Na primeira execução, o sistema verifica a existência de dados essenciais e cria o mínimo necessário para funcionamento.
+
+- Se não existir usuário administrador, o sistema pode criar um usuário padrão de manutenção.
+- Os tipos de instrumento e naipes podem ser criados automaticamente, caso ainda não existam.
+- As funções da banda podem ser inicializadas automaticamente.
+- A base local de municípios e logradouros pode ser importada quando a base estiver vazia.
+
+---
+
+## 13. Normalização de dados
+
+O sistema aplica normalização em vários campos para manter consistência.
+
+- Nomes e endereços são tratados em formato padronizado.
+- E-mails são armazenados em minúsculas.
+- Telefones são normalizados para o padrão nacional.
+- Estados (UF) são armazenados em maiúsculas.
+- Dados de endereço e CEP podem ser preenchidos automaticamente a partir da base local ou fallback de consulta externa.
+
+---
+
+## 14. Regras atuais de operação
+
+As regras abaixo refletem o funcionamento real da aplicação em sua versão atual:
+
+- O sistema prioriza cadastros e manutenção operacional da banda marcial.
+- A gestão de usuários, backup e tecnologia é centralizada em administradores.
+- A gestão de presenças e passes é funcional e auditável por mês.
+- A central de comunicações exige autorização e público explícito.
+- O módulo de Google Workspace deve estar disponível para comunicação e sincronização.
+- A aplicação usa um modelo de operação baseado em dados reais, históricos e confirmação de ações sensíveis.
+
+Este documento deve ser entendido como uma descrição do comportamento atual do sistema e não como lista de requisitos futuros sem implementação validada no código e nas telas.
 - A página de gerenciamento de naipes deve possuir formulário inline para criação e edição, sem necessidade de navegação para outra página.
 
 - Ao editar um naipe, o formulário deve exibir o nome atual e permitir cancelar a operação.

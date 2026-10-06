@@ -71,12 +71,18 @@ from .google_oauth import (
 )
 from .google_mail import enviar_email_gmail
 from .google_calendar import sincronizar_atividade, sincronizar_se_vinculada
-from .google_drive import enviar_backup_para_drive, listar_backups_drive
+from .google_drive import (
+    backup_drive_restauravel,
+    baixar_backup_do_drive,
+    enviar_backup_para_drive,
+    listar_backups_drive,
+)
 from datetime import datetime, timezone
 from pathlib import Path
 import hmac
 import os
 import requests
+import tempfile
 from werkzeug.utils import secure_filename
 from functools import wraps
 from sqlalchemy import text
@@ -3180,6 +3186,8 @@ def painel_backup():
     if google_drive_authorized:
         try:
             google_drive_backups = listar_backups_drive()
+            for backup_drive in google_drive_backups:
+                backup_drive["restauravel"] = backup_drive_restauravel(backup_drive)
         except (RuntimeError, ValueError, requests.RequestException):
             current_app.logger.exception("Falha ao listar backups no Google Drive")
             google_drive_error = "Não foi possível consultar o Google Drive. Tente novamente."
@@ -3203,7 +3211,41 @@ def gerar_backup():
         caminho_db = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "instance", "database.db")
         caminho_backup = criar_backup(caminho_db)
         nome_arquivo = os.path.basename(caminho_backup)
-        flash(f"Backup criado com sucesso: {nome_arquivo}")
+        try:
+            google_drive_authorized = has_scope(GOOGLE_DRIVE_FILE_SCOPE)
+        except RuntimeError:
+            google_drive_authorized = False
+
+        if not google_drive_authorized:
+            flash(
+                f"Backup criado localmente: {nome_arquivo}. "
+                "Autorize o Google Drive para enviar uma cópia à nuvem.",
+                "warning",
+            )
+            return redirect(url_for("main.painel_backup"))
+
+        try:
+            backup_drive = enviar_backup_para_drive(caminho_backup)
+        except ValueError as exc:
+            flash(
+                f"Backup criado localmente: {nome_arquivo}, mas o arquivo não "
+                f"pôde ser enviado ao Google Drive: {exc}",
+                "warning",
+            )
+        except (RuntimeError, OSError, requests.RequestException):
+            current_app.logger.exception(
+                "Backup local criado, mas o envio automático ao Google Drive falhou"
+            )
+            flash(
+                f"Backup criado localmente: {nome_arquivo}, mas não foi possível "
+                "enviá-lo ao Google Drive. A cópia local foi preservada.",
+                "warning",
+            )
+        else:
+            flash(
+                f"Backup criado e enviado ao Google Drive: {backup_drive['name']}.",
+                "success",
+            )
     except Exception as e:
         current_app.logger.exception("Erro ao criar backup")
         flash("Não foi possível criar o backup. Tente novamente.", "error")
@@ -3265,6 +3307,68 @@ def restore_backup():
     except Exception as e:
         current_app.logger.exception("Erro ao restaurar backup")
         flash("Não foi possível restaurar o backup. Tente novamente.", "error")
+
+    return redirect(url_for("main.painel_backup"))
+
+
+@main_bp.route("/admin/backup/restaurar-drive", methods=["POST"])
+@login_required
+@admin_required
+def restaurar_backup_drive():
+    """Baixa e restaura um backup criptografado armazenado no Google Drive."""
+    arquivo_id = request.form.get("arquivo_id", "")
+    nome_arquivo = request.form.get("nome_arquivo", "")
+    if not backup_drive_restauravel({"id": arquivo_id, "name": nome_arquivo}):
+        flash("Arquivo de backup inválido.", "danger")
+        return redirect(url_for("main.painel_backup"))
+
+    caminho_temporario = None
+    try:
+        descriptor, caminho_temporario = tempfile.mkstemp(
+            prefix="bmcm-restore-",
+            suffix=".zip",
+            dir=current_app.instance_path,
+        )
+        os.close(descriptor)
+        baixar_backup_do_drive(arquivo_id, nome_arquivo, caminho_temporario)
+
+        valido, mensagem = validar_backup(caminho_temporario)
+        if not valido:
+            flash(mensagem, "danger")
+            return redirect(url_for("main.painel_backup"))
+
+        caminho_db = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "instance",
+            "database.db",
+        )
+        sucesso, mensagem = restaurar_backup(caminho_temporario, caminho_db)
+        if sucesso:
+            flash(
+                mensagem
+                + " Um backup de segurança do estado atual foi criado. "
+                "É necessário reiniciar a aplicação para que as alterações tenham efeito.",
+                "success",
+            )
+        else:
+            flash(mensagem, "danger")
+    except (FileNotFoundError, ValueError) as exc:
+        flash(str(exc), "warning")
+    except (RuntimeError, OSError, requests.RequestException):
+        current_app.logger.exception("Falha ao restaurar backup do Google Drive")
+        flash(
+            "Não foi possível baixar ou restaurar o backup do Google Drive. "
+            "Verifique a autorização e a chave de criptografia e tente novamente.",
+            "danger",
+        )
+    finally:
+        if caminho_temporario and os.path.exists(caminho_temporario):
+            try:
+                os.remove(caminho_temporario)
+            except OSError:
+                current_app.logger.exception(
+                    "Falha ao remover o backup temporário baixado do Google Drive"
+                )
 
     return redirect(url_for("main.painel_backup"))
 
@@ -3443,22 +3547,7 @@ def configuracoes():
             valores["login_title"] = request.form.get("login_titulo", "").strip()
         if "login_subtitulo" in request.form:
             valores["login_subtitle"] = request.form.get("login_subtitulo", "").strip()
-        if "cor-accent" in request.form:
-            valores["theme_accent"] = request.form.get("cor-accent", "#0d6efd")
-        if "cor-fundo" in request.form:
-            valores["theme_bg"] = request.form.get("cor-fundo", "#121212")
-        if "cor-navbar" in request.form:
-            valores["navbar_bg"] = request.form.get("cor-navbar", "#343a40")
-        if "cor-superficie" in request.form:
-            valores["surface_bg"] = request.form.get("cor-superficie", "#1f1f1f")
-        if "cor-texto-aba-ativa" in request.form:
-            valores["tab_active_text"] = request.form.get("cor-texto-aba-ativa", "#ffffff")
-        if "cor-fundo-aba-ativa" in request.form:
-            valores["tab_active_bg"] = request.form.get("cor-fundo-aba-ativa", "#0d6efd")
-        if "cor-texto-aba-inativa" in request.form:
-            valores["tab_inactive_text"] = request.form.get("cor-texto-aba-inativa", "#adb5bd")
-        if "cor-fundo-aba-inativa" in request.form:
-            valores["tab_inactive_bg"] = request.form.get("cor-fundo-aba-inativa", "#212529")
+
         if "texto-rodape" in request.form:
             valores["footer_text"] = request.form.get("texto-rodape", "").strip()
         if "email-remetente-comunicacao" in request.form:
@@ -3551,6 +3640,28 @@ def configuracoes():
     )
 
 
+@main_bp.route("/minha-conta/acessibilidade", methods=["GET", "POST"])
+@login_required
+def preferencias_acessibilidade():
+    if request.method == "POST":
+        tema = (request.form.get("tema-sistema") or "").strip().lower()
+        tamanho_texto = (request.form.get("tamanho-texto") or "").strip().lower()
+        if tema not in {"padrao", "claro", "escuro"}:
+            flash("Selecione um tema válido.", "danger")
+            return redirect(url_for("main.preferencias_acessibilidade"))
+        if tamanho_texto not in {"padrao", "medio", "grande", "extra-grande"}:
+            flash("Selecione um tamanho de texto válido.", "danger")
+            return redirect(url_for("main.preferencias_acessibilidade"))
+
+        current_user.theme_preset = tema
+        current_user.font_scale = tamanho_texto
+        db.session.commit()
+        flash("Suas preferências de acessibilidade foram salvas.", "success")
+        return redirect(url_for("main.preferencias_acessibilidade"))
+
+    return render_template("preferencias_acessibilidade.html")
+
+
 @main_bp.route("/admin/manutencao/limpar-cache", methods=["POST"])
 @login_required
 @admin_required
@@ -3641,4 +3752,3 @@ def reindexar_banco():
         flash("Não foi possível reindexar o banco. Tente novamente.", "danger")
 
     return redirect(url_for("main.configuracoes"))
-

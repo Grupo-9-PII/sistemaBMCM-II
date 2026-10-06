@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-br"
+  data-theme="{{ current_user.theme_preset if current_user.is_authenticated and current_user.theme_preset in ['padrao', 'claro', 'escuro'] else 'padrao' }}"
+  data-font-size="{{ current_user.font_scale if current_user.is_authenticated and current_user.font_scale in ['padrao', 'medio', 'grande', 'extra-grande'] else 'padrao' }}">
 
 <head>
   <meta charset="UTF-8">
@@ -8,74 +10,11 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  <style>
-    :root {
-      --theme-accent: {{ system_settings.get('theme_accent', '#0d6efd') }};
-      --theme-bg: {{ system_settings.get('theme_bg', '#121212') }};
-      --navbar-bg: {{ system_settings.get('navbar_bg', '#343a40') }};
-      --surface-bg: {{ system_settings.get('surface_bg', '#1f1f1f') }};
-      --tab-active-text: {{ system_settings.get('tab_active_text', '#ffffff') }};
-      --tab-active-bg: {{ system_settings.get('tab_active_bg', '#0d6efd') }};
-      --tab-inactive-text: {{ system_settings.get('tab_inactive_text', '#adb5bd') }};
-      --tab-inactive-bg: {{ system_settings.get('tab_inactive_bg', '#212529') }};
-    }
-
-    body {
-      background-color: var(--theme-bg);
-      color: #ffffff;
-    }
-
-    .navbar {
-      background-color: var(--navbar-bg) !important;
-    }
-
-    .card,
-    .dropdown-menu,
-    .login-card,
-    .modal-content,
-    .table,
-    .table-hover tbody tr {
-      background-color: var(--surface-bg) !important;
-      color: #f8f9fa !important;
-    }
-
-    .card .card-header,
-    .card .card-body,
-    .dropdown-menu,
-    .login-card,
-    .modal-content {
-      color: #f8f9fa !important;
-    }
-
-    .dropdown-menu .dropdown-item {
-      color: #f8f9fa !important;
-    }
-
-    .dropdown-menu .dropdown-item:hover,
-    .dropdown-menu .dropdown-item:focus {
-      background-color: rgba(248, 249, 250, 0.08) !important;
-      color: #ffffff !important;
-    }
-
-    .nav-tabs .nav-link.active {
-      color: var(--tab-active-text) !important;
-      background-color: var(--tab-active-bg) !important;
-    }
-
-    .nav-tabs .nav-link {
-      color: var(--tab-inactive-text) !important;
-      background-color: var(--tab-inactive-bg) !important;
-    }
-
-    .btn-primary {
-      background-color: var(--theme-accent);
-      border-color: var(--theme-accent);
-    }
-  </style>
   <title>{% block title %}Banda Marcial Cidade de Marília{% endblock %}</title>
 </head>
 
 <body>
+  <a class="skip-link" href="#main-content">Pular para o conteúdo principal</a>
   {% if current_user.is_authenticated %}
   <nav class="navbar navbar-expand-md navbar-dark main-navbar" aria-label="Navegação principal">
     <div class="container">
@@ -93,22 +32,24 @@
               <i class="bi bi-house-door me-1"></i> Inicial
             </a>
           </li>
-          {% if current_user.is_admin %}
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('main.listar_usuarios') }}">
-              <i class="bi bi-people me-1"></i> Usuários
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-collection me-1" aria-hidden="true"></i> Gestão
             </a>
-          </li>
-          {% endif %}
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('main.listar_alunos') }}">
-              <i class="bi bi-mortarboard me-1"></i> Integrantes
-            </a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('main.listar_instrumentos') }}">
-              <i class="bi bi-music-note-beamed"></i> Instrumentos
-            </a>
+            <ul class="dropdown-menu">
+              <li><a class="dropdown-item" href="{{ url_for('main.listar_alunos') }}">
+                  <i class="bi bi-mortarboard me-2" aria-hidden="true"></i>Integrantes
+                </a></li>
+              <li><a class="dropdown-item" href="{{ url_for('main.listar_instrumentos') }}">
+                  <i class="bi bi-music-note-beamed me-2" aria-hidden="true"></i>Instrumentos
+                </a></li>
+              {% if current_user.is_admin %}
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="{{ url_for('main.listar_usuarios') }}">
+                  <i class="bi bi-people me-2" aria-hidden="true"></i>Usuários
+                </a></li>
+              {% endif %}
+            </ul>
           </li>
           {% if google_workspace_status.available %}
           <li class="nav-item">
@@ -178,6 +119,10 @@
                 <hr class="dropdown-divider">
               </li>
               {% endif %}
+              <li><a class="dropdown-item" href="{{ url_for('main.preferencias_acessibilidade') }}">
+                  <i class="bi bi-universal-access me-2"></i>Acessibilidade
+                </a></li>
+              <li><hr class="dropdown-divider"></li>
               <li><a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">
                   <i class="bi bi-box-arrow-right me-2"></i>Sair
                 </a></li>
@@ -190,7 +135,7 @@
   </nav>
   {% endif %}
 
-  <main class="{% if not current_user.is_authenticated %}min-vh-100{% endif %}">
+  <main id="main-content" tabindex="-1" class="{% if not current_user.is_authenticated %}min-vh-100{% endif %}">
     {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
     <div class="container mt-3">

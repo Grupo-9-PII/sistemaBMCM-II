@@ -17,6 +17,8 @@ class User(UserMixin, db.Model):
     is_admin = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
     must_change_password = db.Column(db.Boolean, default=True)
+    theme_preset = db.Column(db.String(20), nullable=False, default="padrao")
+    font_scale = db.Column(db.String(20), nullable=False, default="padrao")
 
     login_attempts = db.Column(db.Integer, default=0)
     blocked_until = db.Column(db.DateTime, nullable=True)
@@ -560,5 +562,4 @@ class ContatoComunicacao(db.Model):
     observacoes = db.Column(db.Text, nullable=True)
     ativo = db.Column(db.Boolean, default=True)
     criado_em = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-
 

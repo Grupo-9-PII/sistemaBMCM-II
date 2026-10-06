@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import requests
@@ -10,6 +11,8 @@ DRIVE_UPLOAD_URL = "https://www.googleapis.com/upload/drive/v3/files"
 DRIVE_BACKUP_FOLDER_NAME = "BMCM Backups"
 DRIVE_FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
 BACKUP_MIME_TYPE = "application/zip"
+_DRIVE_ID_PATTERN = re.compile(r"[A-Za-z0-9_-]+\Z")
+_BACKUP_NAME_PATTERN = re.compile(r"backup_[A-Za-z0-9_.-]+\.zip\Z")
 
 
 def _headers(content_type=None):
@@ -158,3 +161,64 @@ def listar_backups_drive():
         f"'{pasta_id}' in parents and trashed = false and mimeType = '{BACKUP_MIME_TYPE}'",
         "id,name,modifiedTime,size,webViewLink",
     )
+
+
+def backup_drive_restauravel(arquivo):
+    if not isinstance(arquivo, dict):
+        return False
+    arquivo_id = arquivo.get("id")
+    nome_arquivo = arquivo.get("name")
+    return bool(
+        isinstance(arquivo_id, str)
+        and isinstance(nome_arquivo, str)
+        and _DRIVE_ID_PATTERN.fullmatch(arquivo_id)
+        and _BACKUP_NAME_PATTERN.fullmatch(nome_arquivo)
+    )
+
+
+def baixar_backup_do_drive(arquivo_id, nome_arquivo, caminho_destino):
+    if not has_scope(GOOGLE_DRIVE_FILE_SCOPE):
+        raise RuntimeError("Autorize o escopo Google Drive nas configurações do sistema.")
+
+    if not backup_drive_restauravel({"id": arquivo_id, "name": nome_arquivo}):
+        raise ValueError("Arquivo de backup inválido.")
+
+    arquivo_listado = next(
+        (
+            arquivo
+            for arquivo in listar_backups_drive()
+            if arquivo.get("id") == arquivo_id and arquivo.get("name") == nome_arquivo
+        ),
+        None,
+    )
+    if not arquivo_listado:
+        raise FileNotFoundError("O backup selecionado não foi encontrado na pasta do BMCM.")
+
+    response = requests.get(
+        f"{DRIVE_FILES_URL}/{arquivo_id}",
+        headers=_headers(),
+        params={"alt": "media"},
+        stream=True,
+        timeout=120,
+    )
+    try:
+        response.raise_for_status()
+        with open(caminho_destino, "wb") as backup_file:
+            for chunk in response.iter_content(chunk_size=1024 * 1024):
+                if chunk:
+                    backup_file.write(chunk)
+    finally:
+        response.close()
+
+    try:
+        with pyzipper.AESZipFile(caminho_destino, "r") as archive:
+            info = archive.getinfo("database.db")
+    except (KeyError, OSError, pyzipper.BadZipFile) as exc:
+        raise ValueError("O arquivo selecionado não é um backup BMCM válido.") from exc
+
+    if getattr(info, "wz_aes_strength", None) != 3:
+        raise ValueError(
+            "O arquivo do Google Drive não está criptografado com AES-256 e não pode ser restaurado."
+        )
+
+    return arquivo_listado

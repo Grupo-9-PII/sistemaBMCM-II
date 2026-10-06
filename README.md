@@ -44,6 +44,7 @@
   - [Gmail](#gmail)
 - [Tecnologias Utilizadas](#tecnologias-utilizadas)
 - [Arquitetura e Estrutura do Projeto](#arquitetura-e-estrutura-do-projeto)
+- [Uso de JavaScript no sistema](#uso-de-javascript-no-sistema)
 - [Modelo de Dados](#modelo-de-dados)
 - [Regras de Negócio Relevantes](#regras-de-negócio-relevantes)
   - [Acesso](#acesso)
@@ -142,8 +143,8 @@ A proposta é **evoluir a aplicação existente**, acrescentando funcionalidades
 Entre os principais eixos da evolução estão:
 
 * validação com conta Google real da publicação de atividades avulsas no Calendar;
-* implementação e validação real do backup remoto no Google Drive;
-* ampliação dos testes automatizados e dos recursos de acessibilidade;
+* implementação e validação real da restauração de backups do Google Drive;
+* testes automatizados e validação prática dos recursos de acessibilidade;
 * utilização de APIs externas;
 * aplicação prática do conceito de computação em nuvem;
 * manutenção da segurança e da privacidade dos dados.
@@ -156,6 +157,7 @@ As seguintes melhorias já foram incorporadas ao sistema existente:
 
 * criação de ambiente virtual em `venv/` e organização das dependências;
 * inclusão do `pytest` na lista de dependências de desenvolvimento;
+* preferências individuais de tema e tamanho do texto para acessibilidade;
 * proteção CSRF para requisições `POST` e formulários;
 * correção de compatibilidade com SQLAlchemy 2 nas rotinas de manutenção;
 * proteção dos caminhos de restauração e exclusão de backups;
@@ -181,9 +183,17 @@ As seguintes melhorias já foram incorporadas ao sistema existente:
 * controle de cartões, cotas mensais, recargas, consumos, estornos e histórico auditável de passes;
 * fluxo OAuth 2.0 do Google e envio de mensagens pelo Gmail;
 * configuração do OAuth por variáveis de ambiente e arquivo local `.env`, ignorado pelo Git;
-* persistência do token OAuth em `instance/google_oauth_token.json` e envio de e-mails autorizados com suporte a anexos.
+* persistência do token OAuth em `instance/google_oauth_token.json` e envio de e-mails autorizados com suporte a anexos;
+* temas acessíveis e tamanhos de texto configuráveis individualmente por usuário;
+* correção da sobreposição dos menus principal e de atividades em relação aos cards e formulários;
+* agrupamento dos menus de integrantes, instrumentos e usuários em um dropdown de Gestão, respeitando a permissão administrativa;
+* reforço do contraste de textos auxiliares, incluindo a descrição da Central de Comunicações, nos temas padrão e escuro;
+* documentação do JavaScript usado nas páginas, incluindo o fluxo de busca de CEP local com fallback para ViaCEP;
+* restauração administrativa de backups criptografados diretamente do Google Drive, preservando cópia de segurança local antes da substituição do banco;
+* envio automático do backup ao Google Drive ao criar uma cópia local, quando a integração estiver autorizada;
+* validação manual do fluxo completo de backup na nuvem, incluindo restauração e cópia de segurança do banco atual.
 
-O OAuth solicita os escopos necessários para Gmail, Calendar e Drive. Gmail e a sincronização inicial do Calendar estão conectados a operações do sistema. O Drive permite enviar backups ZIP existentes e consultar arquivos na pasta `BMCM Backups`; Calendar e Drive foram validados com a conta Google configurada no ambiente. O WhatsApp não está integrado ao BMCM.
+O OAuth solicita os escopos necessários para Gmail, Calendar e Drive. Gmail, Calendar e Drive estão conectados a operações do sistema. O envio de e-mail foi testado com sucesso usando uma conta Google real; Calendar e operações de backup no Drive foram validados com a conta configurada no ambiente. Em 06/10/2026, o fluxo de backup na nuvem foi validado manualmente, incluindo criação local, envio automático, restauração e cópia de segurança do banco atual. O WhatsApp não está integrado ao BMCM.
 
 ## Controle de versão da aplicação
 
@@ -203,7 +213,7 @@ Nesse formato:
 
 A versão oficial fica centralizada em `config.py`, nas constantes `APP_VERSION_MAJOR`, `APP_VERSION_UPDATE` e `APP_VERSION_COUNT`. Cada correção, rotina ou formulário concluído incrementa o terceiro componente a partir da versão atual. Ao passar de `99`, a contagem volta a `0` e o segundo componente é incrementado; se ele também passar de `99`, volta a `0` e o primeiro componente é incrementado. A função `proxima_versao()` formaliza essa regra. Mudanças estruturais maiores podem incrementar o primeiro componente.
 
-Versão atual: **1.4.20**.
+Versão atual: **1.4.29**.
 
 A versão é exibida no login, na área de créditos e nas configurações administrativas. A contagem representa o controle acumulado de alterações do desenvolvimento e não é alterada automaticamente pelo uso do sistema em produção.
 
@@ -301,7 +311,7 @@ Desenvolver e evoluir uma aplicação web para apoio à gestão administrativa e
 
 # Funcionalidades em Evolução
 
-Os fluxos básicos de presença, ensaios, eventos e apresentações já estão implementados. A Central de Comunicações foi validada por testes automatizados para os públicos disponíveis, consentimento de contatos externos, revogação e histórico. O envio real depende da autorização e configuração da conta Google no ambiente.
+Os fluxos básicos de presença, ensaios, eventos e apresentações já estão implementados. A Central de Comunicações foi validada por testes automatizados para os públicos disponíveis, consentimento de contatos externos, revogação e histórico. Um envio de teste real pelo Gmail foi concluído com sucesso; novos envios ainda dependem de autorização OAuth vigente, remetente válido e consentimento aplicável.
 
 ## Controle de presença
 
@@ -362,11 +372,11 @@ Esses registros podem ser sincronizados manualmente com o Google Calendar, após
 
 # Integrações Google: Situação e Próximas Etapas
 
-O código possui fluxo OAuth com escopos para Gmail, Google Calendar e Google Drive. A autorização de um escopo não significa que toda a API correspondente esteja implementada. Gmail envia mensagens pela Central de Comunicações; Calendar sincroniza ensaios e eventos; Drive envia backups ZIP e lista os arquivos da pasta da aplicação. Calendar e Drive foram validados com a conta Google configurada no ambiente.
+O código possui fluxo OAuth com escopos para Gmail, Google Calendar e Google Drive. A autorização de um escopo não significa que toda a API correspondente esteja implementada. Gmail envia mensagens pela Central de Comunicações e teve o envio real de teste validado com sucesso; Calendar sincroniza registros do BMCM; Drive envia backups ZIP e lista os arquivos da pasta da aplicação. Calendar e Drive também foram validados com a conta Google configurada no ambiente.
 
 ## Google Drive
 
-**Status: MVP implementado e validado com conta Google real.** O painel de backup permite enviar um ZIP local existente e consultar os arquivos da pasta `BMCM Backups` no Drive. O backup local permanece disponível mesmo se o envio remoto falhar.
+**Status: fluxo de backup na nuvem implementado e validado com conta Google real.** O painel de backup cria sempre uma cópia local e, se o Drive estiver autorizado, tenta enviá-la automaticamente. Também permite enviar novamente um ZIP local, consultar os arquivos da pasta `BMCM Backups` e restaurar uma cópia remota. Falhas no envio à nuvem preservam o backup local e são informadas ao administrador. Em 06/10/2026, foi validada a criação, o envio automático e a restauração do backup remoto, incluindo a cópia de segurança do estado atual antes da substituição do banco. A aplicação deve ser reiniciada após a restauração.
 
 O Drive poderá ser utilizado como serviço de armazenamento em nuvem para:
 
@@ -375,7 +385,7 @@ O Drive poderá ser utilizado como serviço de armazenamento em nuvem para:
 * armazenamento de relatórios quando aplicável;
 * apoio à recuperação de informações.
 
-O MVP usa OAuth com escopo `drive.file`, limitado aos arquivos e pastas criados pela aplicação. A restauração diretamente do Drive ainda não está disponível.
+O MVP usa OAuth com escopo `drive.file`, limitado aos arquivos e pastas criados pela aplicação. Para restaurar, o arquivo precisa estar listado na pasta BMCM, ter o formato esperado e estar criptografado com AES-256; a chave local correspondente deve estar disponível.
 
 ## Google Calendar
 
@@ -392,7 +402,7 @@ O Google Calendar é um recurso externo de organização e comunicação. O BMCM
 
 ## Gmail
 
-**Status: fluxo OAuth e envio de mensagens implementados.** A Central de Comunicações possui fluxo funcional validado por testes automatizados, com consentimento rastreável para contatos externos e envio direcionado a participantes autorizados de eventos. O uso real depende das credenciais e da autorização Google configuradas no ambiente.
+**Status: fluxo OAuth e envio implementados; envio de teste validado com conta Google real.** A Central de Comunicações possui fluxo funcional validado por testes automatizados, com consentimento rastreável para contatos externos e envio direcionado a participantes autorizados de eventos. Cada envio continua dependendo de credenciais e autorização OAuth vigentes no ambiente.
 
 Entre as possibilidades estão:
 
@@ -405,7 +415,7 @@ Entre as possibilidades estão:
 * comunicação institucional com organizadores de eventos;
 * contato com outras prefeituras e instituições para apresentações.
 
-A integração não tem como objetivo criar um novo sistema de e-mail, mas utilizar o Gmail como serviço externo integrado ao BMCM. Não foi realizado envio real de teste para evitar uma operação externa sem destinatário confirmado.
+A integração não tem como objetivo criar um novo sistema de e-mail, mas utilizar o Gmail como serviço externo integrado ao BMCM. O envio de teste com conta real foi executado e concluído com sucesso; isso valida a conexão e o fluxo de envio, sem dispensar as verificações de consentimento e destinatários em cada comunicação.
 
 ---
 
@@ -504,6 +514,81 @@ Estrutura resumida:
 * comunicação;
 * APIs externas.
 
+## Uso de JavaScript no sistema
+
+O JavaScript é utilizado no navegador para interações que complementam as páginas renderizadas pelo Flask. A lógica existente está principalmente em blocos `<script>` dentro dos templates Jinja; atualmente não há uma pasta de scripts JavaScript próprios em `static/`. O template principal `templates/base.html` carrega o bundle do Bootstrap e contém comportamentos compartilhados:
+
+* abre menus dropdown e o menu responsivo pelo Bootstrap;
+* fecha o menu mobile após a navegação;
+* acrescenta o token CSRF aos formulários `POST` e às chamadas `fetch` locais feitas com método `POST`.
+
+Os scripts específicos de páginas já são utilizados para:
+
+* cadastro de integrantes em `templates/admin_aluno_form.html`: pré-visualização de foto, máscara e busca de CEP, preenchimento de endereço, autorização de foto de menor e captura de assinatura;
+* configurações em `templates/admin_configuracoes.html`: registro e revelação controlada da senha de backup;
+* passes em `templates/admin_passes.html`: exibição condicional de campos conforme o tipo de lançamento;
+* relatórios em `templates/relatorios_alunos.html`: geração de PDF usando jsPDF e html2canvas, carregados por CDN;
+* ações pontuais em templates: confirmações e impressão usando funções do navegador.
+
+### Exemplo: busca e preenchimento de CEP
+
+No formulário de integrante, `buscarCEP()` valida que o CEP tenha oito dígitos, tenta primeiro o endpoint local `/admin/buscar-cep/<cep>` e, se não houver registro local, consulta a API pública ViaCEP. O código abaixo ilustra a sequência de chamadas e o preenchimento dos campos:
+
+```javascript
+async function buscarCEP() {
+  const cep = document.getElementById('cep').value.replace(/\D/g, '');
+  if (cep.length !== 8) {
+    showToast('CEP inválido', 'O CEP deve ter 8 dígitos', 'warning');
+    return;
+  }
+
+  try {
+    const respostaLocal = await fetch(`/admin/buscar-cep/${cep}`);
+    const resultadoLocal = await respostaLocal.json();
+
+    if (resultadoLocal.success && resultadoLocal.logradouro) {
+      const endereco = resultadoLocal.logradouro;
+      document.getElementById('endereco').value =
+        `${endereco.tipo} ${endereco.descricao}`;
+      document.getElementById('bairro').value =
+        endereco.descricao_bairro || '';
+      document.getElementById('cidade').value =
+        endereco.descricao_cidade || '';
+      document.getElementById('estado').value = endereco.uf || '';
+    } else {
+      const respostaViaCep = await fetch(
+        `https://viacep.com.br/ws/${cep}/json/`
+      );
+      const endereco = await respostaViaCep.json();
+
+      if (endereco.erro) {
+        showToast('CEP não encontrado', 'O CEP informado não foi encontrado', 'danger');
+        return;
+      }
+
+      document.getElementById('endereco').value = endereco.logradouro || '';
+      document.getElementById('bairro').value = endereco.bairro || '';
+      document.getElementById('cidade').value = endereco.localidade || '';
+      document.getElementById('estado').value = endereco.uf || '';
+    }
+  } catch (erro) {
+    console.error('Erro ao buscar CEP:', erro);
+    showToast('Erro', 'Erro ao buscar CEP. Tente novamente.', 'danger');
+  }
+}
+```
+
+Na implementação completa, a tela também apresenta indicador de carregamento, mascara o CEP durante a digitação e envia novos endereços encontrados na ViaCEP para `/admin/salvar-logradouro`, evitando buscas externas repetidas. A função está em `templates/admin_aluno_form.html`.
+
+Ao ampliar JavaScript:
+
+* manter a validação e autorização no servidor; validações no navegador são apenas apoio à usabilidade;
+* verificar a resposta HTTP (`response.ok`) e tratar erros de rede e respostas inválidas;
+* não inserir credenciais ou segredos no JavaScript entregue ao cliente;
+* usar o mecanismo CSRF existente para requisições mutáveis locais;
+* associar os scripts específicos à página correspondente e preservar uso por teclado e tecnologias assistivas;
+* quando a lógica crescer ou for compartilhada, movê-la para arquivos organizados em `static/js/` e carregar apenas onde forem necessários.
+
 ---
 
 # Modelo de Dados
@@ -597,22 +682,21 @@ Entre os recursos e melhorias considerados estão:
 * suporte a diferentes tamanhos de tela;
 * tema claro;
 * tema escuro;
-* personalização visual;
+* temas predefinidos padrão, claro e escuro, sem seleção livre de cores, configuráveis por usuário;
 * contraste adequado;
-* navegação por teclado;
-* foco visual;
-* tamanho ajustável de caracteres;
+* navegação por teclado, incluindo atalho para pular ao conteúdo principal;
+* foco visível em controles interativos;
+* tamanhos de texto padrão, médio, grande e muito grande, configuráveis por usuário;
 * elementos de formulário identificados adequadamente;
 * mensagens de erro compreensíveis;
 * organização consistente dos menus;
 * atalhos de teclado quando aplicáveis;
-* controle de contraste e paleta visual em configurações administrativas;
 * melhor legibilidade em telas de login, cadastros e presenças;
 * foco em elementos de formulário, abas e botões críticos;
 * suporte a leitores de tela e labels sem ambiguidade;
 * redução de elementos que dependam apenas de cor para indicar estado ou ação.
 
-A personalização visual deverá respeitar critérios de legibilidade e contraste. A possibilidade de personalizar cores não deve resultar em combinações que dificultem a utilização do sistema. A tela deve continuar utilizável mesmo em condições de baixa visão, contraste reduzido ou navegação assistida.
+As opções de tema usam paletas controladas para preservar contraste e legibilidade. A interface deve continuar utilizável em diferentes tamanhos de tela e por teclado, sem depender de combinações de cores definidas livremente.
 
 O objetivo é permitir que o sistema seja utilizado por pessoas com diferentes níveis de familiaridade com tecnologia.
 
@@ -673,9 +757,9 @@ O status das integrações externas é:
 
 | Serviço             | Situação no código                                                          |
 | ------------------- | ---------------------------------------------------------------------------- |
-| Gmail API           | OAuth e envio implementados; usado pela Central de Comunicações              |
+| Gmail API           | OAuth e envio implementados; envio de teste validado com conta real          |
 | Google Calendar API | Sincronização unidirecional implementada e validada com conta real |
-| Google Drive API    | Upload/listagem de backups implementados e validados com conta real |
+| Google Drive API    | Criação, envio automático, listagem e restauração validados com conta real |
 | ViaCEP              | Consulta de endereços como alternativa à base local                          |
 
 Cada integração deverá possuir:
@@ -691,7 +775,7 @@ Cada integração deverá possuir:
 
 # Computação em Nuvem
 
-A utilização atual do Gmail e as operações de Calendar e Drive demonstram integração com serviços em nuvem. Calendar e Drive foram validados com a conta Google configurada no ambiente.
+A utilização atual do Gmail e as operações de Calendar e Drive demonstram integração com serviços em nuvem. Gmail teve envio de teste validado com conta real; Calendar e Drive foram validados com a conta Google configurada no ambiente.
 
 O sistema poderá utilizar recursos remotos para:
 
@@ -703,7 +787,7 @@ O sistema poderá utilizar recursos remotos para:
 
 O conceito previsto é o de uma aplicação web que combina recursos locais, banco de dados e serviços disponibilizados por provedores externos.
 
-Google Calendar possui sincronização unidirecional de atividades; Drive permite upload e listagem dos backups da aplicação. As duas integrações foram validadas com a conta Google configurada no ambiente.
+Google Calendar possui sincronização unidirecional de atividades; Drive permite criação local com envio automático quando autorizado, listagem e restauração de backups da aplicação. O fluxo completo de backup na nuvem, inclusive restauração com cópia de segurança prévia do banco, foi validado com a conta Google configurada no ambiente.
 
 ---
 
@@ -833,23 +917,40 @@ O manual deverá ser atualizado à medida que novas funcionalidades do PI II for
 
 # Testes Automatizados
 
-A aplicação possui o **Pytest** configurado como ferramenta de testes. A suíte automatizada ainda está em expansão e deve acompanhar a implementação das funcionalidades do PI II.
+A aplicação utiliza **Pytest**. Execute os comandos a partir da raiz do repositório; na primeira configuração, crie o ambiente virtual e instale as dependências com `python -m pip install -r requirements.txt`.
 
 Execução:
 
 ### Windows
 
 ```bash
-python -m pytest -q
+.\.venv\Scripts\python.exe -m pytest -q
 ```
 
 ### Linux/Mac
 
 ```bash
-./venv/bin/python -m pytest -q
+./.venv/bin/python -m pytest -q
 ```
 
-Durante o PI II, a cobertura de testes deverá ser ampliada para funcionalidades críticas, especialmente:
+Para executar o arquivo principal ou um único teste:
+
+```bash
+python -m pytest -q tests/test_seguranca_e_inicializacao.py
+python -m pytest -q tests/test_seguranca_e_inicializacao.py::test_incremento_de_versao_com_transporte
+```
+
+O ambiente virtual pode ser ativado antes dos comandos:
+
+```bash
+# Linux/Mac
+source .venv/bin/activate
+
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+```
+
+Confira no [contexto do projeto](./PROJECT_CONTEXT.md#como-executar-os-testes-automatizados) o procedimento, os critérios de interpretação e as orientações para registrar os resultados. A cobertura de testes deve acompanhar as funcionalidades críticas, especialmente:
 
 * autenticação;
 * autorização;
@@ -1054,7 +1155,7 @@ Consulte o arquivo [LICENSE](LICENSE) para obter os termos completos.
 
 **PI I:** Base funcional implementada.
 
-**PI II:** Evolução em andamento. Presença, ensaios, eventos, atividades avulsas, calendário administrativo, relatórios profissionais e controle de passes possuem fluxos implementados. A Central de Comunicações foi validada por testes automatizados; Calendar publica manualmente registros do BMCM; Drive mantém o MVP de backup remoto. A sincronização Calendar de atividades avulsas ainda precisa de validação com conta real.
+**PI II:** Evolução em andamento. Presença, ensaios, eventos, atividades avulsas, calendário administrativo, relatórios profissionais e controle de passes possuem fluxos implementados. A Central de Comunicações foi validada por testes automatizados e teve envio de teste pelo Gmail confirmado com conta real; Calendar publica manualmente registros do BMCM; Drive permite enviar, consultar e restaurar backups remotos. A restauração remota foi validada com conta real em 06/10/2026. A publicação Calendar de atividades avulsas ainda precisa de validação com conta Google real.
 
 ### Principais objetivos da evolução
 
@@ -1078,6 +1179,7 @@ Consulte o arquivo [LICENSE](LICENSE) para obter os termos completos.
 * [x] Base funcional da Central de Comunicações administrativa
 * [x] Conclusão funcional e validação automatizada da Central de Comunicações
 * [x] Fluxo OAuth 2.0 e envio de mensagens pelo Gmail
+* [x] Validar envio de teste pelo Gmail com conta Google real
 * [x] MVP de sincronização unidirecional com Google Calendar implementado no código
 * [x] Validar a sincronização Calendar com uma conta Google real
 * [x] Implementar e testar automaticamente sincronização de atividades avulsas com Google Calendar
@@ -1087,7 +1189,9 @@ Consulte o arquivo [LICENSE](LICENSE) para obter os termos completos.
 * [x] Autenticação OAuth 2.0 para Google Workspace
 * [x] Documentação das integrações e serviços em nuvem
 * [x] Ampliação dos testes automatizados para calendário, relatórios e passes
-* [ ] Ampliação dos recursos de acessibilidade
+* [x] Implementação e validação prática dos recursos de acessibilidade
+* [x] Implementação e testes automatizados da restauração de backup do Google Drive
+* [x] Validar restauração de backup do Google Drive com conta Google real, incluindo cópia de segurança do estado atual
 * [ ] Atualizador controlado de versões da aplicação
 
 ---

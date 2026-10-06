@@ -147,14 +147,28 @@
       <div class="table-responsive">
         <table class="table table-dark table-striped table-hover mb-0">
           <caption class="visually-hidden">Backups armazenados no Google Drive</caption>
-          <thead><tr><th scope="col">Nome</th><th scope="col">Modificado em</th><th scope="col">Tamanho</th><th scope="col">Ação</th></tr></thead>
+          <thead><tr><th scope="col">Nome</th><th scope="col">Modificado em</th><th scope="col">Tamanho</th><th scope="col">Ações</th></tr></thead>
           <tbody>
             {% for backup in google_drive_backups %}
             <tr>
               <td><code class="text-info">{{ backup.name }}</code></td>
               <td>{{ backup.modifiedTime or '—' }}</td>
               <td>{{ backup.size|filesizeformat if backup.size else '—' }}</td>
-              <td><a class="btn btn-sm btn-outline-light" href="{{ backup.webViewLink or ('https://drive.google.com/file/d/' ~ backup.id ~ '/view') }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Abrir</a></td>
+              <td>
+                <div class="btn-group" role="group">
+                  <a class="btn btn-sm btn-outline-light" href="{{ backup.webViewLink or ('https://drive.google.com/file/d/' ~ backup.id ~ '/view') }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Abrir</a>
+                  {% if backup.restauravel %}
+                  <form action="{{ url_for('main.restaurar_backup_drive') }}" method="POST"
+                        onsubmit="return confirm('Tem certeza que deseja restaurar este backup do Google Drive?\n\nO banco de dados atual será substituído e um backup local de segurança será criado automaticamente. A aplicação precisará ser reiniciada.')">
+                    <input type="hidden" name="arquivo_id" value="{{ backup.id }}">
+                    <input type="hidden" name="nome_arquivo" value="{{ backup.name }}">
+                    <button type="submit" class="btn btn-sm btn-warning" title="Restaurar backup do Google Drive">
+                      <i class="bi bi-cloud-download me-1" aria-hidden="true"></i>Restaurar
+                    </button>
+                  </form>
+                  {% endif %}
+                </div>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -174,4 +188,3 @@
   </div>
 </div>
 {% endblock %}
-

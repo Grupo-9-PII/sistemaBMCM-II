@@ -50,7 +50,7 @@ O BMCM já possui ou possui em desenvolvimento os seguintes recursos:
 * Calendário interno mensal do BMCM, agregando ensaios, eventos e atividades avulsas;
 * Base para indicadores de presença e análise de frequência.
 
-O OAuth solicita escopos para Gmail, Calendar e Drive. Gmail, sincronização unidirecional inicial do Calendar e upload/listagem de backups no Drive estão conectados a operações do sistema. Calendar e Drive foram validados com a conta Google configurada no ambiente.
+O OAuth solicita escopos para Gmail, Calendar e Drive. Gmail, sincronização unidirecional do Calendar e upload/listagem/restauração de backups no Drive estão conectados a operações do sistema. Ao criar backup manual, o sistema gera sempre a cópia local e tenta enviá-la automaticamente para o Drive se o escopo estiver autorizado; falha na nuvem não remove nem invalida a cópia local. O envio de teste pelo Gmail foi concluído com sucesso usando conta real; Calendar e Drive também foram validados com a conta Google configurada no ambiente. Em 06/10/2026, foi validado manualmente o fluxo de backup na nuvem: criação local, envio automático, restauração do arquivo remoto e criação da cópia de segurança do banco atual.
 
 Esses recursos devem ser considerados parte da evolução do projeto e não devem ser descartados ou reimplementados desnecessariamente.
 
@@ -174,20 +174,20 @@ Uma futura integração RFID/NFC ou outra solução IoT poderá identificar o in
 
 # 5. Integração com serviços Google
 
-O sistema deverá explorar APIs do Google como parte da integração com serviços externos e do conceito de computação em nuvem. A Central de Comunicações foi concluída funcionalmente e validada por testes automatizados. A sincronização Calendar de atividades avulsas está implementada e testada automaticamente; sua validação com conta real permanece pendente. Os MVPs de Calendar para ensaios/eventos e Drive foram validados com a conta Google configurada no ambiente.
+O sistema deverá explorar APIs do Google como parte da integração com serviços externos e do conceito de computação em nuvem. A Central de Comunicações foi concluída funcionalmente, validada por testes automatizados e teve um envio de teste pelo Gmail concluído com sucesso usando conta real. A sincronização Calendar de atividades avulsas está implementada e testada automaticamente; sua validação com conta real permanece pendente. Os MVPs de Calendar para ensaios/eventos e de upload/listagem de backups no Drive foram validados com a conta Google configurada no ambiente. A restauração de backup do Drive foi implementada, testada automaticamente e validada manualmente em 06/10/2026, incluindo a cópia de segurança do estado atual antes da restauração.
 
 As três integrações principais previstas são:
 
 ## 5.1 Google Drive — backup e nuvem
 
-O MVP atual permite enviar backups ZIP locais e consultar arquivos da pasta `BMCM Backups` no Google Drive. A integração deve ser validada com uma conta Google real. A evolução poderá utilizar o Drive como componente de armazenamento em nuvem para:
+O MVP atual permite criar backups ZIP locais, enviá-los automaticamente ao Drive quando autorizado (ou manualmente em caso de falha/desautorização), consultar arquivos da pasta `BMCM Backups` e restaurar backups criptografados diretamente do Google Drive. Upload, listagem e restauração remota foram validados com uma conta Google real. Em 06/10/2026, o teste manual confirmou também a criação de uma cópia de segurança do estado atual antes da substituição do banco. A evolução poderá utilizar o Drive como componente de armazenamento em nuvem para:
 
 * backup dos dados do sistema;
 * armazenamento de arquivos relevantes;
 * eventual armazenamento de relatórios;
 * demonstração prática do conceito de computação em nuvem.
 
-O escopo OAuth `drive.file` limita o acesso aos arquivos e à pasta criados pela aplicação. A restauração diretamente a partir do Drive ainda não está implementada.
+O escopo OAuth `drive.file` limita o acesso aos arquivos e à pasta criados pela aplicação. A restauração exige que o arquivo esteja listado na pasta de backups BMCM, passe pela validação do arquivo AES-256 e use a chave de backup correspondente. Antes de substituir o banco local, o fluxo existente cria uma cópia de segurança local; a aplicação deve ser reiniciada após a restauração. A validação manual da restauração com uma conta Google real foi concluída em 06/10/2026.
 
 As credenciais do Google devem ser armazenadas em variáveis de ambiente e nunca em código-fonte, arquivos de texto do projeto ou GitHub. O projeto usa o arquivo local `.env` como mecanismo de configuração local e este arquivo deve permanecer fora do controle de versão.
 
@@ -238,6 +238,8 @@ Possíveis utilizações:
 A funcionalidade deve ser desenvolvida respeitando limites, segurança, autenticação e políticas da API utilizada.
 
 O sistema não deve ser transformado em uma plataforma de e-mail completa. O Gmail deve funcionar como um serviço integrado ao sistema.
+
+Um envio de teste foi realizado com sucesso por meio de uma conta Google real. Os envios operacionais continuam sujeitos à autorização OAuth vigente, às regras de consentimento e à validação dos destinatários elegíveis.
 
 ---
 
@@ -291,7 +293,7 @@ Autorizações de e-mail e WhatsApp devem ser independentes, com registro de dat
 
 # 6. Conceito de computação em nuvem
 
-A utilização atual do Gmail e os MVPs de integração com Google Calendar e Google Drive devem ser compreendidos como parte da aplicação do conceito de **computação em nuvem**, sujeitos à validação com contas reais.
+A utilização atual do Gmail e os MVPs de integração com Google Calendar e Google Drive demonstram a aplicação do conceito de **computação em nuvem**. O envio de teste do Gmail e os MVPs de Calendar para ensaios/eventos e de upload/listagem de backups no Drive foram validados com contas reais; a publicação Calendar de atividades avulsas e a restauração de backup do Drive ainda requerem validação real.
 
 O objetivo não é apenas "usar serviços do Google".
 
@@ -390,7 +392,8 @@ Considerar:
 * tamanho ajustável das fontes;
 * contraste adequado;
 * tema claro e escuro;
-* personalização de contrastes e paleta visual em painel administrativo;
+* temas seguros predefinidos (padrão, claro e escuro), configuráveis individualmente por usuário;
+* tamanhos de texto padrão, médio, grande e muito grande, configuráveis individualmente por usuário;
 * elementos HTML semanticamente apropriados;
 * identificação adequada de campos de formulário;
 * mensagens de erro compreensíveis;
@@ -398,13 +401,14 @@ Considerar:
 * responsividade;
 * atalhos de teclado quando forem realmente úteis;
 * controle de foco em modais, abas e menus;
+* menu principal e dropdowns acima dos cards e formulários, inclusive em telas menores;
+* menu Gestão agrupando integrantes e instrumentos, com acesso a usuários exclusivo para administradores;
+* contraste legível para textos auxiliares da Central de Comunicações nos temas padrão e escuro;
 * indicadores visuais acessíveis para botões, links e estados ativos;
 * uso de labels, legends e descrições para leitores de tela;
 * suporte a reduções de movimento e melhor legibilidade em telas sensíveis ao contraste.
 
-A personalização de cores deve considerar contraste suficiente para preservar a legibilidade. O sistema deve permitir ajustes visuais sem comprometer uso em condições de baixa visão, contraste reduzido ou leitura assistida.
-
-O sistema não deve permitir que uma configuração visual torne a interface inutilizável. A ferramenta de personalização deve incluir, quando possível, opções seguras para contraste, cor de fundo, cor de destaques e tamanho de texto, mantendo acessibilidade mínima e consistência visual.
+O sistema não deve permitir que uma configuração visual torne a interface inutilizável. As opções de tema devem usar paletas controladas, e os tamanhos de texto devem ser ampliados sem depender de cores personalizadas que possam comprometer o contraste e a legibilidade.
 
 ---
 
@@ -486,6 +490,81 @@ Não implementar funcionalidades apenas porque são tecnicamente interessantes.
 
 Cada funcionalidade deve possuir uma justificativa relacionada à necessidade da banda ou às exigências acadêmicas.
 
+## 9.3 Uso de JavaScript no sistema
+
+O JavaScript é utilizado no navegador para interações que complementam as páginas renderizadas pelo Flask. A lógica existente está principalmente em blocos `<script>` dentro dos templates Jinja; atualmente não há uma pasta de scripts JavaScript próprios em `static/`. O template principal `templates/base.html` carrega o bundle do Bootstrap e contém comportamentos compartilhados:
+
+* abre menus dropdown e o menu responsivo pelo Bootstrap;
+* fecha o menu mobile após a navegação;
+* acrescenta o token CSRF aos formulários `POST` e às chamadas `fetch` locais feitas com método `POST`.
+
+Os scripts específicos de páginas já são utilizados para:
+
+* cadastro de integrantes em `templates/admin_aluno_form.html`: pré-visualização de foto, máscara e busca de CEP, preenchimento de endereço, autorização de foto de menor e captura de assinatura;
+* configurações em `templates/admin_configuracoes.html`: registro e revelação controlada da senha de backup;
+* passes em `templates/admin_passes.html`: exibição condicional de campos conforme o tipo de lançamento;
+* relatórios em `templates/relatorios_alunos.html`: geração de PDF usando jsPDF e html2canvas, carregados por CDN;
+* ações pontuais em templates: confirmações e impressão usando funções do navegador.
+
+### Exemplo: busca e preenchimento de CEP
+
+No formulário de integrante, `buscarCEP()` valida que o CEP tenha oito dígitos, tenta primeiro o endpoint local `/admin/buscar-cep/<cep>` e, se não houver registro local, consulta a API pública ViaCEP. O código abaixo ilustra a sequência atual de chamadas e o preenchimento dos campos:
+
+```javascript
+async function buscarCEP() {
+  const cep = document.getElementById('cep').value.replace(/\D/g, '');
+  if (cep.length !== 8) {
+    showToast('CEP inválido', 'O CEP deve ter 8 dígitos', 'warning');
+    return;
+  }
+
+  try {
+    const respostaLocal = await fetch(`/admin/buscar-cep/${cep}`);
+    const resultadoLocal = await respostaLocal.json();
+
+    if (resultadoLocal.success && resultadoLocal.logradouro) {
+      const endereco = resultadoLocal.logradouro;
+      document.getElementById('endereco').value =
+        `${endereco.tipo} ${endereco.descricao}`;
+      document.getElementById('bairro').value =
+        endereco.descricao_bairro || '';
+      document.getElementById('cidade').value =
+        endereco.descricao_cidade || '';
+      document.getElementById('estado').value = endereco.uf || '';
+    } else {
+      const respostaViaCep = await fetch(
+        `https://viacep.com.br/ws/${cep}/json/`
+      );
+      const endereco = await respostaViaCep.json();
+
+      if (endereco.erro) {
+        showToast('CEP não encontrado', 'O CEP informado não foi encontrado', 'danger');
+        return;
+      }
+
+      document.getElementById('endereco').value = endereco.logradouro || '';
+      document.getElementById('bairro').value = endereco.bairro || '';
+      document.getElementById('cidade').value = endereco.localidade || '';
+      document.getElementById('estado').value = endereco.uf || '';
+    }
+  } catch (erro) {
+    console.error('Erro ao buscar CEP:', erro);
+    showToast('Erro', 'Erro ao buscar CEP. Tente novamente.', 'danger');
+  }
+}
+```
+
+Na implementação completa, a tela também apresenta indicador de carregamento, mascara o CEP durante a digitação e envia novos endereços encontrados na ViaCEP para `/admin/salvar-logradouro`, evitando buscas externas repetidas. A função está em `templates/admin_aluno_form.html`.
+
+Ao ampliar JavaScript:
+
+* manter a validação e autorização no servidor; validações no navegador são apenas apoio à usabilidade;
+* verificar a resposta HTTP (`response.ok`) e tratar erros de rede e respostas inválidas;
+* não inserir credenciais ou segredos no JavaScript entregue ao cliente;
+* usar o mecanismo CSRF existente para requisições mutáveis locais;
+* associar os scripts específicos à página correspondente e preservar uso por teclado e tecnologias assistivas;
+* quando a lógica crescer ou for compartilhada, movê-la para arquivos organizados em `static/js/` e carregar apenas onde forem necessários.
+
 ---
 
 # 10. Segurança
@@ -563,9 +642,9 @@ O projeto deve demonstrar:
 
 O estado e a ordem de prioridade das integrações são:
 
-1. Gmail API: fluxo OAuth e envio implementados; Central de Comunicações validada por testes automatizados, com envio real dependente da conta Google configurada no ambiente;
+1. Gmail API: fluxo OAuth e envio implementados; Central de Comunicações validada por testes automatizados e envio de teste concluído com sucesso em conta Google real;
 2. Google Calendar API: sincronização unidirecional de ensaios/eventos validada com conta real; publicação de atividades avulsas implementada e testada automaticamente, com validação real pendente;
-3. Google Drive API: MVP de upload e listagem de backups validado com conta Google real;
+3. Google Drive API: upload, listagem e restauração de backups validados com conta Google real;
 4. API HTTP do módulo externo de WhatsApp: possibilidade futura, condicionada à autorização e aos requisitos de segurança.
 
 O módulo externo de WhatsApp deverá permanecer desacoplado do Flask. O BMCM deverá consumi-lo por um cliente de serviço com timeout, tratamento de erros, autenticação e registro de auditoria.
@@ -573,7 +652,7 @@ O módulo externo de WhatsApp deverá permanecer desacoplado do Flask. O BMCM de
 As integrações do BMCM devem manter escopo mínimo e controlado:
 
 * Google Calendar: sincronização em uma direção, do BMCM para o calendário;
-* Google Drive: backup remoto e consulta de arquivos;
+* Google Drive: envio, consulta e restauração administrativa de backups remotos;
 * Gmail: envio de comunicações autorizadas, já disponível;
 * WhatsApp: envio alternativo de mensagens de texto autorizadas através de serviço externo, como possibilidade futura.
 
@@ -605,6 +684,66 @@ Priorizar inicialmente:
 Testes devem ser automatizados sempre que possível.
 
 Também devem existir testes manuais documentados para funcionalidades que dependem de serviços externos ou interação visual.
+
+## Como executar os testes automatizados
+
+Execute os comandos a partir da raiz do repositório. O projeto utiliza `pytest`, listado em `requirements.txt`. Na primeira configuração do ambiente virtual, instale as dependências:
+
+```bash
+# Linux/macOS
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Windows PowerShell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# Com o ambiente ativado (qualquer sistema)
+python -m pip install -r requirements.txt
+```
+
+Com o ambiente virtual ativado, execute toda a suíte:
+
+```bash
+python -m pytest -q
+```
+
+Também é possível chamar diretamente o interpretador do ambiente virtual, sem ativá-lo:
+
+```bash
+# Linux/macOS
+./.venv/bin/python -m pytest -q
+
+# Windows PowerShell ou CMD
+.\.venv\Scripts\python.exe -m pytest -q
+```
+
+Para executar o arquivo principal de integração e segurança:
+
+```bash
+python -m pytest -q tests/test_seguranca_e_inicializacao.py
+```
+
+Para executar um teste isolado, informe o caminho do arquivo, dois-pontos e o nome exato da função:
+
+```bash
+python -m pytest -q tests/test_seguranca_e_inicializacao.py::test_incremento_de_versao_com_transporte
+```
+
+Para filtrar por parte do nome dos testes:
+
+```bash
+python -m pytest -q tests/test_seguranca_e_inicializacao.py -k acessibilidade
+```
+
+Interpretação básica do resultado:
+
+* `passed`: teste executado com sucesso;
+* `failed`: comportamento divergente do esperado; analise a mensagem e o traceback;
+* `error`: falha de preparação ou execução do teste, que também deve ser investigada;
+* o código de saída `0` indica sucesso; valor diferente de zero indica falha na coleta ou nos testes.
+
+Toda nova funcionalidade ou correção deve incluir ou atualizar testes de regressão pertinentes. Os testes automatizados devem usar banco isolado e simular serviços externos quando possível. Chamadas reais a Google ou outros provedores devem ser verificadas em testes manuais separados, com credenciais autorizadas, nunca armazenadas no repositório. Registre no histórico da alteração o comando executado e o resultado, por exemplo: `python -m pytest -q` — `49 passed`.
 
 ---
 
@@ -709,10 +848,12 @@ O objetivo final é entregar uma aplicação funcional que possa continuar sendo
 
 ### Integrações externas e comunicação
 
-* Gmail e Central de Comunicações: fluxo implementado e validado por testes automatizados, incluindo consentimento externo e revogação;
+* Gmail e Central de Comunicações: fluxo implementado, validado por testes automatizados e com envio de teste concluído com sucesso em conta Google real, incluindo consentimento externo e revogação;
 * Google Calendar: MVP unidirecional para ensaios/eventos validado com conta real; atividades avulsas também são publicadas manualmente e passaram nos testes automatizados, aguardando validação real;
-* Google Drive: MVP de upload e listagem implementado e validado com conta real;
+* Google Drive: upload, listagem e restauração implementados e validados com conta real, incluindo cópia de segurança local antes da restauração;
 * WhatsApp: possibilidade futura como módulo externo independente e canal alternativo autorizado.
+
+Os testes manuais de acessibilidade, UX e Central de Comunicações foram executados e validados. A restauração de backup remoto no Drive foi validada manualmente em 06/10/2026, incluindo backup de segurança do banco antes da substituição. Permanece como validação manual externa a publicação Calendar de atividades avulsas.
 
 ### Requisitos técnicos
 

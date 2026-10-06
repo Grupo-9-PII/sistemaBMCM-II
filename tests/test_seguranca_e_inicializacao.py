@@ -865,6 +865,27 @@ def test_central_de_comunicacoes_cria_mensagem_e_status_inicial(monkeypatch):
         assert ComunicacaoDestinatario.query.count() == 1
 
 
+def test_descricao_da_central_de_comunicacoes_usa_contraste_legivel(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    client = app.test_client()
+    _autorizar_google_workspace_em_teste(monkeypatch)
+    _login_admin(client)
+
+    response = client.get("/admin/comunicacoes")
+    assert response.status_code == 200
+    assert (
+        b'<p class="text-muted mb-0">Crie avisos, convites e mensagens para p\xc3'
+        b'\xbablicos espec\xc3\xadficos sem usar WhatsApp ainda.</p>'
+    ) in response.data
+
+    stylesheet = client.get("/static/css/style.css")
+    assert stylesheet.status_code == 200
+    assert (
+        b".text-muted,\n.form-text {\n    color: var(--theme-muted-text) !important;"
+        in stylesheet.data
+    )
+
+
 def test_central_de_comunicacoes_exibe_destinatarios_e_historico(monkeypatch):
     monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
     monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
@@ -1919,6 +1940,61 @@ def test_menu_exibe_google_calendar_apenas_com_escopo_autorizado(monkeypatch):
     assert b"https://calendar.google.com/calendar/u/0/r" in response.data
 
 
+def test_menu_principal_fica_acima_dos_cards_e_dropdowns(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    client = app.test_client()
+    _login_admin(client)
+
+    response = client.get("/")
+    assert response.status_code == 200
+    assert b'class="navbar navbar-expand-md navbar-dark main-navbar"' in response.data
+
+    stylesheet = client.get("/static/css/style.css")
+    assert stylesheet.status_code == 200
+    assert b".main-navbar {\n    position: relative;\n    z-index: 1030;" in stylesheet.data
+
+
+def test_menu_gestao_exibe_links_conforme_permissao_do_usuario(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    with app.app_context():
+        operador = User(
+            username="operador-menu-gestao",
+            is_admin=False,
+            must_change_password=False,
+        )
+        operador.set_password("SenhaOperador123")
+        db.session.add(operador)
+        db.session.commit()
+
+    admin_client = app.test_client()
+    _login_admin(admin_client)
+    admin_response = admin_client.get("/")
+    assert admin_response.status_code == 200
+    assert b"Gest\xc3\xa3o" in admin_response.data
+    assert b'href="/admin/alunos"' in admin_response.data
+    assert b'href="/admin/instrumentos"' in admin_response.data
+    assert b'href="/admin/users"' in admin_response.data
+
+    operator_client = app.test_client()
+    csrf_token = _csrf_token(operator_client)
+    login_response = operator_client.post(
+        "/login",
+        data={
+            "username": "operador-menu-gestao",
+            "password": "SenhaOperador123",
+            "csrf_token": csrf_token,
+        },
+        follow_redirects=False,
+    )
+    assert login_response.status_code == 302
+    operator_response = operator_client.get("/")
+    assert operator_response.status_code == 200
+    assert b"Gest\xc3\xa3o" in operator_response.data
+    assert b'href="/admin/alunos"' in operator_response.data
+    assert b'href="/admin/instrumentos"' in operator_response.data
+    assert b'href="/admin/users"' not in operator_response.data
+
+
 def test_google_drive_cria_pasta_e_envia_backup_sem_duplicar(tmp_path, monkeypatch):
     monkeypatch.setattr(google_drive, "has_scope", lambda scope: True)
     monkeypatch.setattr(google_drive, "get_access_token", lambda: "drive-test-token")
@@ -2020,6 +2096,146 @@ def test_google_drive_recusa_backup_legado_sem_criptografia(tmp_path, monkeypatc
         google_drive.enviar_backup_para_drive(str(backup_path))
 
 
+def test_google_drive_baixa_apenas_backup_listado_e_criptografado(tmp_path, monkeypatch):
+    monkeypatch.setattr(google_drive, "has_scope", lambda scope: True)
+    monkeypatch.setattr(google_drive, "get_access_token", lambda: "drive-test-token")
+    arquivo_id = "drive-backup-id"
+    nome_arquivo = "backup_20261006_120000.zip"
+    backup_remoto = tmp_path / nome_arquivo
+    _criar_backup_zip_aes(backup_remoto)
+    conteudo = backup_remoto.read_bytes()
+    chamadas = []
+
+    class RespostaGoogle:
+        def raise_for_status(self):
+            return None
+
+        def iter_content(self, chunk_size):
+            assert chunk_size == 1024 * 1024
+            yield conteudo
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(
+        google_drive,
+        "listar_backups_drive",
+        lambda: [{"id": arquivo_id, "name": nome_arquivo}],
+    )
+    monkeypatch.setattr(
+        google_drive.requests,
+        "get",
+        lambda url, **kwargs: chamadas.append((url, kwargs)) or RespostaGoogle(),
+    )
+    caminho_destino = tmp_path / "restaurar.zip"
+
+    arquivo = google_drive.baixar_backup_do_drive(
+        arquivo_id, nome_arquivo, str(caminho_destino)
+    )
+
+    assert arquivo["id"] == arquivo_id
+    assert caminho_destino.read_bytes() == conteudo
+    assert chamadas[0][0].endswith(f"/{arquivo_id}")
+    assert chamadas[0][1]["params"] == {"alt": "media"}
+    assert chamadas[0][1]["stream"] is True
+
+    monkeypatch.setattr(google_drive, "listar_backups_drive", lambda: [])
+    with pytest.raises(FileNotFoundError, match="não foi encontrado"):
+        google_drive.baixar_backup_do_drive(
+            arquivo_id, nome_arquivo, str(caminho_destino)
+        )
+    assert len(chamadas) == 1
+
+    with pytest.raises(ValueError, match="inválido"):
+        google_drive.baixar_backup_do_drive(
+            "../outro-arquivo", nome_arquivo, str(caminho_destino)
+        )
+
+
+def test_google_drive_recusa_restauracao_de_backup_sem_criptografia(tmp_path, monkeypatch):
+    monkeypatch.setattr(google_drive, "has_scope", lambda scope: True)
+    monkeypatch.setattr(google_drive, "get_access_token", lambda: "drive-test-token")
+    nome_arquivo = "backup_20261006_120001.zip"
+    backup_remoto = tmp_path / nome_arquivo
+    with zipfile.ZipFile(backup_remoto, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("database.db", b"dados sem criptografia")
+    conteudo = backup_remoto.read_bytes()
+
+    class RespostaGoogle:
+        def raise_for_status(self):
+            return None
+
+        def iter_content(self, chunk_size):
+            yield conteudo
+
+        def close(self):
+            return None
+
+    monkeypatch.setattr(
+        google_drive,
+        "listar_backups_drive",
+        lambda: [{"id": "drive-backup-id", "name": nome_arquivo}],
+    )
+    monkeypatch.setattr(
+        google_drive.requests, "get", lambda *args, **kwargs: RespostaGoogle()
+    )
+
+    with pytest.raises(ValueError, match="não está criptografado com AES-256"):
+        google_drive.baixar_backup_do_drive(
+            "drive-backup-id", nome_arquivo, str(tmp_path / "restaurar.zip")
+        )
+
+
+@pytest.mark.parametrize(
+    ("drive_autorizado", "falha_envio", "mensagem_esperada"),
+    [
+        (True, False, "Backup criado e enviado ao Google Drive"),
+        (False, False, "Backup criado localmente"),
+        (True, True, "A cópia local foi preservada"),
+    ],
+)
+def test_criar_backup_envia_automaticamente_ao_drive_quando_autorizado(
+    tmp_path, monkeypatch, drive_autorizado, falha_envio, mensagem_esperada
+):
+    app = _criar_app_calendar_teste(monkeypatch)
+    app.config["BACKUP_FOLDER"] = str(tmp_path)
+    client = app.test_client()
+    token = _login_admin(client)
+    caminho_backup = tmp_path / "backup_20261006_160000.zip"
+    caminho_backup.write_bytes(b"backup local criado")
+    uploads = []
+
+    monkeypatch.setattr(
+        routes, "criar_backup", lambda caminho_db: str(caminho_backup)
+    )
+    monkeypatch.setattr(
+        routes, "has_scope", lambda scope: drive_autorizado
+    )
+    monkeypatch.setattr(routes, "listar_backups_drive", lambda: [])
+
+    def enviar(caminho):
+        uploads.append(caminho)
+        if falha_envio:
+            raise requests.ConnectionError("Drive indisponível")
+        return {"name": caminho_backup.name}
+
+    monkeypatch.setattr(routes, "enviar_backup_para_drive", enviar)
+
+    response = client.post(
+        "/admin/backup/criar",
+        data={"csrf_token": token},
+        follow_redirects=True,
+    )
+
+    assert response.status_code == 200
+    assert mensagem_esperada.encode() in response.data
+    assert caminho_backup.is_file()
+    if drive_autorizado:
+        assert uploads == [str(caminho_backup)]
+    else:
+        assert uploads == []
+
+
 def test_rota_backup_drive_exige_csrf_e_preserva_fluxo_local(tmp_path, monkeypatch):
     app = _criar_app_calendar_teste(monkeypatch)
     app.config["BACKUP_FOLDER"] = str(tmp_path)
@@ -2055,6 +2271,64 @@ def test_rota_backup_drive_exige_csrf_e_preserva_fluxo_local(tmp_path, monkeypat
     assert response.status_code == 302
     assert enviados == [str(backup_path)]
     assert backup_path.is_file()
+
+
+def test_rota_restaura_backup_drive_com_csrf_e_temporario_removido(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    client = app.test_client()
+    _login_admin(client)
+    monkeypatch.setattr(routes, "has_scope", lambda scope: True)
+    arquivo_drive = {
+        "id": "drive-backup-id",
+        "name": "backup_20261006_120002.zip",
+        "modifiedTime": "2026-10-06T12:00:00.000Z",
+        "size": "1200",
+        "webViewLink": "https://drive.google.com/file/d/drive-backup-id/view",
+    }
+    monkeypatch.setattr(routes, "listar_backups_drive", lambda: [arquivo_drive.copy()])
+    painel = client.get("/admin/backup")
+    assert painel.status_code == 200
+    assert b"Restaurar backup do Google Drive" in painel.data
+
+    token = _csrf_token(client)
+    assert client.post(
+        "/admin/backup/restaurar-drive",
+        data={
+            "arquivo_id": arquivo_drive["id"],
+            "nome_arquivo": arquivo_drive["name"],
+        },
+    ).status_code == 400
+
+    downloads = []
+    restauracoes = []
+
+    def baixar(arquivo_id, nome_arquivo, caminho_destino):
+        downloads.append((arquivo_id, nome_arquivo, caminho_destino))
+        _criar_backup_zip_aes(caminho_destino)
+
+    monkeypatch.setattr(routes, "baixar_backup_do_drive", baixar)
+    monkeypatch.setattr(routes, "validar_backup", lambda caminho: (True, "Backup válido."))
+
+    def restaurar(caminho_backup, caminho_db):
+        restauracoes.append((caminho_backup, caminho_db))
+        assert Path(caminho_backup).is_file()
+        return True, "Backup restaurado com sucesso."
+
+    monkeypatch.setattr(routes, "restaurar_backup", restaurar)
+    response = client.post(
+        "/admin/backup/restaurar-drive",
+        data={
+            "arquivo_id": arquivo_drive["id"],
+            "nome_arquivo": arquivo_drive["name"],
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert downloads[0][:2] == (arquivo_drive["id"], arquivo_drive["name"])
+    assert restauracoes[0][0] == downloads[0][2]
+    assert not Path(downloads[0][2]).exists()
 
 
 def test_painel_backup_lista_drive_e_mostra_falha_de_api(tmp_path, monkeypatch):
@@ -2169,6 +2443,7 @@ def test_configuracoes_registra_e_revela_senha_somente_apos_reautenticacao(
     base_dir.mkdir()
     app.config["BASE_DIR"] = str(base_dir)
     app.config["BACKUP_PASSWORD"] = None
+    app.config["BACKUP_FOLDER"] = str(tmp_path / "backups")
     client = app.test_client()
     _autorizar_google_workspace_em_teste(monkeypatch)
     csrf_token = _login_admin(client)
@@ -2256,3 +2531,120 @@ def test_configuracoes_recusa_trocar_chave_ja_usada(tmp_path, monkeypatch):
     with app.app_context():
         assert senha_atual == backup.obter_senha_backup()
     assert not (base_dir / ".env").exists()
+
+
+def test_preferencias_de_acessibilidade_sao_individuais_e_validadas(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    admin_client = app.test_client()
+    _autorizar_google_workspace_em_teste(monkeypatch)
+    admin_csrf = _login_admin(admin_client)
+
+    with app.app_context():
+        utils.definir_configuracao("theme_preset", "escuro")
+        utils.definir_configuracao("font_scale", "medio")
+        utils.definir_configuracao("theme_accent", "#010203")
+        utils.definir_configuracao("theme_bg", "#040506")
+        operador = User(
+            username="operador-acessibilidade",
+            is_admin=False,
+            must_change_password=False,
+        )
+        operador.set_password("SenhaOperador123")
+        db.session.add(operador)
+        db.session.commit()
+
+    initial = admin_client.get("/admin/configuracoes")
+    assert initial.status_code == 200
+    assert b'data-theme="padrao"' in initial.data
+    assert b'data-font-size="padrao"' in initial.data
+    assert b"#010203" not in initial.data
+    assert b'type="color"' not in initial.data
+    assert b"Pular para o conte\xc3\xbado principal" in initial.data
+    assert b"Acessibilidade" in initial.data
+    assert b"tema-sistema" not in initial.data
+
+    saved = admin_client.post(
+        "/minha-conta/acessibilidade",
+        data={
+            "tema-sistema": "claro",
+            "tamanho-texto": "grande",
+            "csrf_token": admin_csrf,
+        },
+        follow_redirects=False,
+    )
+    assert saved.status_code == 302
+    rendered = admin_client.get("/admin/configuracoes")
+    assert b'data-theme="claro"' in rendered.data
+    assert b'data-font-size="grande"' in rendered.data
+    stylesheet = admin_client.get("/static/css/style.css")
+    assert stylesheet.status_code == 200
+    assert b'html[data-theme="claro"]' in stylesheet.data
+    assert b'html[data-font-size="grande"]' in stylesheet.data
+
+    operator_client = app.test_client()
+    operator_csrf = _csrf_token(operator_client)
+    logged_in = operator_client.post(
+        "/login",
+        data={
+            "username": "operador-acessibilidade",
+            "password": "SenhaOperador123",
+            "csrf_token": operator_csrf,
+        },
+        follow_redirects=False,
+    )
+    assert logged_in.status_code == 302
+
+    operator_page = operator_client.get("/minha-conta/acessibilidade")
+    assert operator_page.status_code == 200
+    assert b'data-theme="padrao"' in operator_page.data
+    assert b'data-font-size="padrao"' in operator_page.data
+
+    operator_saved = operator_client.post(
+        "/minha-conta/acessibilidade",
+        data={
+            "tema-sistema": "escuro",
+            "tamanho-texto": "medio",
+            "csrf_token": operator_csrf,
+        },
+        follow_redirects=False,
+    )
+    assert operator_saved.status_code == 302
+    operator_rendered = operator_client.get("/minha-conta/acessibilidade")
+    assert b'data-theme="escuro"' in operator_rendered.data
+    assert b'data-font-size="medio"' in operator_rendered.data
+
+    admin_rendered = admin_client.get("/minha-conta/acessibilidade")
+    assert b'data-theme="claro"' in admin_rendered.data
+    assert b'data-font-size="grande"' in admin_rendered.data
+
+    rejected = operator_client.post(
+        "/minha-conta/acessibilidade",
+        data={
+            "tema-sistema": "customizado",
+            "tamanho-texto": "invalido",
+            "csrf_token": operator_csrf,
+        },
+        follow_redirects=False,
+    )
+    assert rejected.status_code == 302
+    operator_unchanged = operator_client.get("/minha-conta/acessibilidade")
+    assert b'data-theme="escuro"' in operator_unchanged.data
+    assert b'data-font-size="medio"' in operator_unchanged.data
+
+    anonymous_client = app.test_client()
+    assert anonymous_client.get("/minha-conta/acessibilidade").status_code == 302
+
+
+def test_migracao_prefill_de_preferencias_visuais_legadas(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    with app.app_context():
+        utils.definir_configuracao("theme_preset", "claro")
+        utils.definir_configuracao("font_scale", "grande")
+        db.session.execute(text("ALTER TABLE user DROP COLUMN theme_preset"))
+        db.session.execute(text("ALTER TABLE user DROP COLUMN font_scale"))
+        db.session.commit()
+
+        utils.migrar_banco_novos_campos()
+        admin = User.query.filter_by(username="admin").one()
+        assert admin.theme_preset == "claro"
+        assert admin.font_scale == "grande"

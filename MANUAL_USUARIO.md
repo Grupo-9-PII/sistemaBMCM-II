@@ -562,25 +562,25 @@ Use a função de impressão do navegador para gerar uma versão formal em papel
 
 ### 11.1 Criar Backup
 1. No menu do usuário, no canto superior direito, selecione **Backup do Banco**.
-2. Clique em **Criar Backup Agora** para gerar uma cópia local do banco.
-3. Na lista de backups locais, clique em **Drive** ao lado do arquivo para enviá-lo à pasta `BMCM Backups` no Google Drive.
-4. Consulte as cópias remotas na seção **Backups no Google Drive** e use **Abrir** para visualizá-las no Drive.
+2. Clique em **Criar Backup Agora**. O sistema sempre cria a cópia local e, quando o Google Drive está autorizado, também tenta enviá-la automaticamente à pasta `BMCM Backups`.
+3. Consulte o resultado da operação na mensagem apresentada. Se o Drive não estiver autorizado ou o envio automático falhar, a cópia local será preservada; o botão **Drive** ao lado do arquivo permite tentar o envio manualmente.
+4. Consulte as cópias remotas na seção **Backups no Google Drive**. Use **Abrir** para visualizá-las ou **Restaurar** para recuperar uma cópia.
 
-O envio ao Drive exige que um administrador autorize o escopo Google Drive em **Configurações**. Se o envio falhar, a cópia local continua disponível e pode ser enviada novamente. Repetir o envio de um arquivo com o mesmo nome atualiza a cópia remota.
+O envio ao Drive exige que um administrador autorize o escopo Google Drive em **Configurações**. Repetir o envio de um arquivo com o mesmo nome atualiza a cópia remota.
 
 Os novos arquivos ZIP são protegidos com AES-256. Se `BACKUP_PASSWORD` não estiver configurada, o sistema gera uma senha aleatória e a salva em `instance/.backup_password` com permissões restritas. O backup automático anterior à restauração também é criptografado.
 
-**Aviso:** preserve `BACKUP_PASSWORD` ou `instance/.backup_password` em local seguro e separado dos ZIPs. Para restaurar em outro servidor, configure a mesma senha ou transfira o arquivo-chave por um meio seguro. Sem a chave, não será possível restaurar backups criptografados. Não troque a senha enquanto existirem backups AES-256; a interface bloqueia uma troca que os tornaria irrecuperáveis. Backups antigos sem criptografia continuam compatíveis. A restauração direta do Google Drive ainda não está disponível.
+**Aviso:** preserve `BACKUP_PASSWORD` ou `instance/.backup_password` em local seguro e separado dos ZIPs. Para restaurar em outro servidor, configure a mesma senha ou transfira o arquivo-chave por um meio seguro. Sem a chave, não será possível restaurar backups criptografados. Não troque a senha enquanto existirem backups AES-256; a interface bloqueia uma troca que os tornaria irrecuperáveis. Backups antigos sem criptografia continuam compatíveis para restauração local, mas backups do Drive precisam estar protegidos com AES-256.
 
 ![Backup](./assets/imgs/tela-admin-backup.png)
 
 ### 11.2 Restaurar Backup
 1. No menu do usuário, selecione **Backup do Banco**
-2. Selecione o backup desejado da lista
-3. Clique em **"Restaurar"**
-4. Confirme a operação
+2. Na lista local ou em **Backups no Google Drive**, selecione a cópia desejada
+3. Clique em **"Restaurar"** e confirme a operação
+4. No caso do Drive, o sistema baixa e valida a cópia antes de iniciar a restauração
 
-**Aviso**: A restauração substituirá todos os dados atuais. Faça um backup antes se necessário.
+**Aviso**: A restauração substitui o banco de dados atual. Um backup local de segurança do estado atual é criado automaticamente antes da substituição. Após uma restauração bem-sucedida, reinicie a aplicação para que as alterações tenham efeito. A restauração do Drive exige autorização Google Drive e a mesma chave AES-256 usada para criar o backup.
 
 ### 11.3 Excluir Backup
 1. No menu do usuário, selecione **Backup do Banco**

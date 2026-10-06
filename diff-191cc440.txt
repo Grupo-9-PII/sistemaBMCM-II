@@ -1,0 +1,1110 @@
+diff --git a/MANUAL_USUARIO.md b/MANUAL_USUARIO.md
+index e027051..e7c109e 100755
+--- a/MANUAL_USUARIO.md
++++ b/MANUAL_USUARIO.md
+@@ -81,6 +81,10 @@ Na área de configurações administrativas, o administrador pode autorizar os e
+ 
+ Após a autorização, o sistema salva o token localmente em `instance/google_oauth_token.json`. O token é usado para enviar mensagens pelo Gmail, sincronizar ensaios, eventos e atividades avulsas para o Google Calendar e enviar backups ao Google Drive, conforme os escopos autorizados.
+ 
++![Configurações dos serviços Google](./assets/imgs/tela-configuracoes-google-services.png)
++
++![Seleção de conta Google com identidades anonimizadas](./assets/imgs/tela-login-google.png)
++
+ ### 3.5 Recuperação de Senha
+ Em caso de esquecimento de senha, entre em contato com o administrador do sistema.
+ 
+@@ -205,6 +209,8 @@ Acesse o menu superior e clique em **Integrantes** para visualizar todos os alun
+ - Cidade
+ - Estado
+ 
++![Aba de contato e endereço](./assets/imgs/tela-cadastrar-aluno-endereco.png)
++
+ **Aba Informações da Banda:**
+ - Função na banda (maestro, aluno, etc.)
+ - Foto do aluno
+@@ -213,10 +219,14 @@ Acesse o menu superior e clique em **Integrantes** para visualizar todos os alun
+ - Selecione a escola
+ - Ano letivo
+ 
++![Aba de vínculo com escola](./assets/imgs/tela-cadastrar-aluno-escola.png)
++
+ **Aba Instrumento:**
+ - Selecione o instrumento atualmente associado ao integrante
+ - Informe observações, quando necessário
+ 
++![Aba de vínculo com instrumento](./assets/imgs/tela-cadastrar-aluno-instrumentos.png)
++
+ Ao trocar o instrumento, a associação anterior recebe uma data de devolução e permanece no histórico. Instrumentos inativos não podem ser associados a novos integrantes.
+ 
+ **Aba Responsáveis (para menores):**
+@@ -225,6 +235,8 @@ Ao trocar o instrumento, a associação anterior recebe uma data de devolução
+ - Telefone
+ - E-mail
+ 
++![Aba de responsáveis](./assets/imgs/tela-cadastrar-aluno-responsavel.png)
++
+ **Aba Autorizações:**
+ - Termo de autorização de foto (obrigatório para menores)
+ 
+@@ -381,6 +393,10 @@ Para cada registro, use **Chamada** para lançar ou consultar presença e, quand
+ 
+ O calendário BMCM é independente do Google Calendar. A grade não representa horário de funcionamento da Banda e não presume horário para atividades sem essa informação. A sincronização Google é manual e opcional em cada registro.
+ 
++![Calendário mensal do BMCM](./assets/imgs/calendario-BMCM.png)
++
++![Folha diária de presença com nomes e identificadores anonimizados](./assets/imgs/folha-relatorio-presenca.png)
++
+ ### 9.1 Criar um Ensaio
+ 
+ 1. No menu superior, abra **Atividades** e clique em **Ensaios**
+@@ -396,6 +412,10 @@ O calendário BMCM é independente do Google Calendar. A grade não representa h
+ 
+ Após o cadastro, o sistema abrirá automaticamente a folha de chamada.
+ 
++![Lista de ensaios](./assets/imgs/tela-ensaios.png)
++
++![Formulário para criar ensaio](./assets/imgs/tela-novo-ensaio.png)
++
+ ### 9.2 Registrar Presença em um Ensaio
+ 
+ Na folha de chamada, os integrantes ativos são agrupados pelo instrumento atualmente associado. Para cada integrante, marque uma situação:
+@@ -408,6 +428,8 @@ Clique em **Salvar presença** para registrar ou atualizar a chamada. O usuário
+ 
+ O botão **Imprimir** gera uma versão adequada para impressão e conferência durante o ensaio.
+ 
++![Folha de chamada com nomes anonimizados](./assets/imgs/lista-de-chamada.png)
++
+ ### 9.3 Editar ou Cancelar um Ensaio
+ 
+ Na tela **Ensaios**, use:
+@@ -434,6 +456,10 @@ Na listagem de ensaios, use **Sincronizar** para publicar o ensaio no Google Cal
+ 
+ Os status disponíveis são **A confirmar**, **Confirmado** e **Cancelado**.
+ 
++![Lista de eventos e apresentações](./assets/imgs/tela-criacao-eventos.png)
++
++![Formulário de novo evento](./assets/imgs/tela-novo-evento.png)
++
+ ### 9.5 Registrar Presença em Evento
+ 
+ Na listagem de **Eventos**, clique em **Chamada**. A folha funciona da mesma forma que a folha de ensaio, agrupando integrantes por instrumento e permitindo marcar presença, ausência ou justificativa.
+@@ -454,6 +480,8 @@ Na listagem de eventos, use **Sincronizar** para publicar o evento no Google Cal
+ 
+ Quando houver início e fim, ambos são usados no evento. Com apenas horário inicial, o sistema considera uma hora de duração. Sem horário, a atividade é publicada como evento de dia inteiro. Área, responsável, tipo e observações são incluídos na descrição. O BMCM continua sendo o registro oficial; alterações feitas diretamente no Google Calendar não são importadas.
+ 
++![Lista de atividades avulsas](./assets/imgs/tela-ativi-avulsa.png)
++
+ ### 9.8 Consultar Histórico e Frequência
+ 
+ 1. Abra o menu **Atividades**
+@@ -474,19 +502,26 @@ Use **Imprimir** para gerar uma cópia do histórico.
+ 
+ O relatório profissional é preparado para impressão e pode ser salvo como PDF pelo navegador. O relatório considera integrantes ativos e registros do mês selecionado.
+ 
++![Resumo mensal de presença com nomes anonimizados](./assets/imgs/resumo-mensal-presen%C3%A7a.png)
++
++![Relatório profissional de presença com nomes anonimizados](./assets/imgs/relatorio-mensal-presenca.png)
++
+ ### 9.10 Administrar passes de transporte
+ 
+ O controle de passes está disponível para administradores em **Usuário > Passes de Transporte**.
+ 
+ 1. Selecione o mês de referência.
+-2. Informe a cota inicial de cada integrante com cartão ativo e clique em **Salvar**.
+-3. O sistema registra a disponibilização inicial no histórico de movimentos.
+-4. Quando necessário, informe a quantidade e o motivo da recarga extra e clique em **Recarga extra**.
+-5. Consulte **Histórico** para verificar disponibilizações, recargas, consumos, estornos e saldos.
++2. Escolha o tipo de lançamento: **Cota mensal** ou **Avulso**.
++3. Selecione um integrante com cartão ativo e informe a quantidade.
++4. Para lançamento **Avulso**, informe também o motivo. O avulso pode ser lançado sem cota mensal prévia.
++5. Clique em **Confirmar lançamento**.
++6. Consulte **Histórico** para verificar disponibilizações, recargas, consumos, estornos e saldos.
+ 
+ Cada presença registrada para integrante com cartão consome 2 passes. Com saldo inferior a 2, a presença é bloqueada. Integrantes sem cartão continuam podendo registrar presença, mas não geram consumo de passes.
+ 
+-A recarga extra deve ser maior que zero, exige motivo obrigatório e pode ser utilizada uma única vez por integrante em cada mês. Alterações de presença podem gerar o estorno correspondente no histórico.
++A quantidade avulsa deve ser maior que zero, exige motivo obrigatório e pode ser lançada uma única vez por integrante em cada mês. Integrantes sem cartão ativo não podem receber lançamentos de passes. Alterações de presença podem gerar o estorno correspondente no histórico.
++
++![Tela de passes; lançamento habilitado após cadastrar cartão ativo no integrante](./assets/imgs/lancamento-passes.png)
+ 
+ ---
+ 
+@@ -559,6 +594,8 @@ Os novos arquivos ZIP são protegidos com AES-256. Se `BACKUP_PASSWORD` não est
+ ### 12.1 Acesso à Central
+ A Central de Comunicações fica disponível para usuários com permissão administrativa ou profissional. A partir dela, o administrador pode criar mensagens para públicos específicos, anexos, comunicação com contatos externos e histórico de envios.
+ 
++![Central de Comunicações com dados de contato anonimizados](./assets/imgs/Central-de-comunicacoes.png)
++
+ ### 12.2 Criar uma comunicação
+ 1. Acesse **Comunicações** no painel administrativo.
+ 2. Informe assunto e mensagem.
+@@ -575,6 +612,8 @@ A Central de Comunicações fica disponível para usuários com permissão admin
+ 
+ Para um contato externo novo ou sem autorização vigente, confirme a autorização de e-mail e informe sua origem. A data e a origem ficam registradas no contato. A autorização pode ser revogada na lista da Central; após a revogação, novos envios são bloqueados. A autorização de e-mail não habilita WhatsApp.
+ 
++![Formulário de comunicação com e-mail remetente anonimizado](./assets/imgs/tela-nova%20comunicacao.png)
++
+ ### 12.3 Status do envio
+ A comunicação pode aparecer com os seguintes status:
+ - **Rascunho**
+@@ -736,7 +775,7 @@ Essa identificação é mantida pela equipe responsável pelo desenvolvimento. O
+ 
+ ---
+ 
+-**Versão do Manual**: 1.2
++**Versão do Manual**: 1.3
+ **Sistema**: Sistema BMCM - Banda Marcial Municipal de Marília
+ **Data de Criação**: 2026
+ 
+diff --git a/PROJECT_CONTEXT.md b/PROJECT_CONTEXT.md
+index 91b10a8..4a2229c 100644
+--- a/PROJECT_CONTEXT.md
++++ b/PROJECT_CONTEXT.md
+@@ -129,7 +129,7 @@ O Google Calendar é uma integração de organização e comunicação. O regist
+ 
+ A Banda disponibiliza mensalmente uma cota de passes por integrante. A cota deve ser controlada por integrante e por mês de referência.
+ 
+-O administrador do sistema deverá possuir uma rotina para cadastrar ou atualizar a cota mensal de cada integrante que possua cartão de passe cadastrado. O número de controle do cartão será associado ao integrante e deverá ser único. Integrantes que não recebem cartão podem permanecer sem esse cadastro; o cartão não é um campo obrigatório do integrante.
++O administrador possui uma rotina explícita de lançamento por integrante e mês, com dois modos: **mensal**, que define a cota daquele mês, e **avulso**, que acrescenta uma quantidade excepcional mediante motivo. O número de controle do cartão é associado ao integrante e é único. Integrantes que não recebem cartão permanecem sem esse cadastro; o cartão não é obrigatório. No seletor, todos os integrantes ativos são exibidos; quem não tem cartão ativo aparece identificado e não pode ser selecionado para lançamento. Se não houver nenhum cartão ativo, a tela orienta o administrador a cadastrá-lo no integrante.
+ 
+ A cota inicial poderá receber **uma única recarga extra no mesmo mês** quando a quantidade de ensaios ou atividades superar os passes disponíveis. A recarga deverá possuir quantidade maior que zero e motivo obrigatório informado pelo administrador. O sistema deverá registrar essa recarga como movimento separado, com data e administrador responsável, e impedir uma segunda recarga extra para o mesmo integrante no mesmo mês.
+ 
+@@ -142,7 +142,7 @@ Quando o integrante não possuir cartão de passe cadastrado, a presença dever
+ 
+ O controle deve permitir consultar passes disponibilizados, recarregados, consumidos e restantes. O saldo não deve depender somente de um número manual: cada disponibilização, recarga e consumo deve possuir histórico, relacionado à presença ou atividade que originou o movimento quando aplicável.
+ 
+-Conceitualmente, o modelo poderá utilizar uma cota mensal e movimentos de passe, por exemplo:
++O modelo utiliza uma cota mensal e movimentos de passe:
+ 
+ ```text
+ COTA_MENSAL_PASSES
+diff --git a/README.md b/README.md
+index 1a2b12a..ee87baa 100755
+--- a/README.md
++++ b/README.md
+@@ -203,6 +203,8 @@ Nesse formato:
+ 
+ A versão oficial fica centralizada em `config.py`, nas constantes `APP_VERSION_MAJOR`, `APP_VERSION_UPDATE` e `APP_VERSION_COUNT`. Cada correção, rotina ou formulário concluído incrementa o terceiro componente a partir da versão atual. Ao passar de `99`, a contagem volta a `0` e o segundo componente é incrementado; se ele também passar de `99`, volta a `0` e o primeiro componente é incrementado. A função `proxima_versao()` formaliza essa regra. Mudanças estruturais maiores podem incrementar o primeiro componente.
+ 
++Versão atual: **1.4.20**.
++
+ A versão é exibida no login, na área de créditos e nas configurações administrativas. A contagem representa o controle acumulado de alterações do desenvolvimento e não é alterada automaticamente pelo uso do sistema em produção.
+ 
+ ---
+@@ -319,7 +321,7 @@ O controle manual foi escolhido para manter o sistema simples, acessível e alin
+ 
+ Cada integrante poderá possuir uma cota mensal de passes de transporte. Toda presença diária registrada consome exatamente **2 passes**, sendo um para a ida e outro para a volta, independentemente de a atividade ser ensaio, evento, apresentação, treinamento ou outra atividade válida.
+ 
+-O cartão de passe é opcional no cadastro do integrante. Quando existir, o administrador poderá informar seu número de controle, que será associado de forma única ao integrante. A rotina administrativa de passes permite cadastrar ou atualizar a quantidade disponibilizada para cada integrante com cartão ativo, por mês de referência.
++O cartão de passe é opcional no cadastro do integrante. Quando existir, seu número de controle é associado de forma única ao integrante. Em **Passes de Transporte**, o seletor mostra todos os integrantes ativos e identifica os que não têm cartão ativo; esses ficam desabilitados para lançamento. Se nenhum integrante tiver cartão ativo, a tela orienta o administrador a cadastrar o número de controle no cadastro do integrante. Para os elegíveis, o administrador seleciona o mês e o modo de lançamento: **Cota mensal** define a quantidade regular daquele mês; **Avulso** acrescenta uma quantidade excepcional e exige motivo. O lançamento avulso pode ser feito mesmo sem cota mensal prévia, criando o período com cota mensal zero.
+ 
+ O controle deverá manter histórico das disponibilizações e dos consumos relacionados à atividade ou presença, permitindo calcular o saldo e explicar cada utilização. O sistema deverá impedir o registro da presença quando houver menos de 2 passes disponíveis.
+ 
+@@ -327,7 +329,7 @@ Integrantes sem cartão cadastrado continuam podendo ter a presença registrada,
+ 
+ O cadastro do cartão, da cota mensal, o consumo automático de 2 passes na presença, uma recarga extra mensal justificada e a consulta administrativa do histórico já estão implementados. O sistema mantém movimentos de disponibilização inicial, recarga, consumo e estorno, preservando compatibilidade com cotas antigas.
+ 
+-A recarga extra não substitui a cota inicial, deve ser maior que zero, exige motivo informado pelo administrador e só pode ocorrer uma vez por integrante em cada mês.
++O lançamento avulso não substitui a cota mensal, deve ser maior que zero, exige motivo informado pelo administrador e só pode ocorrer uma vez por integrante em cada mês.
+ 
+ ## Ensaios
+ 
+@@ -881,40 +883,111 @@ Arquivos contendo senhas, tokens, chaves de API ou outras informações sensíve
+ 
+ # Evidências de Interface
+ 
+-Imagens presentes no repositório:
+-
+-| Tela                   | Arquivo                                      | Descrição                                  |
+-| ---------------------- | -------------------------------------------- | ------------------------------------------ |
+-| Login                  | `assets/imgs/Login.png`                      | Página de autenticação                     |
+-| Bloqueio               | `assets/imgs/bloq.png`                       | Tela de bloqueio após tentativas inválidas |
+-| Dashboard              | `assets/imgs/Dash.png`                       | Painel principal                           |
+-| Menu                   | `assets/imgs/tela-menu.png`                  | Menu principal                             |
+-| Usuários               | `assets/imgs/tela-admin-usuarios.png`        | Administração de usuários                  |
+-| Novo usuário           | `assets/imgs/tela-criar-usuario.png`         | Cadastro de usuário                        |
+-| Integrantes            | `assets/imgs/tela-admin-alunos.png`          | Administração de integrantes               |
+-| Cadastro de integrante | `assets/imgs/tela-cadastrar-aluno.png`       | Cadastro de integrante                     |
+-| Relatório individual   | `assets/imgs/tela-relatorio-aluno.png`       | Relatório de integrante                    |
+-| Escolas                | `assets/imgs/tela-admin-escolas.png`         | Administração de escolas                   |
+-| Nova escola            | `assets/imgs/tela-cadastrar-escola.png`      | Cadastro de escola                         |
+-| Relatório de escolas   | `assets/imgs/tela-relatorio-escolas.png`     | Relatório por escola                       |
+-| Instrumentos           | `assets/imgs/tela-admin-instrumentos.png`    | Administração de instrumentos              |
+-| Novo instrumento       | `assets/imgs/tela-cadastrar-instrumento.png` | Cadastro de instrumento                    |
+-| Tipos                  | `assets/imgs/tela-admin-tipos.png`           | Tipos de instrumentos                      |
+-| Naipes                 | `assets/imgs/tela-admin-naipes.png`          | Naipes                                     |
+-| Backup                 | `assets/imgs/tela-admin-backup.png`          | Área relacionada ao backup                 |
+-| Alteração de senha     | `assets/imgs/tela-alterar-senha.png`         | Alteração de senha                         |
+-
+-Exemplos:
+-
+-![Tela de Login](./assets/imgs/Login.png)
+-
+-![Tela de bloqueio](./assets/imgs/bloq.png)
++As capturas abaixo documentam as principais telas do sistema. Dados pessoais identificáveis foram cobertos com máscaras opacas antes da inclusão nesta galeria.
++
++<details>
++<summary>Acesso, navegação e administração</summary>
++
++![Tela de login](./assets/imgs/Login.png)
++
++![Bloqueio após tentativas inválidas](./assets/imgs/bloq.png)
+ 
+ ![Dashboard](./assets/imgs/Dash.png)
+ 
+-![Menu](./assets/imgs/tela-menu.png)
++![Menu principal](./assets/imgs/tela-menu.png)
+ 
+----
++![Administração de usuários](./assets/imgs/tela-admin-usuarios.png)
++
++![Cadastro de usuário](./assets/imgs/tela-criar-usuario.png)
++
++![Alteração de senha](./assets/imgs/tela-alterar-senha.png)
++
++![Configurações de segurança](./assets/imgs/tela-config-seg.png)
++
++![Backup e restauração](./assets/imgs/tela-admin-backup.png)
++
++</details>
++
++<details>
++<summary>Integrantes, cadastros e relatórios</summary>
++
++![Administração de integrantes com dados pessoais anonimizados](./assets/imgs/tela-admin-alunos.png)
++
++![Cadastro de integrante](./assets/imgs/tela-cadastrar-aluno.png)
++
++![Cadastro de endereço](./assets/imgs/tela-cadastrar-aluno-endereco.png)
++
++![Cadastro de responsáveis](./assets/imgs/tela-cadastrar-aluno-responsavel.png)
++
++![Vínculo com escola](./assets/imgs/tela-cadastrar-aluno-escola.png)
++
++![Vínculo com instrumento](./assets/imgs/tela-cadastrar-aluno-instrumentos.png)
++
++![Administração de escolas](./assets/imgs/tela-admin-escolas.png)
++
++![Cadastro de escola](./assets/imgs/tela-cadastrar-escola.png)
++
++![Administração de instrumentos](./assets/imgs/tela-admin-instrumentos.png)
++
++![Cadastro de instrumento](./assets/imgs/tela-cadastrar-instrumento.png)
++
++![Tipos de instrumentos](./assets/imgs/tela-admin-tipos.png)
++
++![Naipes](./assets/imgs/tela-admin-naipes.png)
++
++![Relatório individual com dados pessoais anonimizados](./assets/imgs/tela-relatorio-aluno.png)
++
++![Relatório geral com dados pessoais anonimizados](./assets/imgs/tela-relatorio-geral.png)
++
++![Relatório de escolas](./assets/imgs/tela-relatorio-escolas.png)
++
++</details>
++
++<details>
++<summary>Ensaios, eventos, atividades e presença</summary>
++
++![Lista de ensaios](./assets/imgs/tela-ensaios.png)
++
++![Cadastro de ensaio](./assets/imgs/tela-novo-ensaio.png)
++
++![Edição de ensaio](./assets/imgs/tela-editar-enssaio.png)
++
++![Lista de eventos e apresentações](./assets/imgs/tela-criacao-eventos.png)
++
++![Cadastro de evento](./assets/imgs/tela-novo-evento.png)
++
++![Atividades avulsas](./assets/imgs/tela-ativi-avulsa.png)
++
++![Calendário do BMCM](./assets/imgs/calendario-BMCM.png)
++
++![Lista de chamada com nomes anonimizados](./assets/imgs/lista-de-chamada.png)
++
++![Folha diária de presença com nomes e identificadores anonimizados](./assets/imgs/folha-relatorio-presenca.png)
++
++![Resumo mensal de presença com nomes anonimizados](./assets/imgs/resumo-mensal-presen%C3%A7a.png)
++
++![Relatório profissional de presença com nomes anonimizados](./assets/imgs/relatorio-mensal-presenca.png)
++
++![Lançamento de passes](./assets/imgs/lancamento-passes.png)
++
++</details>
++
++<details>
++<summary>Comunicação e serviços Google</summary>
++
++![Central de comunicações com contato pessoal anonimizado](./assets/imgs/Central-de-comunicacoes.png)
++
++![Nova comunicação com e-mail remetente anonimizado](./assets/imgs/tela-nova%20comunicacao.png)
++
++![Configurações dos serviços Google com e-mail remetente anonimizado](./assets/imgs/tela-configuracoes-google-services.png)
++
++![Seleção de conta Google com identidades anonimizadas](./assets/imgs/tela-login-google.png)
++
++![Aviso de verificação do aplicativo Google](./assets/imgs/tela-aut.google.png)
++
++![Permissões Google com identidade da conta anonimizada](./assets/imgs/servicoa-google.png)
++
++</details>
+ 
+ # Integrantes
+ 
+diff --git a/app/routes.py b/app/routes.py
+index 2b59eb1..6d646f4 100755
+--- a/app/routes.py
++++ b/app/routes.py
+@@ -1250,11 +1250,12 @@ def nova_comunicacao():
+         assunto = (request.form.get("assunto") or "").strip()
+         mensagem = (request.form.get("mensagem") or "").strip()
+         tipo = (request.form.get("tipo") or "aviso").strip().lower()
+-        publico = (request.form.get("publico") or "geral").strip().lower()
++        publico = (request.form.get("publico") or "").strip().lower()
+         canal = (request.form.get("canal") or "email").strip().lower()
+         evento_id = request.form.get("evento_id", type=int)
+         ensaio_id = request.form.get("ensaio_id", type=int)
+         naipe_id = request.form.get("naipe_id", type=int)
++        contato_externo_id = request.form.get("contato_externo_id", type=int)
+         contato_email = (request.form.get("contato_email") or "").strip().lower()
+         destinatario_nome = (request.form.get("destinatario_nome") or "").strip()
+         destinatario_email = (request.form.get("destinatario_email") or "").strip().lower()
+@@ -1263,9 +1264,33 @@ def nova_comunicacao():
+             request.form.get("origem_consentimento_email") or ""
+         ).strip()
+ 
++        publicos_validos = {"geral", "responsaveis", "evento", "naipe", "externo"}
++        if publico not in publicos_validos:
++            flash("Selecione explicitamente o público-alvo da comunicação.", "danger")
++            return redirect(url_for("main.nova_comunicacao"))
++        if publico != "externo" and (
++            contato_externo_id
++            or contato_email
++            or destinatario_nome
++            or destinatario_email
++        ):
++            flash(
++                "Dados de destinatário externo só podem ser usados com o público Contatos externos. "
++                "Nenhuma comunicação foi criada.",
++                "danger",
++            )
++            return redirect(url_for("main.nova_comunicacao"))
++
+         contato_externo = None
+         if publico == "externo":
+-            if contato_email:
++            if contato_externo_id:
++                contato_externo = db.session.get(ContatoComunicacao, contato_externo_id)
++                if not contato_externo or not contato_externo.ativo:
++                    flash("Selecione um contato externo ativo.", "danger")
++                    return redirect(url_for("main.nova_comunicacao"))
++                destinatario_nome = contato_externo.nome
++                destinatario_email = (contato_externo.email or "").strip().lower()
++            elif contato_email:
+                 contato_externo = ContatoComunicacao.query.filter_by(
+                     email=contato_email,
+                     ativo=True,
+@@ -1586,21 +1611,25 @@ def enviar_comunicacao(comunicacao_id):
+             novos_destinatarios.append(destinatario)
+             destinatarios_criados += 1
+     elif comunicacao.publico == "externo":
+-        if not comunicacao.destinatario_email:
+-            flash("Este rascunho não possui um e-mail externo definido.", "warning")
++        contato_externo = db.session.get(
++            ContatoComunicacao, comunicacao.contato_externo_id
++        ) if comunicacao.contato_externo_id else None
++        if not contato_externo or not contato_externo.email:
++            flash("Este rascunho não possui um contato externo selecionado.", "warning")
+             return redirect(url_for("main.listar_comunicacoes"))
+ 
+         existente = ComunicacaoDestinatario.query.filter_by(
+             comunicacao_id=comunicacao.id,
+             tipo_destinatario="contato_externo",
++            destinatario_id=contato_externo.id,
+         ).first()
+         if not existente:
+             destinatario = ComunicacaoDestinatario(
+                 comunicacao_id=comunicacao.id,
+                 tipo_destinatario="contato_externo",
+-                destinatario_id=comunicacao.contato_externo_id or 0,
+-                destinatario_nome=comunicacao.destinatario_nome,
+-                destinatario_email=comunicacao.destinatario_email,
++                destinatario_id=contato_externo.id,
++                destinatario_nome=contato_externo.nome,
++                destinatario_email=contato_externo.email.strip().lower(),
+                 canal="email",
+                 status="pendente",
+             )
+@@ -1888,18 +1917,18 @@ def gerenciar_passes():
+         flash("Cota mensal de passes salva com sucesso.", "success")
+         return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
+ 
+-    alunos_com_cartao = (
+-        Aluno.query.join(CartaoPasse)
+-        .filter(Aluno.ativo.is_(True), CartaoPasse.ativo.is_(True))
+-        .order_by(Aluno.nome)
+-        .all()
+-    )
++    integrantes = Aluno.query.filter_by(ativo=True).order_by(Aluno.nome).all()
++    alunos_com_cartao = [
++        aluno for aluno in integrantes
++        if aluno.cartao_passe and aluno.cartao_passe.ativo
++    ]
+     cotas = {
+         cota.aluno_id: cota
+         for cota in CotaMensalPasse.query.filter_by(mes_referencia=mes_referencia).all()
+     }
+     return render_template(
+         "admin_passes.html",
++        integrantes=integrantes,
+         alunos=alunos_com_cartao,
+         cotas=cotas,
+         saldos={aluno_id: _saldo_cota_passe(cota) for aluno_id, cota in cotas.items()},
+@@ -1958,6 +1987,81 @@ def adicionar_recarga_passe():
+     return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
+ 
+ 
++@main_bp.route("/admin/passes/lancamento", methods=["POST"])
++@login_required
++@admin_required
++def lancar_passes():
++    """Lança a cota mensal ou uma disponibilização avulsa auditada."""
++    aluno_id = request.form.get("aluno_id", type=int)
++    mes_parametro = request.form.get("mes_referencia", "")
++    modo = request.form.get("modo_lancamento", "mensal")
++    motivo = request.form.get("motivo", "").strip()
++    try:
++        mes_referencia = datetime.strptime(mes_parametro, "%Y-%m").date().replace(day=1)
++        quantidade = int(request.form.get("quantidade", ""))
++    except (TypeError, ValueError):
++        flash("Informe mês e quantidade válidos para o lançamento.", "danger")
++        return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_parametro))
++
++    aluno = _get_or_404(Aluno, aluno_id)
++    if not aluno.cartao_passe or not aluno.cartao_passe.ativo:
++        flash("Somente integrantes com cartão de passe ativo podem receber passes.", "danger")
++    elif modo not in {"mensal", "avulso"}:
++        flash("Selecione o tipo de lançamento.", "danger")
++    elif quantidade < 0 or (modo == "avulso" and quantidade == 0):
++        flash("A quantidade mensal não pode ser negativa; o avulso deve ser maior que zero.", "danger")
++    elif modo == "avulso" and not motivo:
++        flash("Informe o motivo do lançamento avulso.", "danger")
++    else:
++        cota = CotaMensalPasse.query.filter_by(
++            aluno_id=aluno.id,
++            mes_referencia=mes_referencia,
++        ).first()
++        if cota is None:
++            cota = CotaMensalPasse(
++                aluno_id=aluno.id,
++                mes_referencia=mes_referencia,
++            )
++            db.session.add(cota)
++            db.session.flush()
++
++        if modo == "mensal":
++            cota.quantidade_disponibilizada = quantidade
++            movimento = MovimentoPasse.query.filter_by(
++                cota_id=cota.id,
++                tipo="DISPONIBILIZACAO",
++            ).first()
++            if movimento is None:
++                movimento = MovimentoPasse(
++                    cota_id=cota.id,
++                    quantidade=quantidade,
++                    tipo="DISPONIBILIZACAO",
++                    motivo="Lançamento mensal da cota.",
++                    registrado_por_id=current_user.id,
++                )
++                db.session.add(movimento)
++            else:
++                movimento.quantidade = quantidade
++                movimento.registrado_por_id = current_user.id
++            flash("Lançamento mensal de passes salvo.", "success")
++        elif MovimentoPasse.query.filter_by(cota_id=cota.id, tipo="RECARGA").first():
++            flash("O lançamento avulso deste integrante já foi utilizado neste mês.", "danger")
++            db.session.rollback()
++            return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
++        else:
++            db.session.add(MovimentoPasse(
++                cota_id=cota.id,
++                quantidade=quantidade,
++                tipo="RECARGA",
++                motivo=motivo,
++                registrado_por_id=current_user.id,
++            ))
++            flash("Lançamento avulso de passes registrado.", "success")
++        db.session.commit()
++
++    return redirect(url_for("main.gerenciar_passes", mes_referencia=mes_referencia.strftime("%Y-%m")))
++
++
+ @main_bp.route("/admin/passes/historico")
+ @login_required
+ @admin_required
+diff --git a/assets/imgs/Central-de-comunicacoes.png b/assets/imgs/Central-de-comunicacoes.png
+new file mode 100644
+index 0000000..49991e3
+Binary files /dev/null and b/assets/imgs/Central-de-comunicacoes.png differ
+diff --git a/assets/imgs/Dash.png b/assets/imgs/Dash.png
+index 286ef50..1f40e38 100755
+Binary files a/assets/imgs/Dash.png and b/assets/imgs/Dash.png differ
+diff --git a/assets/imgs/Login.png b/assets/imgs/Login.png
+old mode 100755
+new mode 100644
+index 2e0afd0..3ccc452
+Binary files a/assets/imgs/Login.png and b/assets/imgs/Login.png differ
+diff --git a/assets/imgs/calendario-BMCM.png b/assets/imgs/calendario-BMCM.png
+new file mode 100644
+index 0000000..1652a52
+Binary files /dev/null and b/assets/imgs/calendario-BMCM.png differ
+diff --git a/assets/imgs/folha-relatorio-presenca.png b/assets/imgs/folha-relatorio-presenca.png
+new file mode 100644
+index 0000000..3403795
+Binary files /dev/null and b/assets/imgs/folha-relatorio-presenca.png differ
+diff --git a/assets/imgs/lancamento-passes.png b/assets/imgs/lancamento-passes.png
+new file mode 100644
+index 0000000..b4b2cab
+Binary files /dev/null and b/assets/imgs/lancamento-passes.png differ
+diff --git a/assets/imgs/lista-de-chamada.png b/assets/imgs/lista-de-chamada.png
+new file mode 100644
+index 0000000..0f79b50
+Binary files /dev/null and b/assets/imgs/lista-de-chamada.png differ
+diff --git a/assets/imgs/relatorio-mensal-presenca.png b/assets/imgs/relatorio-mensal-presenca.png
+new file mode 100644
+index 0000000..fd5e7cf
+Binary files /dev/null and b/assets/imgs/relatorio-mensal-presenca.png differ
+diff --git "a/assets/imgs/resumo-mensal-presen\303\247a.png" "b/assets/imgs/resumo-mensal-presen\303\247a.png"
+new file mode 100644
+index 0000000..e365ab9
+Binary files /dev/null and "b/assets/imgs/resumo-mensal-presen\303\247a.png" differ
+diff --git a/assets/imgs/servicoa-google.png b/assets/imgs/servicoa-google.png
+new file mode 100644
+index 0000000..12659aa
+Binary files /dev/null and b/assets/imgs/servicoa-google.png differ
+diff --git a/assets/imgs/tela-admin-alunos.png b/assets/imgs/tela-admin-alunos.png
+index 613c286..db47975 100755
+Binary files a/assets/imgs/tela-admin-alunos.png and b/assets/imgs/tela-admin-alunos.png differ
+diff --git a/assets/imgs/tela-admin-backup.png b/assets/imgs/tela-admin-backup.png
+old mode 100755
+new mode 100644
+index 7abe871..154e97e
+Binary files a/assets/imgs/tela-admin-backup.png and b/assets/imgs/tela-admin-backup.png differ
+diff --git a/assets/imgs/tela-ativi-avulsa.png b/assets/imgs/tela-ativi-avulsa.png
+new file mode 100644
+index 0000000..decf3a6
+Binary files /dev/null and b/assets/imgs/tela-ativi-avulsa.png differ
+diff --git a/assets/imgs/tela-aut.google.png b/assets/imgs/tela-aut.google.png
+new file mode 100644
+index 0000000..56c94f4
+Binary files /dev/null and b/assets/imgs/tela-aut.google.png differ
+diff --git a/assets/imgs/tela-cadastrar-aluno-instrumentos.png b/assets/imgs/tela-cadastrar-aluno-instrumentos.png
+new file mode 100644
+index 0000000..ff73c66
+Binary files /dev/null and b/assets/imgs/tela-cadastrar-aluno-instrumentos.png differ
+diff --git a/assets/imgs/tela-cadastrar-aluno.png b/assets/imgs/tela-cadastrar-aluno.png
+old mode 100755
+new mode 100644
+index 5f76927..6b9d0d0
+Binary files a/assets/imgs/tela-cadastrar-aluno.png and b/assets/imgs/tela-cadastrar-aluno.png differ
+diff --git a/assets/imgs/tela-config-seg.png b/assets/imgs/tela-config-seg.png
+new file mode 100644
+index 0000000..ecf4ec6
+Binary files /dev/null and b/assets/imgs/tela-config-seg.png differ
+diff --git a/assets/imgs/tela-configuracoes-google-services.png b/assets/imgs/tela-configuracoes-google-services.png
+new file mode 100644
+index 0000000..5a4b51e
+Binary files /dev/null and b/assets/imgs/tela-configuracoes-google-services.png differ
+diff --git a/assets/imgs/tela-criacao-eventos.png b/assets/imgs/tela-criacao-eventos.png
+new file mode 100644
+index 0000000..29dd678
+Binary files /dev/null and b/assets/imgs/tela-criacao-eventos.png differ
+diff --git a/assets/imgs/tela-editar-enssaio.png b/assets/imgs/tela-editar-enssaio.png
+new file mode 100644
+index 0000000..e8d75bb
+Binary files /dev/null and b/assets/imgs/tela-editar-enssaio.png differ
+diff --git a/assets/imgs/tela-ensaios.png b/assets/imgs/tela-ensaios.png
+new file mode 100644
+index 0000000..3bf9c57
+Binary files /dev/null and b/assets/imgs/tela-ensaios.png differ
+diff --git a/assets/imgs/tela-login-google.png b/assets/imgs/tela-login-google.png
+new file mode 100644
+index 0000000..092a9f4
+Binary files /dev/null and b/assets/imgs/tela-login-google.png differ
+diff --git a/assets/imgs/tela-nova comunicacao.png b/assets/imgs/tela-nova comunicacao.png
+new file mode 100644
+index 0000000..5d3f3c7
+Binary files /dev/null and b/assets/imgs/tela-nova comunicacao.png differ
+diff --git a/assets/imgs/tela-novo-ensaio.png b/assets/imgs/tela-novo-ensaio.png
+new file mode 100644
+index 0000000..1c2bef3
+Binary files /dev/null and b/assets/imgs/tela-novo-ensaio.png differ
+diff --git a/assets/imgs/tela-novo-evento.png b/assets/imgs/tela-novo-evento.png
+new file mode 100644
+index 0000000..634759c
+Binary files /dev/null and b/assets/imgs/tela-novo-evento.png differ
+diff --git a/assets/imgs/tela-relatorio-aluno.png b/assets/imgs/tela-relatorio-aluno.png
+index 72b8053..80264c1 100755
+Binary files a/assets/imgs/tela-relatorio-aluno.png and b/assets/imgs/tela-relatorio-aluno.png differ
+diff --git a/assets/imgs/tela-relatorio-geral.png b/assets/imgs/tela-relatorio-geral.png
+index f1a743d..01d5912 100755
+Binary files a/assets/imgs/tela-relatorio-geral.png and b/assets/imgs/tela-relatorio-geral.png differ
+diff --git a/config.py b/config.py
+index 9369bfd..d995aa7 100755
+--- a/config.py
++++ b/config.py
+@@ -7,7 +7,7 @@ load_dotenv()
+ # Controle de versão incremental: principal.atualização.contagem.
+ APP_VERSION_MAJOR = 1
+ APP_VERSION_UPDATE = 4
+-APP_VERSION_COUNT = 16
++APP_VERSION_COUNT = 20
+ APP_VERSION = f"{APP_VERSION_MAJOR}.{APP_VERSION_UPDATE}.{APP_VERSION_COUNT}"
+ APP_VERSION_COMPONENT_LIMIT = 99
+ 
+diff --git a/templates/admin_comunicacao_form.html b/templates/admin_comunicacao_form.html
+index 5b1ad0f..9aed24c 100644
+--- a/templates/admin_comunicacao_form.html
++++ b/templates/admin_comunicacao_form.html
+@@ -29,7 +29,8 @@
+               </div>
+               <div class="col-md-6">
+                 <label for="publico" class="form-label">Público-alvo</label>
+-                <select id="publico" name="publico" class="form-select">
++                <select id="publico" name="publico" class="form-select" required>
++                  <option value="" selected disabled>Selecione o público da comunicação</option>
+                   <option value="geral">Integrantes ativos</option>
+                   <option value="responsaveis">Responsáveis</option>
+                   <option value="evento">Participantes de evento</option>
+@@ -73,14 +74,13 @@
+                 </select>
+               </div>
+               <div class="col-12 border rounded p-3 bg-body-tertiary">
+-                <label for="contato_email" class="form-label">Contato externo cadastrado</label>
+-                <input id="contato_email" name="contato_email" class="form-control" type="email"
+-                       list="contatos_externos" placeholder="Busque por nome ou e-mail">
+-                <datalist id="contatos_externos">
++                <label for="contato_externo_id" class="form-label">Contato externo desta comunicação</label>
++                <select id="contato_externo_id" name="contato_externo_id" class="form-select">
++                  <option value="">Selecione um único contato externo</option>
+                   {% for contato in contatos_externos %}
+-                  <option value="{{ contato.email }}" label="{{ contato.nome }}">{{ contato.nome }}</option>
++                  <option value="{{ contato.id }}">{{ contato.nome }}{% if contato.email %} ({{ contato.email }}){% endif %}</option>
+                   {% endfor %}
+-                </datalist>
++                </select>
+                 <div class="form-text">O público externo é sempre um único destinatário por comunicação.</div>
+               </div>
+               <div class="col-md-6">
+diff --git a/templates/admin_comunicacoes.html b/templates/admin_comunicacoes.html
+index 8e1082a..eb215c0 100644
+--- a/templates/admin_comunicacoes.html
++++ b/templates/admin_comunicacoes.html
+@@ -44,7 +44,15 @@
+                 <div class="btn-group" role="group">
+                   <a href="{{ url_for('main.detalhar_comunicacao', comunicacao_id=comunicacao.id) }}" class="btn btn-sm btn-outline-light">Detalhes</a>
+                   <form method="POST" action="{{ url_for('main.enviar_comunicacao', comunicacao_id=comunicacao.id) }}" class="d-inline">
+-                    <button type="submit" class="btn btn-sm btn-outline-success">Enviar</button>
++                    {% if comunicacao.publico == 'geral' %}
++                    {% set confirmacao_envio = 'Este envio será direcionado a todos os integrantes ativos que possuem e-mail cadastrado. Deseja continuar?' %}
++                    {% elif comunicacao.publico == 'externo' %}
++                    {% set confirmacao_envio = 'Enviar somente para ' ~ (comunicacao.destinatario_nome or 'o contato externo selecionado') ~ ' (' ~ (comunicacao.destinatario_email or 'e-mail cadastrado') ~ ')?' %}
++                    {% else %}
++                    {% set confirmacao_envio = 'Confirma o envio para o público "' ~ comunicacao.alvo_descricao ~ '"?' %}
++                    {% endif %}
++                    <button type="submit" class="btn btn-sm btn-outline-success"
++                            onclick="return confirm({{ confirmacao_envio|tojson }});">Enviar</button>
+                   </form>
+                   {% if comunicacao.status == 'rascunho' %}
+                   <form method="POST" action="{{ url_for('main.excluir_comunicacao', comunicacao_id=comunicacao.id) }}" class="d-inline">
+diff --git a/templates/admin_passes.html b/templates/admin_passes.html
+index b880a82..2b94290 100644
+--- a/templates/admin_passes.html
++++ b/templates/admin_passes.html
+@@ -5,7 +5,7 @@
+   <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+     <div>
+       <h1 class="h3 mb-1"><i class="bi bi-ticket-perforated me-2"></i>Passes de Transporte</h1>
+-      <p class="text-muted mb-0">Cadastre a cota mensal dos integrantes que possuem cartão.</p>
++      <p class="text-muted mb-0">Lance a cota mensal ou uma quantidade avulsa para integrantes com cartão.</p>
+     </div>
+     <a href="{{ url_for('main.historico_passes', mes_referencia=mes_referencia.strftime('%Y-%m')) }}" class="btn btn-outline-secondary">
+       <i class="bi bi-clock-history me-1" aria-hidden="true"></i>Histórico
+@@ -27,6 +27,55 @@
+     </div>
+   </form>
+ 
++  <section class="card mb-4" aria-labelledby="titulo-lancamento-passes">
++    <div class="card-header">
++      <h2 id="titulo-lancamento-passes" class="h5 mb-0">Lançar passes</h2>
++    </div>
++    {% if integrantes and not alunos %}
++    <div class="alert alert-warning m-3 mb-0" role="status">
++      Nenhum integrante ativo possui cartão de passe ativo. Cadastre o número de controle no <a href="{{ url_for('main.listar_alunos') }}">cadastro de integrantes</a> para habilitar lançamentos.
++    </div>
++    {% endif %}
++    <form method="POST" action="{{ url_for('main.lancar_passes') }}" class="card-body">
++      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
++      <input type="hidden" name="mes_referencia" value="{{ mes_referencia.strftime('%Y-%m') }}">
++      <div class="row g-3 align-items-end">
++        <div class="col-md-3">
++          <label for="modo_lancamento" class="form-label">Tipo de lançamento</label>
++          <select name="modo_lancamento" id="modo_lancamento" class="form-select" required>
++            <option value="mensal">Cota mensal</option>
++            <option value="avulso">Avulso</option>
++          </select>
++        </div>
++        <div class="col-md-4">
++          <label for="aluno_id_lancamento" class="form-label">Integrante com cartão</label>
++          <select name="aluno_id" id="aluno_id_lancamento" class="form-select" required>
++            <option value="">Selecione um integrante</option>
++            {% for aluno in integrantes %}
++            {% set possui_cartao_ativo = aluno.cartao_passe and aluno.cartao_passe.ativo %}
++            <option value="{{ aluno.id }}" {% if not possui_cartao_ativo %}disabled{% endif %}>
++              {{ aluno.nome }} — {% if possui_cartao_ativo %}cartão {{ aluno.cartao_passe.numero_controle }}{% else %}sem cartão ativo{% endif %}
++            </option>
++            {% endfor %}
++          </select>
++        </div>
++        <div class="col-md-2">
++          <label for="quantidade_lancamento" class="form-label">Quantidade</label>
++          <input type="number" name="quantidade" id="quantidade_lancamento" class="form-control" min="0" step="1" required>
++        </div>
++        <div class="col-md-3" id="motivo-lancamento-container" hidden>
++          <label for="motivo_lancamento" class="form-label">Motivo do avulso</label>
++          <input type="text" name="motivo" id="motivo_lancamento" class="form-control" maxlength="500" disabled>
++        </div>
++        <div class="col-12 d-flex justify-content-end">
++          <button type="submit" class="btn btn-primary">
++            <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Confirmar lançamento
++          </button>
++        </div>
++      </div>
++    </form>
++  </section>
++
+   <div class="card">
+     <div class="table-responsive">
+       <table class="table table-dark table-hover align-middle mb-0">
+@@ -35,10 +84,9 @@
+           <tr>
+             <th scope="col">Integrante</th>
+             <th scope="col">Cartão</th>
+-            <th scope="col">Cota inicial</th>
+-            <th scope="col">Recarga extra</th>
++            <th scope="col">Cota mensal</th>
++            <th scope="col">Lançamento avulso</th>
+             <th scope="col">Saldo atual</th>
+-            <th scope="col" class="text-end">Ação</th>
+           </tr>
+         </thead>
+         <tbody>
+@@ -49,42 +97,13 @@
+           <tr>
+             <td>{{ aluno.nome }}</td>
+             <td><code>{{ aluno.cartao_passe.numero_controle }}</code></td>
+-            <td>
+-              <form method="POST" id="form-passe-{{ aluno.id }}" class="row g-2 align-items-center">
+-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+-                <input type="hidden" name="aluno_id" value="{{ aluno.id }}">
+-                <input type="hidden" name="mes_referencia" value="{{ mes_referencia.strftime('%Y-%m') }}">
+-                <div class="col-auto">
+-                  <label class="visually-hidden" for="quantidade-{{ aluno.id }}">Quantidade para {{ aluno.nome }}</label>
+-                  <input type="number" min="0" step="1" name="quantidade_disponibilizada"
+-                         id="quantidade-{{ aluno.id }}" class="form-control"
+-                         value="{{ cota.quantidade_disponibilizada if cota else '' }}" required>
+-                </div>
+-              </form>
+-            </td>
++            <td>{{ cota.quantidade_disponibilizada if cota else '-' }}</td>
+             <td>{{ recarga.quantidade if recarga else '-' }}</td>
+             <td><strong>{{ saldo }}</strong></td>
+-            <td class="text-end">
+-                <button type="submit" form="form-passe-{{ aluno.id }}" class="btn btn-sm btn-primary">
+-                  <i class="bi bi-save me-1" aria-hidden="true"></i>Salvar
+-                </button>
+-                {% if cota and not recarga %}
+-                <form method="POST" action="{{ url_for('main.adicionar_recarga_passe') }}" class="mt-2 text-start">
+-                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+-                  <input type="hidden" name="aluno_id" value="{{ aluno.id }}">
+-                  <input type="hidden" name="mes_referencia" value="{{ mes_referencia.strftime('%Y-%m') }}">
+-                  <label class="visually-hidden" for="recarga-quantidade-{{ aluno.id }}">Quantidade da recarga de {{ aluno.nome }}</label>
+-                  <input type="number" min="1" step="1" name="quantidade" id="recarga-quantidade-{{ aluno.id }}" class="form-control form-control-sm mb-1" placeholder="Qtd. extra" required>
+-                  <label class="visually-hidden" for="recarga-motivo-{{ aluno.id }}">Motivo da recarga de {{ aluno.nome }}</label>
+-                  <input type="text" maxlength="500" name="motivo" id="recarga-motivo-{{ aluno.id }}" class="form-control form-control-sm mb-1" placeholder="Motivo obrigatório" required>
+-                  <button type="submit" class="btn btn-sm btn-outline-warning w-100">Recarga extra</button>
+-                </form>
+-                {% endif %}
+-            </td>
+           </tr>
+           {% else %}
+           <tr>
+-            <td colspan="6" class="text-center py-4">Nenhum integrante ativo possui cartão de passe cadastrado.</td>
++            <td colspan="5" class="text-center py-4">Nenhum integrante ativo possui cartão de passe cadastrado.</td>
+           </tr>
+           {% endfor %}
+         </tbody>
+@@ -93,7 +112,23 @@
+   </div>
+ 
+   <p class="text-muted small mt-3 mb-5">
+-    A primeira cota é cadastrada uma vez por mês. Uma única recarga extra pode ser autorizada pelo administrador mediante justificativa.
++    O lançamento avulso funciona como a única recarga extra permitida por integrante no mês e exige justificativa.
+   </p>
+ </div>
++<script>
++  const modoLancamento = document.getElementById("modo_lancamento");
++  const motivoContainer = document.getElementById("motivo-lancamento-container");
++  const motivoLancamento = document.getElementById("motivo_lancamento");
++
++  function atualizarCamposLancamento() {
++    const avulso = modoLancamento.value === "avulso";
++    motivoContainer.hidden = !avulso;
++    motivoLancamento.disabled = !avulso;
++    motivoLancamento.required = avulso;
++    document.getElementById("quantidade_lancamento").min = avulso ? "1" : "0";
++  }
++
++  modoLancamento.addEventListener("change", atualizarCamposLancamento);
++  atualizarCamposLancamento();
++</script>
+ {% endblock %}
+diff --git a/tests/test_seguranca_e_inicializacao.py b/tests/test_seguranca_e_inicializacao.py
+index 0b5b36e..6c4d190 100644
+--- a/tests/test_seguranca_e_inicializacao.py
++++ b/tests/test_seguranca_e_inicializacao.py
+@@ -270,6 +270,7 @@ def test_cartao_passe_opcional_e_cota_mensal_administrativa(monkeypatch):
+         com_cartao = Aluno(nome="COM CARTAO", ativo=True)
+         db.session.add_all([sem_cartao, com_cartao])
+         db.session.flush()
++        sem_cartao_id = sem_cartao.id
+         com_cartao_id = com_cartao.id
+         db.session.add(CartaoPasse(aluno_id=com_cartao.id, numero_controle="CARTAO-001"))
+         db.session.commit()
+@@ -277,7 +278,9 @@ def test_cartao_passe_opcional_e_cota_mensal_administrativa(monkeypatch):
+     resposta = client.get("/admin/passes?mes_referencia=2026-09")
+     assert resposta.status_code == 200
+     assert b"COM CARTAO" in resposta.data
+-    assert b"SEM CARTAO" not in resposta.data
++    assert b"SEM CARTAO" in resposta.data
++    assert b"sem cart\xc3\xa3o ativo" in resposta.data
++    assert f'<option value="{sem_cartao_id}" disabled>'.encode() in resposta.data
+ 
+     resposta = client.post(
+         "/admin/passes",
+@@ -410,6 +413,104 @@ def test_validacoes_admin_passes_rejeitam_valores_invalidos_e_cartao_duplicado(m
+         db.session.rollback()
+ 
+ 
++def test_lancamento_mensal_e_avulso_de_passes(monkeypatch):
++    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
++    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
++    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
++    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
++
++    app = create_app()
++    app.config.update(TESTING=True)
++    client = app.test_client()
++    token = _login_admin(client)
++
++    with app.app_context():
++        aluno_mensal = Aluno(nome="LANCAMENTO MENSAL", ativo=True)
++        aluno_avulso = Aluno(nome="LANCAMENTO AVULSO", ativo=True)
++        db.session.add_all([aluno_mensal, aluno_avulso])
++        db.session.flush()
++        aluno_mensal_id = aluno_mensal.id
++        aluno_avulso_id = aluno_avulso.id
++        db.session.add_all([
++            CartaoPasse(aluno_id=aluno_mensal_id, numero_controle="MENSAL-001"),
++            CartaoPasse(aluno_id=aluno_avulso_id, numero_controle="AVULSO-001"),
++        ])
++        db.session.commit()
++
++    resposta = client.get("/admin/passes?mes_referencia=2026-10")
++    assert resposta.status_code == 200
++    assert b"Lancar passes" in resposta.data or "Lançar passes".encode() in resposta.data
++    assert b"Cota mensal" in resposta.data
++    assert b"Avulso" in resposta.data
++
++    resposta = client.post(
++        "/admin/passes/lancamento",
++        data={
++            "modo_lancamento": "mensal",
++            "aluno_id": aluno_mensal_id,
++            "mes_referencia": "2026-10",
++            "quantidade": "30",
++            "csrf_token": token,
++        },
++        follow_redirects=False,
++    )
++    assert resposta.status_code == 302
++
++    resposta = client.post(
++        "/admin/passes/lancamento",
++        data={
++            "modo_lancamento": "avulso",
++            "aluno_id": aluno_mensal_id,
++            "mes_referencia": "2026-10",
++            "quantidade": "8",
++            "motivo": "Mais ensaios neste mês.",
++            "csrf_token": token,
++        },
++        follow_redirects=False,
++    )
++    assert resposta.status_code == 302
++
++    resposta = client.post(
++        "/admin/passes/lancamento",
++        data={
++            "modo_lancamento": "avulso",
++            "aluno_id": aluno_avulso_id,
++            "mes_referencia": "2026-10",
++            "quantidade": "6",
++            "motivo": "Cartão emitido após lançamento mensal.",
++            "csrf_token": token,
++        },
++        follow_redirects=False,
++    )
++    assert resposta.status_code == 302
++
++    with app.app_context():
++        cota_mensal = CotaMensalPasse.query.filter_by(aluno_id=aluno_mensal_id).one()
++        assert cota_mensal.quantidade_disponibilizada == 30
++        assert routes._saldo_cota_passe(cota_mensal) == 38
++        assert MovimentoPasse.query.filter_by(
++            cota_id=cota_mensal.id, tipo="RECARGA"
++        ).one().motivo == "Mais ensaios neste mês."
++
++        cota_avulsa = CotaMensalPasse.query.filter_by(aluno_id=aluno_avulso_id).one()
++        assert cota_avulsa.quantidade_disponibilizada == 0
++        assert routes._saldo_cota_passe(cota_avulsa) == 6
++
++    resposta = client.post(
++        "/admin/passes/lancamento",
++        data={
++            "modo_lancamento": "avulso",
++            "aluno_id": aluno_mensal_id,
++            "mes_referencia": "2026-10",
++            "quantidade": "3",
++            "motivo": "Outra recarga",
++            "csrf_token": token,
++        },
++        follow_redirects=True,
++    )
++    assert "já foi utilizado neste mês".encode() in resposta.data
++
++
+ def test_presenca_consumo_estorno_e_excecao_sem_cartao(monkeypatch):
+     monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+     monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+@@ -1037,8 +1138,23 @@ def test_central_de_comunicacoes_suporta_publico_externo(monkeypatch):
+             observacoes="Órgão externo",
+             ativo=True,
+         )
+-        db.session.add(contato)
++        outros_contatos = [
++            ContatoComunicacao(
++                nome="Secretaria de Educação",
++                email="educacao@prefeitura.gov.br",
++                ativo=True,
++                autorizacao_email=True,
++            ),
++            ContatoComunicacao(
++                nome="Secretaria de Esportes",
++                email="esportes@prefeitura.gov.br",
++                ativo=True,
++                autorizacao_email=True,
++            ),
++        ]
++        db.session.add_all([contato, *outros_contatos])
+         db.session.commit()
++        contato_id = contato.id
+ 
+     response = client.post(
+         "/admin/comunicacoes/nova",
+@@ -1048,7 +1164,7 @@ def test_central_de_comunicacoes_suporta_publico_externo(monkeypatch):
+             "tipo": "informativo",
+             "publico": "externo",
+             "canal": "email",
+-            "contato_email": "cultura@prefeitura.gov.br",
++            "contato_externo_id": str(contato_id),
+             "consentimento_email": "on",
+             "origem_consentimento_email": "Autorização registrada pela coordenação",
+             "csrf_token": token,
+@@ -1062,27 +1178,73 @@ def test_central_de_comunicacoes_suporta_publico_externo(monkeypatch):
+         assert comunicacao is not None
+         assert comunicacao.publico == "externo"
+         assert comunicacao.destinatario_email == "cultura@prefeitura.gov.br"
+-        assert comunicacao.contato_externo_id == 1
++        assert comunicacao.contato_externo_id == contato_id
+ 
++    emails_enviados = []
++    monkeypatch.setattr(
++        routes,
++        "enviar_email_gmail",
++        lambda destinatario, assunto, mensagem, anexos: emails_enviados.append(destinatario),
++    )
++    app.config["TESTING"] = False
+     response = client.post(
+         f"/admin/comunicacoes/{comunicacao.id}/enviar",
+         data={"csrf_token": token},
+         follow_redirects=False,
+     )
+     assert response.status_code == 302
++    assert emails_enviados == ["cultura@prefeitura.gov.br"]
+ 
+     with app.app_context():
+         destinatarios = ComunicacaoDestinatario.query.filter_by(comunicacao_id=comunicacao.id).all()
+         assert len(destinatarios) == 1
+         assert destinatarios[0].tipo_destinatario == "contato_externo"
+-        assert destinatarios[0].destinatario_id == 1
++        assert destinatarios[0].destinatario_id == contato_id
++        assert destinatarios[0].destinatario_email == "cultura@prefeitura.gov.br"
+         assert destinatarios[0].status == "enviado"
+-        contato_atualizado = db.session.get(ContatoComunicacao, 1)
++        assert ComunicacaoDestinatario.query.filter(
++            ComunicacaoDestinatario.comunicacao_id == comunicacao.id,
++            ComunicacaoDestinatario.destinatario_email.in_(
++                ["educacao@prefeitura.gov.br", "esportes@prefeitura.gov.br"]
++            ),
++        ).count() == 0
++        contato_atualizado = db.session.get(ContatoComunicacao, contato_id)
+         assert contato_atualizado.autorizacao_email is True
+         assert contato_atualizado.autorizacao_email_em is not None
+         assert contato_atualizado.origem_autorizacao_email == "Autorização registrada pela coordenação"
+ 
+ 
++def test_central_bloqueia_email_externo_quando_publico_geral_esta_selecionado(monkeypatch):
++    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
++    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
++    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
++    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
++
++    app = create_app()
++    app.config.update(TESTING=True)
++    client = app.test_client()
++    token = _login_admin(client)
++
++    response = client.post(
++        "/admin/comunicacoes/nova",
++        data={
++            "assunto": "Destinatário externo com público incorreto",
++            "mensagem": "Esta comunicação não deve ser criada.",
++            "publico": "geral",
++            "destinatario_nome": "Contato avulso",
++            "destinatario_email": "contato@example.org",
++            "csrf_token": token,
++        },
++        follow_redirects=True,
++    )
++
++    assert response.status_code == 200
++    with app.app_context():
++        assert Comunicacao.query.filter_by(
++            assunto="Destinatário externo com público incorreto"
++        ).count() == 0
++
++
+ def test_central_de_comunicacoes_exclui_apenas_rascunho_sem_log(monkeypatch):
+     monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+     monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")

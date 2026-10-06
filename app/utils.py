@@ -440,6 +440,26 @@ def importar_municipios():
 def migrar_banco_novos_campos():
     """Adiciona os novos campos ao banco de dados se não existirem"""
     try:
+        tema_legado = obter_configuracao("theme_preset", "padrao")
+        if tema_legado not in {"padrao", "claro", "escuro"}:
+            tema_legado = "padrao"
+        fonte_legada = obter_configuracao("font_scale", "padrao")
+        if fonte_legada not in {"padrao", "medio", "grande", "extra-grande"}:
+            fonte_legada = "padrao"
+
+        user_result = db.session.execute(text("PRAGMA table_info(user)"))
+        user_columns = [row[1] for row in user_result.fetchall()]
+        if "theme_preset" not in user_columns:
+            db.session.execute(text(
+                "ALTER TABLE user ADD COLUMN theme_preset VARCHAR(20) "
+                f"NOT NULL DEFAULT '{tema_legado}'"
+            ))
+        if "font_scale" not in user_columns:
+            db.session.execute(text(
+                "ALTER TABLE user ADD COLUMN font_scale VARCHAR(20) "
+                f"NOT NULL DEFAULT '{fonte_legada}'"
+            ))
+
         # Verificar se a coluna cep existe na tabela aluno
         result = db.session.execute(text("PRAGMA table_info(aluno)"))
         columns = [row[1] for row in result.fetchall()]
