@@ -192,7 +192,8 @@ As seguintes melhorias já foram incorporadas ao sistema existente:
 * restauração administrativa de backups criptografados diretamente do Google Drive, preservando cópia de segurança local antes da substituição do banco;
 * envio automático do backup ao Google Drive ao criar uma cópia local, quando a integração estiver autorizada;
 * validação manual do fluxo completo de backup na nuvem, incluindo restauração e cópia de segurança do banco atual;
-* inclusão da captura da tela de preferências de acessibilidade nas evidências do projeto.
+* inclusão da captura da tela de preferências de acessibilidade nas evidências do projeto;
+* criação de um guia rápido de uso em linguagem simples, mantendo o manual detalhado existente.
 
 O OAuth solicita os escopos necessários para Gmail, Calendar e Drive. Gmail, Calendar e Drive estão conectados a operações do sistema. O envio de e-mail foi testado com sucesso usando uma conta Google real; Calendar e operações de backup no Drive foram validados com a conta configurada no ambiente. Em 06/10/2026, o fluxo de backup na nuvem foi validado manualmente, incluindo criação local, envio automático, restauração e cópia de segurança do banco atual. O WhatsApp não está integrado ao BMCM.
 
@@ -214,7 +215,7 @@ Nesse formato:
 
 A versão oficial fica centralizada em `config.py`, nas constantes `APP_VERSION_MAJOR`, `APP_VERSION_UPDATE` e `APP_VERSION_COUNT`. Cada correção, rotina ou formulário concluído incrementa o terceiro componente a partir da versão atual. Ao passar de `99`, a contagem volta a `0` e o segundo componente é incrementado; se ele também passar de `99`, volta a `0` e o primeiro componente é incrementado. A função `proxima_versao()` formaliza essa regra. Mudanças estruturais maiores podem incrementar o primeiro componente.
 
-Versão atual: **1.4.30**.
+Versão atual: **1.4.31**.
 
 A versão é exibida no login, na área de créditos e nas configurações administrativas. A contagem representa o controle acumulado de alterações do desenvolvimento e não é alterada automaticamente pelo uso do sistema em produção.
 
@@ -910,11 +911,12 @@ No primeiro acesso, a alteração da senha é obrigatória.
 
 # Manual do Usuário
 
-Para instruções detalhadas de utilização do sistema:
+Há dois materiais de apoio ao usuário:
 
-📄 [Manual do Usuário](./MANUAL_USUARIO.md)
+* [Guia rápido do usuário](./GUIA_RAPIDO_USUARIO.md): instruções simples e diretas para as tarefas do dia a dia, sem etapas de instalação ou configuração técnica.
+* [Manual detalhado do usuário](./MANUAL_USUARIO.md): referência completa, incluindo administração, integrações e procedimentos avançados.
 
-O manual deverá ser atualizado à medida que novas funcionalidades do PI II forem incorporadas.
+Ambos devem ser atualizados à medida que novas funcionalidades forem incorporadas.
 
 ---
 
