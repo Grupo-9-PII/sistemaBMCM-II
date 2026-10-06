@@ -687,11 +687,24 @@ html[data-theme="claro"] .login-container {
 
 /* Dashboard */
 .dashboard-card {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     background: white;
-    color:black
+    color: black;
     border-radius: 16px;
     padding: 30px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.dashboard-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: url("../img/logobmcm.jpeg") center / contain no-repeat;
+    opacity: 0.28;
+    pointer-events: none;
 }
 
 .dashboard-card h5 {

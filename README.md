@@ -193,7 +193,8 @@ As seguintes melhorias já foram incorporadas ao sistema existente:
 * envio automático do backup ao Google Drive ao criar uma cópia local, quando a integração estiver autorizada;
 * validação manual do fluxo completo de backup na nuvem, incluindo restauração e cópia de segurança do banco atual;
 * inclusão da captura da tela de preferências de acessibilidade nas evidências do projeto;
-* criação de um guia rápido de uso em linguagem simples, mantendo o manual detalhado existente.
+* criação de um guia rápido de uso em linguagem simples, mantendo o manual detalhado existente;
+* inclusão do logotipo BMCM como marca-d'água discreta no bloco de saudação do painel inicial, com ajuste de opacidade para manter o texto legível.
 
 O OAuth solicita os escopos necessários para Gmail, Calendar e Drive. Gmail, Calendar e Drive estão conectados a operações do sistema. O envio de e-mail foi testado com sucesso usando uma conta Google real; Calendar e operações de backup no Drive foram validados com a conta configurada no ambiente. Em 06/10/2026, o fluxo de backup na nuvem foi validado manualmente, incluindo criação local, envio automático, restauração e cópia de segurança do banco atual. O WhatsApp não está integrado ao BMCM.
 
@@ -215,7 +216,7 @@ Nesse formato:
 
 A versão oficial fica centralizada em `config.py`, nas constantes `APP_VERSION_MAJOR`, `APP_VERSION_UPDATE` e `APP_VERSION_COUNT`. Cada correção, rotina ou formulário concluído incrementa o terceiro componente a partir da versão atual. Ao passar de `99`, a contagem volta a `0` e o segundo componente é incrementado; se ele também passar de `99`, volta a `0` e o primeiro componente é incrementado. A função `proxima_versao()` formaliza essa regra. Mudanças estruturais maiores podem incrementar o primeiro componente.
 
-Versão atual: **1.4.31**.
+Versão atual: **1.4.33**.
 
 A versão é exibida no login, na área de créditos e nas configurações administrativas. A contagem representa o controle acumulado de alterações do desenvolvimento e não é alterada automaticamente pelo uso do sistema em produção.
 
