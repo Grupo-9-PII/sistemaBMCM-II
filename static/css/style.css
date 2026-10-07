@@ -344,22 +344,37 @@ p {
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    background-color: var(--surface-bg);
+    color: var(--theme-text);
+}
+
+.creditos-container h1,
+.creditos-container h2 {
+    color: var(--theme-text);
+}
+
+.creditos-container ul {
+    line-height: 1.8;
+}
+
+.creditos-container a {
+    color: var(--theme-accent);
 }
 
 .creditos-badge {
-            display: inline-block;
-            padding: 5px 10px;
-            background: #2c3e50;
-            color: #fff;
-            border-radius: 5px;
-            font-size: 0.8em
+    display: inline-block;
+    padding: 5px 10px;
+    background: var(--theme-accent);
+    color: #fff;
+    border-radius: 5px;
+    font-size: 0.8em;
 }
 
 .creditos-footer {
-            margin-top: 30px;
-            font-size: 0.9em;
-            color: #a5a5a5;
-            text-align: center;
+    margin-top: 30px;
+    font-size: 0.9em;
+    color: var(--theme-muted-text);
+    text-align: center;
 }
 
 /* Safe theme and text-size presets */
@@ -702,8 +717,8 @@ html[data-theme="claro"] .login-container {
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: url("../img/logobmcm.jpeg") center / contain no-repeat;
-    opacity: 0.28;
+    background: url("../img/logobmcm.jpeg") right / contain no-repeat;
+    opacity: 0.5;
     pointer-events: none;
 }
 

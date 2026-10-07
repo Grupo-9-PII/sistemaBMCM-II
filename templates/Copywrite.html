@@ -1,99 +1,63 @@
 {% extends "base.html" %}
-{% block title %}Desenvolvedores — Sistema de Controle{% endblock %}
+{% block title %}Créditos — Sistema BMCM{% endblock %}
 {% block content %}
-<style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 40px;
-            background-color: #f5f5f5;
-            color: #919191;
-        }        
-        h1, h2 {
-            color: #53677a;
-        }
-        ul {
-            line-height: 1.8;
-        }
-        a {
-            color: #2980b9;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
+<div class="container py-4">
+    <section class="creditos-container" aria-labelledby="creditos-title">
+        <h1 id="creditos-title">Créditos do Sistema BMCM</h1>
+        <p>© <span id="copyright-year">2026</span> Grupo 7 (DPR7) — Sistema BMCM.</p>
 
-<div class="creditos-container">
-    <h1>© 2026 – Sistema BMCM</h1>
-    <p>
-        Este software é distribuído sob a licença MIT.
-        Consulte o arquivo LICENSE para mais detalhes.
-    </p>
+        <h2>Equipe de Desenvolvimento — Grupo 7 (DPR7)</h2>
+        <ul>
+            <li>Adriano Guedes Ferraz</li>
+            <li>Aparecido Fernandes De Souza</li>
+            <li>Fabiane Fernanda de Barros Ranke</li>
+            <li>Felipe Oldani dos Santos</li>
+            <li>Kelly Cristina Ferreira da Costa</li>
+            <li>Laerte Alves Pinheiro</li>
+            <li>Renan Ranke Detzel Alves</li>
+            <li>Renato de Abreu Mantovanelli</li>
+        </ul>
 
-    <h2>👥 Equipe de Desenvolvimento – Grupo 7 (DPR7)</h2>
-    <ul>
-        <li>Adriano Guedes Ferraz</li>
-        <li>Aparecido Fernandes De Souza</li>
-        <li>Fabiane Fernanda de Barros Ranke</li>
-        <li>Felipe Oldani dos Santos</li>
-        <li>Kelly Cristina Ferreira da Costa</li>
-        <li>Laerte Alves Pinheiro</li>
-        <li>Renan Ranke Detzel Alves</li>
-        <li>Renato de Abreu Mantovanelli</li>
-    </ul>
+        <h2>Tecnologias e serviços</h2>
+        <ul>
+            <li>Backend: Python e Flask</li>
+            <li>Banco de dados e ORM: SQLite e SQLAlchemy</li>
+            <li>Interface: HTML, CSS, JavaScript e Bootstrap</li>
+            <li>Testes automatizados: Pytest</li>
+            <li>Integrações Google: Gmail, Google Calendar e Google Drive</li>
+            <li>Controle de versão: Git e GitHub</li>
+        </ul>
 
-    <h2>🛠️ Tecnologias Utilizadas</h2>
-    <ul>
-        <li>Backend: Python</li>
-        <li>Framework: Flask</li>
-        <li>Banco de Dados: SQLite</li>
-        <li>ORM: SQLAlchemy</li>
-        <li>Frontend: HTML5, CSS3, JavaScript</li>
-        <li>Versionamento: Git e GitHub</li>
-    </ul>
-
-    <h2>📌 Sobre o Projeto</h2>
-    <p>
-        Este sistema foi desenvolvido como parte das atividades acadêmicas da UNIVESP,
-        no contexto do Projeto Integrador I e expandido no Projeto Integrado II do Eixo de Computação, com foco na aplicação prática de conceitos
-        de desenvolvimento de software.
-    </p>
-
-    <h2>⚖️ Licença</h2>
-    <p>
-        Este projeto é open source e está licenciado sob os termos da licença MIT.
-        Isso permite o uso, cópia, modificação e distribuição do software,
-        inclusive para fins comerciais, desde que seja mantido o aviso de copyright original.
-    </p>
-
-    <h2>🔗 Repositório</h2>
-    <p>
-        <a href="https://github.com/Grupo-9-PII/sistemaBMCM-II" target="_blank">
-            Acessar no GitHub
-        </a>
-    </p>
-
-    <div class="creditos-footer">
+        <h2>Sobre o projeto</h2>
         <p>
-            <span class="creditos-badge">Versão {{ app_version }}</span>
+            Desenvolvido no contexto dos Projetos Integradores I e II da UNIVESP,
+            no Eixo de Computação, o sistema aplica conceitos de desenvolvimento
+            de software às necessidades de gestão da Banda Marcial Cidade de Marília.
         </p>
-        <p id="data"></p>
-    </div>
+
+        <h2>Licença</h2>
+        <p>
+            O sistema é distribuído sob a licença MIT. Ao redistribuir cópias ou
+            partes substanciais do software, devem ser mantidos o aviso de direitos
+            autorais e o texto integral da licença.
+            <a href="https://github.com/Grupo-9-PII/sistemaBMCM-II/blob/main/LICENSE"
+                target="_blank" rel="noopener noreferrer">Consultar o arquivo LICENSE</a>.
+        </p>
+
+        <h2>Repositório</h2>
+        <p>
+            <a href="https://github.com/Grupo-9-PII/sistemaBMCM-II"
+                target="_blank" rel="noopener noreferrer">Acessar o projeto no GitHub</a>
+        </p>
+
+        <footer class="creditos-footer">
+            <span class="creditos-badge">Versão {{ app_version }}</span>
+        </footer>
+    </section>
 </div>
 
 <script>
-    // Data automática
-    const data = new Date();
-    const dataFormatada = data.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
-
-    document.getElementById('data').innerText =
-        "Gerado em: " + dataFormatada;
+    document.getElementById('copyright-year').textContent = new Date().getFullYear();
 </script>
 
 {% endblock %}
