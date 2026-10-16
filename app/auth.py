@@ -4,6 +4,7 @@ from .utils import session_timeout, update_activity, validar_senha_complexidade,
 from datetime import datetime, timedelta, timezone
 from .models import User
 from . import db
+from .backup import agendar_backup_automatico
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -39,6 +40,9 @@ def login():
 
             login_user(user, remember=False)
             update_activity()
+
+            if user.is_admin and not current_app.testing:
+                agendar_backup_automatico(current_app._get_current_object())
 
             if user.must_change_password:
                 return redirect(url_for("auth.change_password"))

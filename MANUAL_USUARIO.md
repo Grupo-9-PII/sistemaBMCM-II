@@ -31,14 +31,14 @@ Siga os passos abaixo para começar a utilizar o sistema rapidamente:
 
 1. Acesse o sistema pelo navegador
 2. Informe seu usuário e senha
-3. Após o login, acesse o menu superior e clique em **Integrantes**
-4. Clique em **"Novo Integrante"**
+3. Após o login, acesse **Gestão > Integrantes** (ou o atalho **Integrantes** do painel **Inicial**)
+4. Se a opção estiver disponível para sua conta, clique em **Novo Integrante**
 5. Preencha os dados obrigatórios
 6. Clique em **"Salvar"**
 
-✔ Pronto! O aluno já estará cadastrado no sistema.
+✔ Pronto! O integrante já estará cadastrado no sistema.
 
-> Dica: Utilize o menu superior para navegar entre as funcionalidades.
+> Dica: as opções disponíveis dependem da conta. O menu **Gestão** contém Integrantes, Instrumentos e, para administradores, Usuários. O menu **Atividades** contém Calendário BMCM, Ensaios, Atividades avulsas, Relatório de presença, Resumo mensal e Eventos. O atalho **Escolas** fica no painel **Inicial**.
 >
 ## 3. Acesso ao Sistema
 
@@ -54,12 +54,14 @@ Ao acessar o sistema, o usuário será direcionado para a tela de login.
 **Botão "Entrar"**: Realiza a autenticação no sistema
 
 ### 3.2 Primeiro Acesso
-No primeiro acesso, o sistema solicitará a alteração da senha padrão. O usuário deverá:
+Quando a conta exigir a troca da senha no primeiro acesso (por exemplo, após uma redefinição pelo administrador), o sistema direcionará o usuário para a tela de alteração. O usuário deverá:
 1. Inserir a senha atual (fornecida pelo administrador)
-2. Criar uma nova senha com no mínimo 6 caracteres
+2. Criar uma nova senha com no mínimo 6 caracteres e atender aos requisitos de complexidade configurados pelo administrador
 3. Confirmar a nova senha
 
-![Tela de Login](./assets/imgs/tela-alterar-senha.png)
+![Tela de alteração de senha](./assets/imgs/tela-alterar-senha.png)
+
+Para alterar a senha posteriormente, use o cartão **Senha > Alterar** no painel **Inicial**. A senha atual é solicitada.
 
 ### 3.3 Configuração do arquivo `.env`
 Antes de utilizar integrações com o Google, o administrador deve configurar o arquivo `.env` do projeto com as credenciais do Google OAuth 2.0 e a chave secreta da aplicação.
@@ -77,7 +79,7 @@ O arquivo `.env` deve permanecer fora do Git e não deve ser enviado para reposi
 A senha do backup também pode ser registrada na guia **Configurações > Sistema/Manutenção**, após informar a senha atual do administrador. A senha salva no `.env` pode ser revelada somente após nova reautenticação administrativa. Se já existir uma chave local ou backups protegidos, a interface só aceita registrar a mesma chave para preservar a restauração.
 
 ### 3.4 OAuth do Google e Google Workspace
-Na área de configurações administrativas, o administrador pode autorizar os escopos Gmail, Google Calendar e Google Drive solicitados pelo sistema. O escopo Drive é `drive.file` e limita o acesso aos arquivos e pastas criados pela aplicação.
+Em **Seu nome > Configurações**, o administrador pode iniciar a autorização dos serviços Gmail, Google Calendar e Google Drive usados pelo sistema. Cada serviço depende de seu escopo autorizado. O escopo Drive é `drive.file` e limita o acesso aos arquivos e pastas criados pela aplicação.
 
 Após a autorização, o sistema salva o token localmente em `instance/google_oauth_token.json`. O token é usado para enviar mensagens pelo Gmail, sincronizar ensaios, eventos e atividades avulsas para o Google Calendar e enviar backups ao Google Drive, conforme os escopos autorizados.
 
@@ -88,6 +90,11 @@ Após a autorização, o sistema salva o token localmente em `instance/google_oa
 ### 3.5 Recuperação de Senha
 Em caso de esquecimento de senha, entre em contato com o administrador do sistema.
 
+### 3.6 Preferências de acessibilidade
+Abra o menu com seu nome e escolha **Acessibilidade**. Selecione o tema (**Padrão do sistema**, **Tema claro** ou **Tema escuro**) e o tamanho do texto (**Padrão**, **Médio**, **Grande** ou **Muito grande**), depois clique em **Salvar preferências**. As escolhas são individuais e não alteram a aparência das outras contas.
+
+![Preferências de acessibilidade](./assets/imgs/tela-acessabilidade.png)
+
 ---
 
 ## 4. Dashboard (Painel Principal)
@@ -97,39 +104,30 @@ Após o login, o usuário acessa o dashboard que apresenta estatísticas gerais 
 
 ![Dashboard](./assets/imgs/Dash.png)
 
-Estatísticas apresentadas:
-- Total de alunos cadastrados
-- Alunos ativos
-- Total de escolas cadastradas
-- Instrumentos ativos
-- Usuários ativos
-- Usuários administradores
-- Atividades registradas
-- Registros de presença
-- Atividades e presenças do dia
+O painel apresenta indicadores de integrantes cadastrados e ativos, escolas, instrumentos ativos, usuários, atividades e presenças, além de atalhos para módulos principais. Os atalhos de **Usuários** e **Backup** aparecem para administradores. O cartão **Senha** permite alterar a senha; **CopyRight** abre os créditos do projeto.
 
 ### 4.2 Menu de Navegação
-O menu principal está disponível na barra superior ou lateral e permite acesso a todas as funcionalidades do sistema.
+O menu principal fica na barra superior. **Gestão** reúne Integrantes e Instrumentos e, para administradores, Usuários. **Atividades** reúne Calendário BMCM, Ensaios, Atividades avulsas, Relatório de presença, Resumo mensal e Eventos. **Escolas** é acessada pelo atalho no painel **Inicial**. O acesso a **Comunicações** e **Google Calendar** depende da autorização/configuração correspondente. O menu com seu nome contém Acessibilidade e Sair; administradores também encontram Usuários, Backup do Banco, Logs: Hard Delete, Configurações e Passes de Transporte.
 
 ![Menu](./assets/imgs/tela-menu.png)
 
 ---
 
-## 4. Gestão de Usuários (Administrador)
+## 5. Gestão de Usuários (Administrador)
 
-### 4.1 Listar Usuários
-Acesse o menu superior e clique em **Usuários** para visualizar todos os usuários cadastrados no sistema.
+### 5.1 Listar Usuários
+Acesse **Gestão > Usuários** ou **Seu nome > Gerenciar Usuários** para visualizar as contas cadastradas.
 
 ![Usuarios](./assets/imgs/tela-admin-usuarios.png)
 
 **Informações exibidas:**
 - Nome de usuário
-- Status (ativo/inativo)
-- Tipo (administrador ou não)
-- Última alteração de senha
+- Tipo (administrador ou conta sem perfil de administrador)
+- Status (ativo ou bloqueado)
+- Situação da senha (definida ou troca pendente)
 
-### 4.2 Criar Novo Usuário
-1. Acesse o menu superior e clique em **Usuários**
+### 5.2 Criar Novo Usuário
+1. Acesse **Gestão > Usuários**
 2. Clique em **"Novo Usuário"**
 3. Preencha os campos:
 
@@ -140,37 +138,39 @@ Acesse o menu superior e clique em **Usuários** para visualizar todos os usuár
 - **Administrador**: Marque se o usuário terá acesso administrativo
 4. Clique em **"Salvar"**
 
-### 4.3 Editar Usuário
-1. Acesse o menu superior e clique em **Usuários**
+A senha precisa ter pelo menos 6 caracteres e atender aos requisitos de complexidade definidos em **Configurações > Segurança**. A nova conta deverá trocar a senha no primeiro acesso.
+
+### 5.3 Editar Usuário
+1. Acesse **Gestão > Usuários**
 2. Clique no botão de edição ao lado do usuário desejado
 3. Altere os dados necessários
 4. Clique em **"Salvar"**
 
 **Nota**: O nome de usuário não pode ser alterado após a criação.
 
-### 4.4 Alterar Senha de Usuário
-1. Acesse o menu superior e clique em **Usuários**
+### 5.4 Redefinir Senha de Usuário
+1. Acesse **Gestão > Usuários**
 2. Clique em **"Resetar Senha"** ao lado do usuário
-3. A senha será redefinida para a senha padrão do sistema
+3. A senha será redefinida para a senha inicial padrão do sistema e a pessoa precisará alterá-la no próximo acesso. Entregue a senha temporária por um meio seguro.
 
-### 4.5 Ativar/Desativar Usuário
-1. Acesse o menu superior e clique em **Usuários**
+### 5.5 Ativar/Desativar Usuário
+1. Acesse **Gestão > Usuários**
 2. Clique no botão de alternância ao lado do usuário
 3. O usuário será ativado ou bloqueado imediatamente
 
-### 4.6 Excluir Usuário
-1. Acesse o menu superior e clique em **Usuários**
+### 5.6 Excluir Usuário
+1. Acesse **Gestão > Usuários**
 2. Clique no botão de exclusão ao lado do usuário
 3. Confirme a exclusão na mensagem apresentada
 
-**Nota**: O usuário "admin" não pode ser excluído ou alterado por outros usuários.
+**Nota**: a conta `admin` é protegida contra alterações feitas por outra conta. Um administrador também não pode bloquear ou excluir a própria conta.
 
 ---
 
-## 5. Gestão de Alunos/Integrantes
+## 6. Gestão de Alunos/Integrantes
 
-### 5.1 Listar Alunos
-Acesse o menu superior e clique em **Integrantes** para visualizar todos os alunos cadastrados.
+### 6.1 Listar Alunos
+Acesse **Gestão > Integrantes** para consultar os cadastros.
 
 ![Integrantes](./assets/imgs/tela-admin-alunos.png)
 
@@ -179,15 +179,16 @@ Acesse o menu superior e clique em **Integrantes** para visualizar todos os alun
 - Filtrar por status (ativos/inativos)
 
 **Informações exibidas:**
-- Nome do aluno
+- Nome do integrante
 - Data de nascimento
 - Escola
+- Instrumento atual
 - Status (ativo/inativo)
-- Ações (editar, visualizar, excluir)
+- Ações disponíveis para a conta (relatório, edição, ativação/inativação ou exclusão)
 
-### 5.2 Cadastrar Novo Aluno
-1. Acesse o menu superior e clique em **Integrantes**
-2. Clique em **"Novo Aluno"**
+### 6.2 Cadastrar Novo Integrante
+1. Acesse **Gestão > Integrantes**
+2. Clique em **"Novo Integrante"**, quando disponível
 3. Preencha os dados em abas:
 
 ![Cadastro de Integrantes](./assets/imgs/tela-cadastrar-aluno.png)
@@ -212,12 +213,11 @@ Acesse o menu superior e clique em **Integrantes** para visualizar todos os alun
 ![Aba de contato e endereço](./assets/imgs/tela-cadastrar-aluno-endereco.png)
 
 **Aba Informações da Banda:**
-- Função na banda (maestro, aluno, etc.)
-- Foto do aluno
+- Função na banda, datas de entrada/desligamento e foto do integrante
+- Número de controle do cartão de passe, se houver
 
 **Aba Escola:**
 - Selecione a escola
-- Ano letivo
 
 ![Aba de vínculo com escola](./assets/imgs/tela-cadastrar-aluno-escola.png)
 
@@ -229,64 +229,50 @@ Acesse o menu superior e clique em **Integrantes** para visualizar todos os alun
 
 Ao trocar o instrumento, a associação anterior recebe uma data de devolução e permanece no histórico. Instrumentos inativos não podem ser associados a novos integrantes.
 
-**Aba Responsáveis (para menores):**
-- Nome do responsável
-- Parentesco
-- Telefone
-- E-mail
+**Responsáveis:**
+- Nome do pai e/ou da mãe, telefone, e-mail e endereço do responsável, quando aplicável
 
 ![Aba de responsáveis](./assets/imgs/tela-cadastrar-aluno-responsavel.png)
 
-**Aba Autorizações:**
-- Termo de autorização de foto (obrigatório para menores)
-
 4. Clique em **"Salvar"**
 
 
-### 5.3  Cadastro de Aluno Menor de Idade
+### 6.3 Cadastro de integrante menor de idade
 
-Para alunos menores de 18 anos:
+Para integrante menor de 18 anos, o termo de autorização de imagem e a assinatura do responsável são obrigatórios quando uma foto é enviada ou substituída:
 
-1. Preencha os dados normalmente
-2. Vá até a aba **Responsáveis**
-3. Cadastre pelo menos um responsável
-4. Vá até a aba **Autorizações**
-5. Marque o consentimento de imagem
-6. Realize a assinatura digital
+1. Selecione a foto na aba **Dados Pessoais**.
+2. Preencha os dados do responsável que autoriza, confirme o termo e registre a assinatura digital.
+3. Salve o cadastro. O sistema vincula a autorização à foto registrada.
 
-⚠ Obrigatório para salvar com foto
+Sem foto nova, o cadastro não exige essa autorização de imagem. Ao trocar a foto de um menor, é necessário coletar novo consentimento e assinatura.
 
-### 5.4 Editar Aluno
-1. Acesse o menu superior e clique em **Integrantes**
-2. Clique no botão de edição ao lado do aluno desejado
+### 6.4 Editar Integrante
+1. Acesse **Gestão > Integrantes**
+2. Clique no botão de edição ao lado do integrante desejado, se disponível
 3. Altere os dados necessários
 4. Clique em **"Salvar"**
 
-### 5.5 Visualizar Aluno (Relatório Individual)
-1. Acesse o menu superior e clique em **Integrantes**
-2. Clique no botão de visualização ao lado do aluno
-3. O sistema exibirá um relatório completo com todos os dados
+### 6.5 Consultar o relatório individual
+1. Acesse **Gestão > Integrantes**
+2. Clique no ícone **Relatório** ao lado do integrante
+3. O sistema abre o relatório individual, preparado para consulta e impressão.
 
 ![Rel Aluno](./assets/imgs/tela-relatorio-aluno.png)
 
-### 5.6 Ativar/Desativar Aluno
-1. Acesse o menu superior e clique em **Integrantes**
-2. Clique no botão de alternância ao lado do aluno
-3. O aluno será marcado como inativo (não excluído)
+### 6.6 Ativar, inativar ou excluir cadastro
+1. Acesse **Gestão > Integrantes**
+2. Use os controles da linha do integrante, disponíveis para administradores.
+3. Para excluir totalmente um cadastro, informe a justificativa solicitada pelo sistema.
 
-**Nota**: O sistema mantém o histórico dos alunos inativos ao invés de excluí-los.
-
-### 5.7 Excluir Aluno
-1. Acesse o menu superior e clique em **Integrantes**
-2. Clique no botão de exclusão ao lado do aluno
-3. Confirme a exclusão na mensagem apresentada
+Inativar preserva o cadastro e o histórico. A exclusão total é permanente; seus registros de auditoria podem ser consultados em **Seu nome > Logs: Hard Delete**. Prefira inativar quando não houver necessidade de remoção definitiva.
 
 ---
 
-## 6. Gestão de Escolas
+## 7. Gestão de Escolas
 
-### 6.1 Listar Escolas
-Acesse o dashboard e clique em **Escolas** para visualizar todas as escolas cadastradas.
+### 7.1 Listar Escolas
+No painel **Inicial**, clique em **Escolas** para visualizar as escolas cadastradas.
 
 ![Escolas](./assets/imgs/tela-admin-escolas.png)
 
@@ -296,8 +282,8 @@ Acesse o dashboard e clique em **Escolas** para visualizar todas as escolas cada
 - Quantidade de alunos vinculados
 - Ações (editar, excluir)
 
-### 6.2 Cadastrar Nova Escola
-1. Acesse o dashboard e clique em **Escolas**
+### 7.2 Cadastrar Nova Escola
+1. No painel **Inicial**, clique em **Escolas**
 2. Clique em **"Nova Escola"**
 3. Preencha os campos:
 
@@ -307,30 +293,30 @@ Acesse o dashboard e clique em **Escolas** para visualizar todas as escolas cada
 - **Endereço**: Endereço completo
 4. Clique em **"Salvar"**
 
-### 6.3 Editar Escola
-1. Acesse o dashboard e clique em **Escolas**
+### 7.3 Editar Escola
+1. No painel **Inicial**, clique em **Escolas**
 2. Clique no botão de edição ao lado da escola desejada
 3. Altere os dados necessários
 4. Clique em **"Salvar"**
 
-### 6.4 Excluir Escola
-1. Acesse o dashboard e clique em **Escolas**
+### 7.4 Excluir Escola
+1. No painel **Inicial**, clique em **Escolas**
 2. Clique no botão de exclusão ao lado da escola
 3. Confirme a exclusão
 
-**Nota**: Só será possível excluir escolas que não tenham alunos vinculados.
+Confira os vínculos antes de confirmar. Se a escola tiver integrantes vinculados e a remoção não for permitida, atualize os vínculos primeiro ou peça ajuda ao administrador.
 
-### 6.5 Relatório de Escolas
-Na tela de Escolas, clique em **Relatório** para visualizar um relatório com todas as escolas e seus respectivos alunos vinculados.
+### 7.5 Relatório de Escolas
+Na tela de Escolas, clique em **Relatório** para abrir a versão imprimível das escolas e seus integrantes vinculados.
 
 ![Rel Escolas](./assets/imgs/tela-relatorio-escolas.png)
 
 ---
 
-## 7. Gestão de Instrumentos
+## 8. Gestão de Instrumentos
 
-### 7.1 Listar Instrumentos
-Clique em **Instrumentos** no menu superior para visualizar todos os instrumentos cadastrados.
+### 8.1 Listar Instrumentos
+Acesse **Gestão > Instrumentos** para consultar o patrimônio. É possível pesquisar por nome e filtrar por status ou tipo.
 
 ![Instrumentos](./assets/imgs/tela-admin-instrumentos.png)
 
@@ -341,8 +327,8 @@ Clique em **Instrumentos** no menu superior para visualizar todos os instrumento
 - Status (ativo/inativo)
 - Ações (editar, ativar/inativar)
 
-### 7.2 Cadastrar Novo Instrumento
-1. Clique em **Instrumentos** no menu superior
+### 8.2 Cadastrar Novo Instrumento
+1. Acesse **Gestão > Instrumentos**
 2. Clique em **"Novo Instrumento"**
 3. Preencha os campos:
 
@@ -351,31 +337,20 @@ Clique em **Instrumentos** no menu superior para visualizar todos os instrumento
 - **Nome**: Nome do instrumento (obrigatório)
 - **Tipo**: Categoria do instrumento
 - **Naipe**: Seção da banda
-- **Descrição**: Descrição adicional
+- **Patrimônio**: Identificador patrimonial único, quando aplicável
+- **Marca, modelo, estado e data de aquisição**
+- **Observações**
 4. Clique em **"Salvar"**
 
-### 7.3 Editar Instrumento
-1. Clique em **Instrumentos** no menu superior
+### 8.3 Editar, ativar/inativar ou excluir
+1. Acesse **Gestão > Instrumentos**
 2. Clique no botão de edição ao lado do instrumento desejado
-3. Altere os dados necessários
-4. Clique em **"Salvar"**
+3. Altere os dados e salve; use os controles da linha para ativar/inativar ou excluir, conforme disponíveis na tela.
 
-### 7.4 Ativar/Desativar Instrumento
-1. Clique em **Instrumentos** no menu superior
-2. Clique no botão de alternância ao lado do instrumento
-3. O instrumento será ativado ou inativado
-
----
-
-## 8. Tipos e Naipes
-
-### 8.1 Tipos de Instrumento
-Gerencie as categorias de instrumentos (ex: cordas, sopros, percussão).
+### 8.4 Tipos e Naipes
+Na tela **Instrumentos**, use **Gerenciar Tipos** e **Gerenciar Naipes** para manter as categorias de instrumentos e as seções da Banda. As telas oferecem ações para incluir, editar e remover registros.
 
 ![Tipos](./assets/imgs/tela-admin-tipos.png)
-
-### 8.2 Naipes
-Gerencie as seções da banda (ex: metais, madeiras, percussão).
 
 ![Naipes](./assets/imgs/tela-admin-naipes.png)
 
@@ -416,7 +391,7 @@ Após o cadastro, o sistema abrirá automaticamente a folha de chamada.
 
 ![Formulário para criar ensaio](./assets/imgs/tela-novo-ensaio.png)
 
-### 9.2 Registrar Presença em um Ensaio
+### 9.2 Registrar Presença
 
 Na folha de chamada, os integrantes ativos são agrupados pelo instrumento atualmente associado. Para cada integrante, marque uma situação:
 
@@ -443,7 +418,7 @@ Na listagem de ensaios, use **Sincronizar** para publicar o ensaio no Google Cal
 
 ### 9.4 Criar um Evento ou Apresentação
 
-1. No menu superior, clique em **Eventos**
+1. No menu **Atividades**, clique em **Eventos** (ou use **Novo evento** no Calendário BMCM)
 2. Clique em **Novo evento**
 3. Informe:
   - nome do evento;
@@ -472,7 +447,14 @@ O cancelamento é lógico: os dados do evento e os registros de presença perman
 
 Na listagem de eventos, use **Sincronizar** para publicar o evento no Google Calendar como evento de dia inteiro. Depois da primeira sincronização, edições e cancelamentos feitos no BMCM tentam atualizar o evento vinculado. Se a API estiver indisponível ou a autorização tiver expirado, o evento permanece salvo no BMCM e uma mensagem informa a falha. Alterações feitas diretamente no Google Calendar não são importadas para o BMCM.
 
-### 9.7 Publicar uma Atividade no Google Calendar
+### 9.7 Criar e publicar uma atividade avulsa
+
+1. No menu **Atividades**, abra **Atividades avulsas** ou o **Calendário BMCM**.
+2. Clique em **Nova atividade**.
+3. Informe o tipo (treinamento, apresentação ou outra), título e data. Horários, local, área, responsável e observações podem ser preenchidos quando aplicáveis.
+4. Clique em **Criar atividade**; o sistema abrirá a chamada para registrar presença.
+
+Na lista de atividades, use **Chamada** para consultar ou registrar presenças. A sincronização com o Google Calendar é manual:
 
 1. Acesse **Atividades** e crie o treinamento, apresentação ou outra atividade.
 2. Na listagem, clique em **Sincronizar Calendar**. A sincronização é manual e exige que o escopo Google Calendar esteja autorizado.
@@ -482,18 +464,23 @@ Quando houver início e fim, ambos são usados no evento. Com apenas horário in
 
 ![Lista de atividades avulsas](./assets/imgs/tela-ativi-avulsa.png)
 
-### 9.8 Consultar Histórico e Frequência
+### 9.8 Consultar chamadas e frequência
 
-1. Abra o menu **Atividades**
-2. Clique em **Relatório de presença**
-3. Selecione um integrante ou mantenha **Todos os integrantes**
-4. Clique em **Filtrar histórico**
+1. No menu **Atividades**, abra **Ensaios** e clique em **Histórico**.
+2. Selecione um integrante ou mantenha **Todos os integrantes**.
+3. Clique em **Filtrar histórico**.
 
 O sistema exibirá as chamadas, datas, atividades, locais, integrantes e situações. Quando um integrante for selecionado, será exibido o percentual de frequência calculado com base nos registros disponíveis.
 
 Use **Imprimir** para gerar uma cópia do histórico.
 
-### 9.9 Consultar o resumo mensal e o relatório profissional
+### 9.9 Relatório diário e relatório de evento
+
+O item **Atividades > Relatório de presença** abre a **Folha diária de presença**. Escolha a data e clique em **Consultar data** para ver, em uma única folha, a situação dos integrantes ativos e as atividades registradas. Use **Imprimir** para imprimir ou salvar como PDF.
+
+Na tela **Eventos**, clique em **Relatório** ao lado do evento para abrir a folha consolidada da chamada e usar **Imprimir**.
+
+### 9.10 Consultar o resumo mensal e o relatório profissional
 
 1. Abra o menu **Atividades** e clique em **Resumo mensal**.
 2. Informe o mês de referência e clique em **Consultar**.
@@ -502,13 +489,13 @@ Use **Imprimir** para gerar uma cópia do histórico.
 
 O relatório profissional é preparado para impressão e pode ser salvo como PDF pelo navegador. O relatório considera integrantes ativos e registros do mês selecionado.
 
-![Resumo mensal de presença com nomes anonimizados](./assets/imgs/resumo-mensal-presen%C3%A7a.png)
+![Resumo mensal de presença com nomes anonimizados](./assets/imgs/resumo-mensal-presença.png)
 
 ![Relatório profissional de presença com nomes anonimizados](./assets/imgs/relatorio-mensal-presenca.png)
 
-### 9.10 Administrar passes de transporte
+### 9.11 Administrar passes de transporte
 
-O controle de passes está disponível para administradores em **Usuário > Passes de Transporte**.
+O controle de passes está disponível para administradores em **Seu nome > Passes de Transporte**.
 
 1. Selecione o mês de referência.
 2. Escolha o tipo de lançamento: **Cota mensal** ou **Avulso**.
@@ -527,44 +514,63 @@ A quantidade avulsa deve ser maior que zero, exige motivo obrigatório e pode se
 
 ## 10. Relatórios
 
-### 10.1 Relatório Geral de Alunos
-Acesse para visualizar todos os alunos cadastrados com filtros por:
-- Escola
-- Status
-- Função na banda
+### 10.1 Relatório Geral de Integrantes
+Na tela **Gestão > Integrantes**, clique em **Relatórios** para abrir a versão imprimível dos integrantes ativos. O relatório pode conter dados pessoais e vínculos cadastrados; manuseie e imprima essas informações com cuidado.
 
 ![Rel alunos](./assets/imgs/tela-relatorio-geral.png)
 
-### 10.2 Relatório Individual de Aluno
-Acesse através da visualização de cada aluno para obter um relatório detalhado.
+### 10.2 Relatório Individual de Integrante
+Na lista **Integrantes**, use o ícone **Relatório** ao lado do cadastro para abrir a versão individual imprimível.
 
 ![Rel Aluno](./assets/imgs/tela-relatorio-aluno.png)
 
 ### 10.3 Relatório de Escolas
-Acesse para visualizar todas as escolas e seus alunos vinculados.
+Na tela **Escolas**, clique em **Relatório** para abrir a lista imprimível de escolas e integrantes vinculados.
 
 ![Rel Escolas](./assets/imgs/tela-relatorio-escolas.png)
 
-### 10.4 Relatório profissional de presença
-O relatório profissional pode ser aberto a partir do **Resumo mensal de presenças**. Ele apresenta:
+### 10.4 Relatórios de presença
+O menu **Atividades** oferece:
 
-- período de referência e data de geração;
-- totais de registros, presentes, justificados e frequência;
-- resumo de frequência por integrante;
-- resumo por ensaio, evento ou atividade;
-- detalhamento de data, integrante, atividade, situação e observações.
+- **Relatório de presença**: folha diária consolidada, filtrada por data;
+- **Resumo mensal**: totais de presentes, ausentes, justificados e frequência, resumo por tipo de atividade e detalhamento do período;
+- **Relatório profissional**: no resumo mensal, abre o documento formal do período, com resumo por integrante, por atividade e detalhamento dos registros;
+- **Histórico**: na tela **Ensaios**, consulta os registros de chamada, com filtro por integrante e percentual de frequência;
+- **Relatório do evento**: na lista **Eventos**, apresenta a chamada consolidada daquele evento.
 
-Use a função de impressão do navegador para gerar uma versão formal em papel ou PDF.
+Use **Imprimir** nas folhas e relatórios que oferecem esse botão e escolha **Salvar como PDF** na janela de impressão do navegador.
 
 ---
 
-## 11. Backup do Sistema
+## 11. Configurações e manutenção (Administrador)
 
-### 11.1 Criar Backup
+Abra **Seu nome > Configurações**. A página reúne abas para personalizar o sistema, ajustar segurança e executar tarefas de manutenção.
+
+### 11.1 Personalização e serviços Google
+
+Na aba **Personalização**, o administrador pode alterar o logo e os textos da tela de login e do rodapé, configurar o endereço remetente das comunicações e consultar a situação dos serviços Gmail, Google Calendar e Google Drive. Use **Autorizar serviços Google** para iniciar ou renovar as autorizações. O remetente de comunicação deve corresponder à conta Gmail autorizada.
+
+### 11.2 Segurança
+
+Na aba **Segurança**, ajuste o tempo de sessão, o limite de tentativas de login e os requisitos de complexidade de senha. A senha precisa ter pelo menos 6 caracteres; os requisitos selecionados (letra minúscula, maiúscula, número ou símbolo) também serão aplicados.
+
+### 11.3 Sistema e manutenção
+
+Na aba **Sistema/Manutenção**, configure o limite de upload, a pasta dos backups e o período de retenção de logs. A seção de senha dos backups permite, após reautenticação administrativa, revelar a chave atual ou registrar no `.env` uma senha com no mínimo 16 caracteres. Se já existir uma chave ou backup criptografado, use a mesma senha para preservar a capacidade de restauração.
+
+As ações **Limpar Cache**, **Executar Verificação** e **Reindexar** são tarefas administrativas de manutenção. Execute-as com cuidado e peça orientação ao responsável técnico se não souber se são necessárias. **Logs: Hard Delete**, no menu do usuário, permite consultar a auditoria de exclusões permanentes de integrantes.
+
+---
+
+## 12. Backup do Sistema
+
+### 12.1 Criar Backup
 1. No menu do usuário, no canto superior direito, selecione **Backup do Banco**.
 2. Clique em **Criar Backup Agora**. O sistema sempre cria a cópia local e, quando o Google Drive está autorizado, também tenta enviá-la automaticamente à pasta `BMCM Backups`.
 3. Consulte o resultado da operação na mensagem apresentada. Se o Drive não estiver autorizado ou o envio automático falhar, a cópia local será preservada; o botão **Drive** ao lado do arquivo permite tentar o envio manualmente.
 4. Consulte as cópias remotas na seção **Backups no Google Drive**. Use **Abrir** para visualizá-las ou **Restaurar** para recuperar uma cópia.
+
+Após o início do sistema, um login válido de administrador agenda um backup em segundo plano quando ainda não existe backup local ou quando o mais recente foi criado há pelo menos 48 horas. Se o Google Drive estiver autorizado, o sistema também tenta enviar essa cópia para a nuvem. O backup automático não interrompe o login.
 
 O envio ao Drive exige que um administrador autorize o escopo Google Drive em **Configurações**. Repetir o envio de um arquivo com o mesmo nome atualiza a cópia remota.
 
@@ -574,7 +580,7 @@ Os novos arquivos ZIP são protegidos com AES-256. Se `BACKUP_PASSWORD` não est
 
 ![Backup](./assets/imgs/tela-admin-backup.png)
 
-### 11.2 Restaurar Backup
+### 12.2 Restaurar Backup
 1. No menu do usuário, selecione **Backup do Banco**
 2. Na lista local ou em **Backups no Google Drive**, selecione a cópia desejada
 3. Clique em **"Restaurar"** e confirme a operação
@@ -582,39 +588,38 @@ Os novos arquivos ZIP são protegidos com AES-256. Se `BACKUP_PASSWORD` não est
 
 **Aviso**: A restauração substitui o banco de dados atual. Um backup local de segurança do estado atual é criado automaticamente antes da substituição. Após uma restauração bem-sucedida, reinicie a aplicação para que as alterações tenham efeito. A restauração do Drive exige autorização Google Drive e a mesma chave AES-256 usada para criar o backup.
 
-### 11.3 Excluir Backup
+### 12.3 Excluir Backup
 1. No menu do usuário, selecione **Backup do Banco**
 2. Selecione o backup desejado
 3. Clique em **"Excluir"**
 
 ---
 
-## 12. Central de Comunicações
+## 13. Central de Comunicações
 
-### 12.1 Acesso à Central
-A Central de Comunicações fica disponível para usuários com permissão administrativa ou profissional. A partir dela, o administrador pode criar mensagens para públicos específicos, anexos, comunicação com contatos externos e histórico de envios.
+### 13.1 Acesso à Central
+A opção **Comunicações** aparece no menu quando o Gmail remetente e a autorização Google necessários estão disponíveis. Contas autenticadas que veem esse item podem abrir a Central para preparar comunicações, consultar o histórico e gerenciar as autorizações de e-mail de contatos externos.
 
 ![Central de Comunicações com dados de contato anonimizados](./assets/imgs/Central-de-comunicacoes.png)
 
-### 12.2 Criar uma comunicação
-1. Acesse **Comunicações** no painel administrativo.
-2. Informe assunto e mensagem.
+### 13.2 Criar e enviar uma comunicação
+1. Acesse **Comunicações** e clique em **Nova comunicação**.
+2. Informe assunto, tipo e mensagem.
 3. Selecione o público-alvo:
-   - integrante específico;
+   - integrantes ativos;
    - responsáveis;
-   - alunos ativos;
+   - participantes de um evento;
    - naipe;
-  - participantes ativos com autorização aprovada no evento selecionado;
-   - contato externo;
-   - outros públicos configurados.
-4. Anexe arquivos, quando necessário.
-5. Revise a mensagem e confirme o envio.
+   - um contato externo (um destinatário por comunicação).
+4. Se necessário, escolha o evento ou naipe e adicione anexos. O canal WhatsApp está desabilitado; o envio disponível é por e-mail.
+5. Clique em **Criar comunicação** para salvar como rascunho.
+6. Na lista, confira o público e clique em **Enviar**; confirme a operação. Use **Detalhes** para consultar o resultado por destinatário.
 
-Para um contato externo novo ou sem autorização vigente, confirme a autorização de e-mail e informe sua origem. A data e a origem ficam registradas no contato. A autorização pode ser revogada na lista da Central; após a revogação, novos envios são bloqueados. A autorização de e-mail não habilita WhatsApp.
+Para um contato externo novo ou sem autorização vigente, confirme a autorização de e-mail e informe sua origem. A data e a origem ficam registradas no contato. A autorização pode ser revogada na lista da Central; após a revogação, novos envios são bloqueados. A autorização de e-mail não habilita WhatsApp. Os anexos são armazenados localmente no servidor.
 
-![Formulário de comunicação com e-mail remetente anonimizado](./assets/imgs/tela-nova%20comunicacao.png)
+![Formulário de comunicação com e-mail remetente anonimizado](<./assets/imgs/tela-nova comunicacao.png>)
 
-### 12.3 Status do envio
+### 13.3 Status do envio
 A comunicação pode aparecer com os seguintes status:
 - **Rascunho**
 - **Enviado**
@@ -623,113 +628,82 @@ A comunicação pode aparecer com os seguintes status:
 
 O sistema registra o resultado por destinatário e mantém o histórico do envio para auditoria.
 
-### 12.4 Uso do Gmail na comunicação
-Quando a conexão com o Google estiver autorizada, a comunicação pode ser enviada por Gmail, respeitando o remetente configurado no sistema e os escopos do OAuth. O canal é controlado e não substitui automaticamente outras formas de envio autorizadas.
+### 13.4 Uso do Gmail na comunicação
+O envio utiliza a conta Gmail autorizada e o remetente configurado pelo administrador. Se o serviço estiver indisponível, o sistema informa o resultado no histórico; confira os detalhes antes de tentar enviar novamente.
 
 ---
 
-## 13. Alteração de Senha
+## 14. Alteração de Senha
 
-### 12.1 Alterar Própria Senha
-1. Clique no seu nome de usuário no menu superior
-2. Selecione **"Alterar Senha"**
-3. Preencha:
+### 14.1 Alterar a própria senha
+1. No painel **Inicial**, clique em **Alterar** no cartão **Senha**.
+2. Informe a senha atual, a nova senha e a confirmação.
+3. Clique em **Atualizar Senha**.
 
 ![Alt. Senha](./assets/imgs/tela-alterar-senha.png)
 
-- Senha atual
-- Nova senha
-- Confirme a nova senha
-1. Clique em **"Salvar"**
+A senha precisa atender ao mínimo de 6 caracteres e às regras de complexidade configuradas pelo administrador.
 
 ---
 
-## 14. Logout
+## 15. Sair do Sistema
 
-### 14.1 Sair do Sistema
-1. Clique no seu nome de usuário no menu superior
-2. Selecione **"Sair"**
-
----
-
-## 15. Perfis de Usuário
-
-### 15.1 Administrador
-Acesso completo a todas as funcionalidades:
-- Gestão de usuários
-- Gestão de alunos
-- Gestão de escolas
-- Gestão de instrumentos
-- Relatórios
-- Backup
-- Configurações do sistema
-- Autorização do Google Workspace
-- Central de Comunicações
-
-### 15.2 Profissional
-Acesso às funcionalidades de gestão:
-- Gestão de alunos
-- Gestão de escolas
-- Gestão de instrumentos
-- Relatórios
-- Central de Comunicações
-
-### 15.3 Usuário Comum
-Acesso básico:
-- Visualização de dados
-- Relatórios
+### 15.1 Sair do Sistema
+1. Abra o menu com seu nome no alto da tela.
+2. Selecione **"Sair"**, especialmente ao usar um computador compartilhado.
 
 ---
 
-## 16. Dicas de Segurança
+## 16. Contas e permissões
 
-1. **Senhas**: Use senhas fortes com no mínimo 6 caracteres
-2. **Logout**: Sempre saia do sistema após o uso
-3. **Compartilhamento**: Não compartilhe suas credenciais
-4. **Bloqueio**: O sistema bloqueia o usuário após 3 tentativas de login incorretas por 12 horas
-### 16.1 Boas Práticas de Segurança
+O cadastro de usuário distingue contas **administradoras** e contas sem essa marcação. A interface não oferece perfis separados chamados “Profissional” e “Usuário Comum”; as opções e ações variam conforme a conta e as integrações disponíveis.
 
-- Utilize senhas com:
-  - mínimo de 8 caracteres
-  - letras maiúsculas e minúsculas
-  - números e símbolos
+### 16.1 Administrador
+Além das funções comuns disponíveis para uma conta autenticada, o administrador tem acesso a **Usuários**, **Backup do Banco**, **Logs: Hard Delete**, **Configurações** e **Passes de Transporte**. Algumas ações nas telas de integrantes também aparecem somente para administradores.
 
-- Não compartilhe suas credenciais
+### 16.2 Conta sem perfil de administrador
+Pode acessar as opções de uso disponíveis no menu e nas telas para sua conta, como consultar módulos e registrar atividades ou presenças. Opções administrativas e ações restritas não são exibidas ou não podem ser usadas. Se uma função necessária não estiver disponível, solicite ao administrador o acesso apropriado.
 
-- Evite acessar o sistema em redes públicas
-
-- Sempre realize logout após o uso
-
-- Altere sua senha periodicamente
-
-- Mantenha o arquivo `.env` protegido e fora do GitHub
-
-- Não exponha tokens de OAuth, senhas ou chaves em arquivos do projeto
 ---
 
-## 17. Solução de Problemas
+## 17. Dicas de Segurança
 
-### 17.1 Esqueci minha senha
+### 17.1 Boas Práticas de Segurança
+
+- Use uma senha forte com pelo menos 6 caracteres e os requisitos de complexidade definidos pelo administrador.
+
+- Não compartilhe sua senha nem deixe a sessão aberta em computador compartilhado; saia do sistema ao terminar.
+
+- Evite acessar o sistema em redes públicas.
+
+- A conta é bloqueada por 12 horas ao atingir o limite de tentativas configurado pelo administrador. Há também um limite temporário de tentativas por endereço de rede.
+
+- Mantenha o arquivo `.env`, tokens OAuth e a senha/chave de backup protegidos e fora do Git.
+---
+
+## 18. Solução de Problemas
+
+### 18.1 Esqueci minha senha
 Entre em contato com o administrador do sistema para resetar sua senha.
 
-### 17.2 Usuário bloqueado
-O sistema bloqueia automaticamente após 3 tentativas incorretas. Aguarde 12 horas ou entre em contato com o administrador.
+### 18.2 Usuário bloqueado
+O bloqueio da conta dura 12 horas após o limite de tentativas configurado ser atingido. O limite de tentativas por endereço de rede também pode exigir que aguarde um minuto. Se o problema continuar, entre em contato com o administrador.
 
-### 17.3 Não consigo acessar uma funcionalidade
+### 18.3 Não consigo acessar uma funcionalidade
 Verifique se seu perfil de usuário tem permissão para acessar aquela funcionalidade. Entre em contato com o administrador se necessário.
 
-### 17.4 Dados não aparecem
+### 18.4 Dados não aparecem
 Verifique se você tem permissão de acesso. Alguns dados podem estar filtrados por perfil.
 
-### 17.5 Google OAuth não funciona
+### 18.5 Google OAuth não funciona
 Verifique se o arquivo `.env` está corretamente preenchido, se as variáveis do Google estão corretas e se a URI de retorno coincide com a configuração registrada no Google Cloud.
 
 ---
-## 18. Problemas Comuns e Soluções
+## 19. Problemas Comuns e Soluções
 
-### ❌ Não consigo salvar o aluno
+### ❌ Não consigo salvar o integrante
 - Verifique campos obrigatórios
-- Confirme autorização de menor (se aplicável)
+- Se estiver enviando uma foto de pessoa menor de 18 anos, complete o termo e a assinatura do responsável
 
 ---
 
@@ -740,8 +714,8 @@ Verifique se o arquivo `.env` está corretamente preenchido, se as variáveis do
 ---
 
 ### ❌ Usuário bloqueado
-- O sistema bloqueia após 3 tentativas
-- Aguarde 12 horas ou solicite desbloqueio
+- O sistema bloqueia a conta por 12 horas após atingir o limite configurado
+- Se o limite de tentativas por endereço de rede for atingido, aguarde um minuto antes de tentar novamente
 
 ---
 
@@ -752,16 +726,16 @@ Verifique se o arquivo `.env` está corretamente preenchido, se as variáveis do
 ---
 
 ### ❌ Não consigo excluir escola
-- Pode haver alunos vinculados
-- Remova vínculos antes de excluir
+- Confira se há integrantes vinculados à escola
+- Se a remoção continuar indisponível, peça ajuda ao administrador antes de alterar os vínculos
 
 ---
 
-## 19. Contato e Suporte
+## 20. Contato e Suporte
 
 Para dúvidas ou problemas técnicos, entre em contato com o administrador do sistema.
 
-### 19.1 Identificação da versão
+### 20.1 Identificação da versão
 
 A versão atual da aplicação é exibida na tela de login, na área de créditos e nas configurações administrativas.
 

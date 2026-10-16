@@ -490,6 +490,8 @@ Não implementar funcionalidades apenas porque são tecnicamente interessantes.
 
 Cada funcionalidade deve possuir uma justificativa relacionada à necessidade da banda ou às exigências acadêmicas.
 
+**Proposta futura — visualizador do manual do usuário:** disponibilizar uma opção de Ajuda no sistema que apresente o conteúdo de `MANUAL_USUARIO.md` em uma página responsiva, com navegação por títulos e leitura confortável em computadores e celulares. O visualizador deve usar o próprio manual como fonte, evitando manter uma cópia de conteúdo divergente, e renderizar Markdown com segurança, sem permitir a execução de HTML ou scripts não confiáveis. Esta proposta fica registrada para avaliação e implementação posterior; não faz parte do trabalho atual.
+
 ## 9.3 Uso de JavaScript no sistema
 
 O JavaScript é utilizado no navegador para interações que complementam as páginas renderizadas pelo Flask. A lógica existente está principalmente em blocos `<script>` dentro dos templates Jinja; atualmente não há uma pasta de scripts JavaScript próprios em `static/`. O template principal `templates/base.html` carrega o bundle do Bootstrap e contém comportamentos compartilhados:
@@ -971,5 +973,5 @@ Regras obrigatórias:
 7. a versão não pode ser alterada pelas configurações administrativas da aplicação;
 8. a versão exibida nas telas deve ser a mesma versão oficial registrada no código;
 9. toda publicação ou atualização deve registrar a nova versão e suas alterações no histórico do projeto.
-
+10. regra extra fora do versionamento: O ambiente virtual esta em venv nunca em .venv 
 Essa regra não deve ser removida, ignorada ou substituída por numeração independente em módulos. Nenhuma nova implementação estará concluída sem a atualização correspondente da versão.

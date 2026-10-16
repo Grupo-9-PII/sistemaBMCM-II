@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^git status --short && printf '\\\\n--- files ---\\\\n' && find app templates -maxdepth 2 -type f -not -path '\\*/__pycache__/\\*' \\| sort$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

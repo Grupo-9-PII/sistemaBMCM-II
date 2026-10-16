@@ -5,16 +5,21 @@ Utiliza compactação ZIP para cópias locais do banco de dados.
 
 import os
 import secrets
+import sqlite3
+import tempfile
 import zipfile
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+from threading import Lock, Thread
 
 import pyzipper
 from flask import current_app
 
 # Nome da subpasta de backups na pasta do usuário
 PASTA_BACKUP = "BKPSISTBMCM"
+INTERVALO_BACKUP_AUTOMATICO = timedelta(days=2)
+_BACKUP_AUTOMATICO_LOCK = Lock()
 
 
 def obter_senha_backup(criar=True):
@@ -154,6 +159,94 @@ def criar_backup(caminho_db, senha=None):
     return caminho_backup
 
 
+def _backup_automatico_vencido():
+    backups = listar_backups()
+    if not backups:
+        return True
+    return datetime.now() - backups[0]["data"] >= INTERVALO_BACKUP_AUTOMATICO
+
+
+def _executar_backup_automatico(app):
+    try:
+        with app.app_context():
+            if not _backup_automatico_vencido():
+                return
+
+            from . import db
+
+            engine = db.engine
+            if engine.dialect.name != "sqlite":
+                raise RuntimeError(
+                    "O backup automático oferece suporte apenas ao banco SQLite."
+                )
+            caminho_db = engine.url.database
+            if not caminho_db or caminho_db == ":memory:":
+                raise RuntimeError(
+                    "Não é possível criar backup automático de banco SQLite em memória."
+                )
+            if not Path(caminho_db).is_absolute():
+                caminho_db = str(Path(app.config["BASE_DIR"]) / caminho_db)
+
+            with tempfile.TemporaryDirectory() as pasta_temporaria:
+                caminho_snapshot = str(Path(pasta_temporaria) / "database.db")
+                with sqlite3.connect(caminho_db) as banco_origem:
+                    with sqlite3.connect(caminho_snapshot) as banco_snapshot:
+                        banco_origem.backup(banco_snapshot)
+                caminho_backup = criar_backup(caminho_snapshot)
+
+            app.logger.info(
+                "Backup automático local criado: %s", Path(caminho_backup).name
+            )
+
+            try:
+                from .google_oauth import GOOGLE_DRIVE_FILE_SCOPE, has_scope
+                from .google_drive import enviar_backup_para_drive
+
+                if has_scope(GOOGLE_DRIVE_FILE_SCOPE):
+                    backup_drive = enviar_backup_para_drive(caminho_backup)
+                    app.logger.info(
+                        "Backup automático enviado ao Google Drive: %s",
+                        backup_drive["name"],
+                    )
+            except (RuntimeError, ValueError, OSError):
+                app.logger.exception(
+                    "Backup automático local criado, mas o envio ao Google Drive falhou"
+                )
+            except Exception:
+                app.logger.exception(
+                    "Erro inesperado ao enviar backup automático ao Google Drive"
+                )
+    except Exception:
+        app.logger.exception("Não foi possível criar o backup automático")
+    finally:
+        _BACKUP_AUTOMATICO_LOCK.release()
+
+
+def agendar_backup_automatico(app):
+    """Agenda backup em segundo plano se o último tiver pelo menos 48 horas."""
+    if not _BACKUP_AUTOMATICO_LOCK.acquire(blocking=False):
+        return False
+
+    try:
+        with app.app_context():
+            if not _backup_automatico_vencido():
+                _BACKUP_AUTOMATICO_LOCK.release()
+                return False
+
+        thread = Thread(
+            target=_executar_backup_automatico,
+            args=(app,),
+            name="backup-automatico",
+            daemon=True,
+        )
+        thread.start()
+        return True
+    except Exception:
+        _BACKUP_AUTOMATICO_LOCK.release()
+        app.logger.exception("Não foi possível agendar o backup automático")
+        return False
+
+
 def validar_backup(caminho_backup, senha=None):
     """Valida se o arquivo de backup é um ZIP válido."""
     try:
@@ -226,4 +319,3 @@ def excluir_backup(caminho_backup):
     except Exception as e:
         current_app.logger.exception("Erro ao excluir backup")
         return False, "Não foi possível excluir o backup. Verifique o log do sistema."
-

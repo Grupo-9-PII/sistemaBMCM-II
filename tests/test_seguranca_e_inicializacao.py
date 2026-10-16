@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -11,6 +11,7 @@ from sqlalchemy.exc import IntegrityError
 
 import app.utils as utils
 import app.routes as routes
+import app.auth as auth
 import app.google_calendar as google_calendar
 import app.google_drive as google_drive
 import app.google_oauth as google_oauth
@@ -24,6 +25,86 @@ def test_incremento_de_versao_com_transporte():
     assert proxima_versao(1, 4, 6) == (1, 4, 7)
     assert proxima_versao(1, 4, 99) == (1, 5, 0)
     assert proxima_versao(1, 99, 99) == (2, 0, 0)
+
+
+def test_backup_automatico_vencido_apos_48_horas(monkeypatch):
+    agora = datetime.now()
+    monkeypatch.setattr(backup, "listar_backups", lambda: [])
+    assert backup._backup_automatico_vencido()
+
+    monkeypatch.setattr(
+        backup,
+        "listar_backups",
+        lambda: [{"data": agora - timedelta(hours=47, minutes=59)}],
+    )
+    assert not backup._backup_automatico_vencido()
+
+    monkeypatch.setattr(
+        backup,
+        "listar_backups",
+        lambda: [{"data": agora - timedelta(hours=48)}],
+    )
+    assert backup._backup_automatico_vencido()
+
+
+def test_login_admin_agenda_backup_automatico(monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(Config, "SQLALCHEMY_DATABASE_URI", "sqlite://")
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+
+    app = create_app()
+    app.config["TESTING"] = False
+    agendamentos = []
+    monkeypatch.setattr(
+        auth,
+        "agendar_backup_automatico",
+        lambda app_atual: agendamentos.append(app_atual),
+    )
+    client = app.test_client()
+    token = _csrf_token(client)
+    utils._LOGIN_TENTATIVAS_IP.clear()
+
+    response = client.post(
+        "/login",
+        data={
+            "username": "admin",
+            "password": "123456",
+            "csrf_token": token,
+        },
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 302
+    assert agendamentos == [app]
+
+
+def test_backup_automatico_cria_copia_sqlite_valida(tmp_path, monkeypatch):
+    monkeypatch.setattr(Config, "SECRET_KEY", "chave-de-teste-segura")
+    monkeypatch.setattr(
+        Config,
+        "SQLALCHEMY_DATABASE_URI",
+        f"sqlite:///{tmp_path / 'database.db'}",
+    )
+    monkeypatch.setattr(Config, "IMPORTAR_LOGRADOUROS_INICIAIS", False)
+    monkeypatch.setattr(utils, "importar_municipios", lambda: None)
+    monkeypatch.setattr(google_oauth, "has_scope", lambda scope: False)
+
+    app = create_app()
+    pasta_backups = tmp_path / "backups"
+    app.config.update(
+        BACKUP_FOLDER=str(pasta_backups),
+        BACKUP_PASSWORD="senha-segura-para-teste",
+    )
+
+    assert backup._BACKUP_AUTOMATICO_LOCK.acquire(blocking=False)
+    backup._executar_backup_automatico(app)
+
+    with app.app_context():
+        backups = backup.listar_backups()
+        assert len(backups) == 1
+        valido, mensagem = backup.validar_backup(backups[0]["caminho"])
+        assert valido, mensagem
 
 
 def test_dashboard_exibe_indicadores_operacionais(monkeypatch):
