@@ -245,7 +245,18 @@ def _resposta_senha_backup(payload, status=200):
 @login_required
 @admin_required
 def iniciar_google_oauth():
-    return redirect(authorization_url())
+    try:
+        return redirect(authorization_url())
+    except RuntimeError as exc:
+        current_app.logger.error(
+            "Falha ao iniciar a autorização OAuth do Google.",
+            exc_info=True,
+        )
+        flash(
+            f"Não foi possível iniciar a autorização do Google: {exc}",
+            "danger",
+        )
+        return redirect(url_for("main.configuracoes"))
 
 
 @main_bp.route("/google/oauth/callback")

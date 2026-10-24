@@ -1863,6 +1863,22 @@ def test_google_oauth_solicita_escopos_dos_servicos_integrados(monkeypatch):
     assert set(google_oauth.google_oauth_config()["scopes"]) == set(scopes)
 
 
+def test_inicio_google_oauth_informa_configuracao_ausente(monkeypatch):
+    app = _criar_app_calendar_teste(monkeypatch)
+    client = app.test_client()
+    _login_admin(client)
+    monkeypatch.delenv("GOOGLE_OAUTH_CLIENT_ID", raising=False)
+    monkeypatch.delenv("GOOGLE_OAUTH_CLIENT_SECRET", raising=False)
+
+    response = client.get("/admin/google/oauth/start")
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/admin/configuracoes")
+    settings = client.get(response.headers["Location"])
+    assert settings.status_code == 200
+    assert b"GOOGLE_OAUTH_CLIENT_ID" in settings.data
+
+
 def test_rota_de_sincronizacao_calendar_exige_login_e_csrf(monkeypatch):
     app = _criar_app_calendar_teste(monkeypatch)
     client = app.test_client()
