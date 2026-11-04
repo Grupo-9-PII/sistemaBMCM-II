@@ -167,14 +167,14 @@ histórico e integridade transacional.
 
 ### Calendário e futuras integrações
 
-O calendário interno mensal do BMCM agrega ensaios, eventos e atividades avulsas já cadastrados. A seleção de um dia oferece acesso à chamada de cada registro, ao relatório diário e à criação de um registro naquela data, com o formulário pré-preenchido. O calendário não cria expediente ou horário de funcionamento e não presume horários ausentes. A integração com o Google Calendar é separada, unidirecional e manual: publica registros do BMCM, não substitui o banco de dados e não importa alterações feitas diretamente no Google Calendar. A publicação de atividades avulsas foi implementada e validada por testes automatizados; ainda requer validação com uma conta Google real.
+O calendário interno mensal do BMCM agrega ensaios, eventos e atividades avulsas já cadastrados. A seleção de um dia oferece acesso à chamada de cada registro, ao relatório diário e à criação de um registro naquela data, com o formulário pré-preenchido. O calendário não cria expediente ou horário de funcionamento e não presume horários ausentes. A integração com o Google Calendar é separada, unidirecional e manual: publica registros do BMCM, não substitui o banco de dados e não importa alterações feitas diretamente no Google Calendar. A publicação de atividades avulsas foi validada por testes automatizados e com uma conta Google real.
 
 Uma futura integração RFID/NFC ou outra solução IoT poderá identificar o integrante e chamar uma API do BMCM. A API deverá continuar responsável por validar a atividade, verificar a cota, registrar a presença e consumir os 2 passes. RFID, NFC e IoT não fazem parte do escopo atual do PI II.
 
 
 # 5. Integração com serviços Google
 
-O sistema deverá explorar APIs do Google como parte da integração com serviços externos e do conceito de computação em nuvem. A Central de Comunicações foi concluída funcionalmente, validada por testes automatizados e teve um envio de teste pelo Gmail concluído com sucesso usando conta real. A sincronização Calendar de atividades avulsas está implementada e testada automaticamente; sua validação com conta real permanece pendente. Os MVPs de Calendar para ensaios/eventos e de upload/listagem de backups no Drive foram validados com a conta Google configurada no ambiente. A restauração de backup do Drive foi implementada, testada automaticamente e validada manualmente em 06/10/2026, incluindo a cópia de segurança do estado atual antes da restauração.
+O sistema explora APIs do Google como parte da integração com serviços externos e do conceito de computação em nuvem. A Central de Comunicações foi concluída funcionalmente, validada por testes automatizados e teve um envio de teste pelo Gmail concluído com sucesso usando conta real. A publicação Calendar de ensaios, eventos e atividades avulsas foi validada com conta Google real; as atividades avulsas também passaram pelos testes automatizados. Os MVPs de upload e listagem de backups no Drive foram validados com conta real. A restauração de backup do Drive foi implementada, testada automaticamente e validada manualmente em 06/10/2026, incluindo a cópia de segurança do estado atual antes da restauração. Os recursos de acessibilidade foram testados automaticamente e avaliados na prática.
 
 As três integrações principais previstas são:
 
@@ -195,7 +195,7 @@ As credenciais do Google devem ser armazenadas em variáveis de ambiente e nunca
 
 ## 5.2 Google Calendar — ensaios, eventos e atividades
 
-O MVP de sincronização unidirecional do BMCM para o Google Calendar está implementado para ensaios, eventos e atividades avulsas. A sincronização é acionada manualmente nas listagens, exige autorização do escopo `calendar.events` e atualiza o vínculo existente quando repetida. Ensaios e eventos foram validados com conta Google real. A nova publicação de atividades avulsas passou nos testes automatizados e ainda precisa ser validada com uma conta real.
+O MVP de sincronização unidirecional do BMCM para o Google Calendar está implementado para ensaios, eventos e atividades avulsas. A sincronização é acionada manualmente nas listagens, exige autorização do escopo `calendar.events` e atualiza o vínculo existente quando repetida. Ensaios, eventos e atividades avulsas foram validados com conta Google real; a publicação de atividades avulsas também passou nos testes automatizados.
 
 O comportamento inicial é:
 
@@ -293,7 +293,7 @@ Autorizações de e-mail e WhatsApp devem ser independentes, com registro de dat
 
 # 6. Conceito de computação em nuvem
 
-A utilização atual do Gmail e os MVPs de integração com Google Calendar e Google Drive demonstram a aplicação do conceito de **computação em nuvem**. O envio de teste do Gmail e os MVPs de Calendar para ensaios/eventos e de upload/listagem de backups no Drive foram validados com contas reais; a publicação Calendar de atividades avulsas e a restauração de backup do Drive ainda requerem validação real.
+A utilização atual do Gmail e as integrações com Google Calendar e Google Drive demonstram a aplicação do conceito de **computação em nuvem**. O envio de teste do Gmail, a publicação de ensaios, eventos e atividades avulsas no Calendar e as operações de upload, listagem e restauração de backups no Drive foram testados e validados com contas Google reais.
 
 O objetivo não é apenas "usar serviços do Google".
 
@@ -645,7 +645,7 @@ O projeto deve demonstrar:
 O estado e a ordem de prioridade das integrações são:
 
 1. Gmail API: fluxo OAuth e envio implementados; Central de Comunicações validada por testes automatizados e envio de teste concluído com sucesso em conta Google real;
-2. Google Calendar API: sincronização unidirecional de ensaios/eventos validada com conta real; publicação de atividades avulsas implementada e testada automaticamente, com validação real pendente;
+2. Google Calendar API: sincronização unidirecional de ensaios, eventos e atividades avulsas testada e validada com conta real; atividades avulsas também cobertas por testes automatizados;
 3. Google Drive API: upload, listagem e restauração de backups validados com conta Google real;
 4. API HTTP do módulo externo de WhatsApp: possibilidade futura, condicionada à autorização e aos requisitos de segurança.
 
@@ -851,11 +851,11 @@ O objetivo final é entregar uma aplicação funcional que possa continuar sendo
 ### Integrações externas e comunicação
 
 * Gmail e Central de Comunicações: fluxo implementado, validado por testes automatizados e com envio de teste concluído com sucesso em conta Google real, incluindo consentimento externo e revogação;
-* Google Calendar: MVP unidirecional para ensaios/eventos validado com conta real; atividades avulsas também são publicadas manualmente e passaram nos testes automatizados, aguardando validação real;
+* Google Calendar: MVP unidirecional para ensaios, eventos e atividades avulsas validado com conta real; publicação de atividades avulsas também aprovada nos testes automatizados;
 * Google Drive: upload, listagem e restauração implementados e validados com conta real, incluindo cópia de segurança local antes da restauração;
 * WhatsApp: possibilidade futura como módulo externo independente e canal alternativo autorizado.
 
-Os testes manuais de acessibilidade, UX e Central de Comunicações foram executados e validados. A restauração de backup remoto no Drive foi validada manualmente em 06/10/2026, incluindo backup de segurança do banco antes da substituição. Permanece como validação manual externa a publicação Calendar de atividades avulsas.
+Os testes manuais de acessibilidade, UX e Central de Comunicações foram executados e validados, assim como os testes automatizados das preferências individuais de acessibilidade. A restauração de backup remoto no Drive foi testada automaticamente e validada manualmente em 06/10/2026, incluindo backup de segurança do banco antes da substituição. A publicação Calendar de atividades avulsas também foi validada com conta Google real, além dos testes automatizados.
 
 ### Requisitos técnicos
 

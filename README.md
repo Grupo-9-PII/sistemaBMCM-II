@@ -140,14 +140,13 @@ O **PI II** não tem como objetivo reconstruir o sistema.
 
 A proposta é **evoluir a aplicação existente**, acrescentando funcionalidades que atendam às necessidades atuais da banda e aos requisitos acadêmicos do novo projeto.
 
-Entre os principais eixos da evolução estão:
+As seguintes etapas de validação do PI II foram concluídas:
 
-* validação com conta Google real da publicação de atividades avulsas no Calendar;
-* implementação e validação real da restauração de backups do Google Drive;
-* testes automatizados e validação prática dos recursos de acessibilidade;
-* utilização de APIs externas;
-* aplicação prática do conceito de computação em nuvem;
-* manutenção da segurança e da privacidade dos dados.
+* [x] Publicação de atividades avulsas no Google Calendar validada com conta Google real, além dos testes automatizados;
+* [x] Restauração de backups do Google Drive testada automaticamente e validada com conta Google real;
+* [x] Recursos de acessibilidade cobertos por testes automatizados e avaliação prática concluída.
+
+A utilização de APIs externas, a aplicação de computação em nuvem e a manutenção da segurança e da privacidade permanecem como eixos contínuos da evolução.
 
 A evolução será realizada de forma incremental, preservando funcionalidades existentes sempre que possível.
 
@@ -320,7 +319,7 @@ Os fluxos básicos de presença, ensaios, eventos e apresentações já estão i
 
 O sistema possui controle **manual** de presença dos integrantes, relacionado a ensaios, eventos e atividades avulsas. Cada registro de presença é associado à atividade correspondente, que pode ser uma apresentação, treinamento ou outra atividade válida da Banda.
 
-Uma atividade de treinamento pode ser registrada sem ter sido previamente cadastrada como ensaio ou compromisso. O calendário interno mensal reúne ensaios, eventos e atividades avulsas, permitindo selecionar uma data, abrir chamadas e relatórios e iniciar novos cadastros com a data escolhida. Horários de funcionamento citados como contexto são apenas referência e não são modelados nem usados como validação. O cadastro, a chamada e a publicação manual opcional de atividades avulsas no Google Calendar estão disponíveis; essa publicação ainda precisa de validação com conta Google real.
+Uma atividade de treinamento pode ser registrada sem ter sido previamente cadastrada como ensaio ou compromisso. O calendário interno mensal reúne ensaios, eventos e atividades avulsas, permitindo selecionar uma data, abrir chamadas e relatórios e iniciar novos cadastros com a data escolhida. Horários de funcionamento citados como contexto são apenas referência e não são modelados nem usados como validação. O cadastro, a chamada e a publicação manual opcional de atividades avulsas no Google Calendar estão disponíveis. A publicação foi validada por testes automatizados e com uma conta Google real.
 
 Os fluxos atuais permitem:
 
@@ -702,6 +701,7 @@ Entre os recursos e melhorias considerados estão:
 As opções de tema usam paletas controladas para preservar contraste e legibilidade. A interface deve continuar utilizável em diferentes tamanhos de tela e por teclado, sem depender de combinações de cores definidas livremente.
 
 O objetivo é permitir que o sistema seja utilizado por pessoas com diferentes níveis de familiaridade com tecnologia.
+As preferências individuais de tema e tamanho do texto foram testadas automaticamente, e a avaliação prática dos recursos de acessibilidade foi concluída.
 
 ![Tela de preferências de acessibilidade com opções individuais de tema e tamanho do texto](./assets/imgs/tela-acessabilidade.png)
 
@@ -1161,7 +1161,7 @@ Consulte o arquivo [LICENSE](LICENSE) para obter os termos completos.
 
 **PI I:** Base funcional implementada.
 
-**PI II:** Evolução em andamento. Presença, ensaios, eventos, atividades avulsas, calendário administrativo, relatórios profissionais e controle de passes possuem fluxos implementados. A Central de Comunicações foi validada por testes automatizados e teve envio de teste pelo Gmail confirmado com conta real; Calendar publica manualmente registros do BMCM; Drive permite enviar, consultar e restaurar backups remotos. A restauração remota foi validada com conta real em 06/10/2026. A publicação Calendar de atividades avulsas ainda precisa de validação com conta Google real.
+**PI II:** Evolução em andamento. Presença, ensaios, eventos, atividades avulsas, calendário administrativo, relatórios profissionais e controle de passes possuem fluxos implementados. A Central de Comunicações foi validada por testes automatizados e teve envio de teste pelo Gmail confirmado com conta real. Ensaios, eventos e atividades avulsas foram publicados manualmente no Calendar e validados com conta Google real, além dos testes automatizados das atividades avulsas. O Drive permite enviar, consultar e restaurar backups remotos; a restauração foi testada automaticamente e validada com conta real em 06/10/2026. Os recursos de acessibilidade também foram testados automaticamente e avaliados na prática.
 
 ### Principais objetivos da evolução
 
@@ -1189,13 +1189,13 @@ Consulte o arquivo [LICENSE](LICENSE) para obter os termos completos.
 * [x] MVP de sincronização unidirecional com Google Calendar implementado no código
 * [x] Validar a sincronização Calendar com uma conta Google real
 * [x] Implementar e testar automaticamente sincronização de atividades avulsas com Google Calendar
-* [ ] Validar sincronização de atividades avulsas com conta Google real
+* [x] Validar sincronização de atividades avulsas com conta Google real
 * [x] MVP de upload e listagem de backups no Google Drive implementado no código
 * [x] Validar upload e consulta Drive com uma conta Google real
 * [x] Autenticação OAuth 2.0 para Google Workspace
 * [x] Documentação das integrações e serviços em nuvem
 * [x] Ampliação dos testes automatizados para calendário, relatórios e passes
-* [x] Implementação e validação prática dos recursos de acessibilidade
+* [x] Implementação, testes automatizados e validação prática dos recursos de acessibilidade
 * [x] Implementação e testes automatizados da restauração de backup do Google Drive
 * [x] Validar restauração de backup do Google Drive com conta Google real, incluindo cópia de segurança do estado atual
 * [ ] Atualizador controlado de versões da aplicação
